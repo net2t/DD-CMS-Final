@@ -48,3 +48,4 @@ temp/
 # ============ BROWSER ============
 chromedriver.exe
 chromedriver
+.env_example
