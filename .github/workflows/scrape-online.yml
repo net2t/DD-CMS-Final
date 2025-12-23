@@ -3,7 +3,7 @@ name: Online Mode Scraper
 on:
   # Run every 15 minutes
   schedule:
-    - cron: '*/1115 * * * *'
+    - cron: '*/15 * * * *'
   
   # Allow manual trigger
   workflow_dispatch:
