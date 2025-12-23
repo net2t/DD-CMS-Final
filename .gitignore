@@ -1,0 +1,50 @@
+# ============ CREDENTIALS & SECRETS ============
+.env
+.env.local
+credentials.json
+*.key
+
+# ============ PYTHON ============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# ============ SESSION & CACHE ============
+damadam_cookies.pkl
+*.pyc
+*.pyo
+*.pyd
+
+# ============ IDE & EDITOR ============
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============ DATA FILES ============
+*.xlsx
+*.xls
+*.csv
+output/
+
+# ============ LOGS & TEMP ============
+*.log
+logs/
+tmp/
+temp/
+
+# ============ BROWSER ============
+chromedriver.exe
+chromedriver
