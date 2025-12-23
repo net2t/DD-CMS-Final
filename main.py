@@ -2,6 +2,7 @@
 """
 DamaDam Scraper v4.0 - Main Entry Point
 Supports two modes: Target (from sheet) and Online (from online users list)
+STEP-6: Online mode max_profiles limit, profile sorting
 """
 
 import sys
@@ -26,7 +27,7 @@ def main():
         epilog="""
 Examples:
   python main.py --mode target --max-profiles 50
-  python main.py --mode online
+  python main.py --mode online --max-profiles 10
   python main.py --mode target --batch-size 10
         """
     )
@@ -42,7 +43,7 @@ Examples:
         '--max-profiles',
         type=int,
         default=0,
-        help='Max profiles to scrape (0 = all, only for target mode)'
+        help='Max profiles to scrape (0 = all, applies to both modes)'
     )
     
     parser.add_argument(
@@ -60,15 +61,13 @@ Examples:
     print("=" * 70)
     print(f"Mode: {args.mode}")
     print(f"Batch Size: {args.batch_size}")
-    if args.mode == 'target':
-        print(f"Max Profiles: {'All' if args.max_profiles == 0 else args.max_profiles}")
+    print(f"Max Profiles: {'All' if args.max_profiles == 0 else args.max_profiles}")
     print("=" * 70)
     print()
     
     # Update config
     Config.BATCH_SIZE = args.batch_size
-    if args.mode == 'target':
-        Config.MAX_PROFILES_PER_RUN = args.max_profiles
+    Config.MAX_PROFILES_PER_RUN = args.max_profiles
     
     # Start time
     start_time = get_pkt_time()
@@ -92,11 +91,15 @@ Examples:
         log_msg("Connecting to Google Sheets...")
         sheets = SheetsManager()
         
-        # Run appropriate mode
+        # Run appropriate mode (STEP-6: Both modes now accept max_profiles)
         if args.mode == 'target':
             stats = run_target_mode(driver, sheets, args.max_profiles)
         else:  # online
-            stats = run_online_mode(driver, sheets)
+            stats = run_online_mode(driver, sheets, args.max_profiles)
+        
+        # STEP-6: Sort profiles by date after scraping
+        log_msg("Sorting profiles by date...")
+        sheets.sort_profiles_by_date()
         
         # End time
         end_time = get_pkt_time()
@@ -116,6 +119,13 @@ Examples:
             "Trigger": f"{trigger}-{args.mode}",
             "Start": start_time.strftime("%d-%b-%y %I:%M %p"),
             "End": end_time.strftime("%d-%b-%y %I:%M %p"),
+            # STEP-6: Include state counts (with BLANK fallback)
+            "state_counts": {
+                "ACTIVE": stats.get('active', 0),
+                "UNVERIFIED": stats.get('unverified', 0),
+                "BANNED": stats.get('banned', 0),
+                "DEAD": stats.get('dead', 0)
+            }
         }
         
         sheets.update_dashboard(dashboard_data)

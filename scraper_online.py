@@ -1,5 +1,6 @@
 """
 Online Mode Scraper - Scrapes users from online list
+STEP-6: Enforce MAX_PROFILES limit
 """
 
 import time
@@ -97,8 +98,19 @@ class OnlineUsersParser:
 
 # ==================== ONLINE MODE RUNNER ====================
 
-def run_online_mode(driver, sheets):
-    """Run scraper in Online mode"""
+def run_online_mode(driver, sheets, max_profiles=0):
+    """Run scraper in Online mode
+    
+    STEP-6: Added max_profiles parameter to enforce limit
+    
+    Args:
+        driver: WebDriver instance
+        sheets: SheetsManager instance
+        max_profiles: Maximum profiles to process (0 = unlimited)
+        
+    Returns:
+        dict: Statistics about the scraping operation
+    """
     log_msg("=== ONLINE MODE STARTED ===")
     
     # Get online users
@@ -115,6 +127,12 @@ def run_online_mode(driver, sheets):
             "unchanged": 0,
             "logged": 0
         }
+    
+    # STEP-6: Enforce max_profiles limit
+    original_count = len(nicknames)
+    if max_profiles > 0:
+        nicknames = nicknames[:max_profiles]
+        log_msg(f"Limited to {max_profiles} profiles (from {original_count} available)")
     
     log_msg(f"Processing {len(nicknames)} online users...")
     

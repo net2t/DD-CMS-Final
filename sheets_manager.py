@@ -1,7 +1,6 @@
 """
 Google Sheets Manager - All sheet operations
-PRIMARY KEY: Column A (ID) is the immutable primary key for ProfilesTarget.
-Nicknames are mutable metadata only.
+STEP-6: Nickname-based duplication, Row 2 insertion, Dashboard fixes
 """
 
 import json
@@ -27,9 +26,9 @@ def log_msg(msg, level="INFO"):
     sys.stdout.flush()
 
 def clean_data(value):
-    """Clean cell data"""
+    """Clean cell data - STEP-6: Return 'BLANK' for empty values"""
     if not value:
-        return ""
+        return "BLANK"
     
     v = str(value).strip().replace('\xa0', ' ')
     bad = {
@@ -38,8 +37,8 @@ def clean_data(value):
         "[No Post URL]", "[Error]", "no set", "none", "null", "no age"
     }
     
-    if v in bad:
-        return ""
+    if v in bad or not v:
+        return "BLANK"
     
     import re
     return re.sub(r"\s+", " ", v)
@@ -92,9 +91,11 @@ def create_gsheets_client():
 class SheetsManager:
     """Manages all Google Sheets operations
     
-    PRIMARY KEY: Column A (ID) is the immutable primary key for ProfilesTarget.
-    Nicknames (Column NICK NAME) are mutable metadata.
-    All ProfilesTarget updates use ID-based lookups.
+    STEP-6 Updates:
+    - Nickname-based duplicate detection
+    - Row 2 insertion for new/updated data
+    - Dashboard blank value handling
+    - Sorting by DATETIME SCRAP descending
     """
     
     def __init__(self, client=None):
@@ -113,9 +114,9 @@ class SheetsManager:
         # Optional sheets
         self.tags_ws = self._get_sheet_if_exists(Config.SHEET_TAGS)
         
-        # Load data
-        self.tags_mapping = {}  # nickname-based (legacy)
-        self.existing_profiles = {}  # ID-based: {id: {row, data}}
+        # Load data - STEP-6: Index by nickname (lowercase)
+        self.tags_mapping = {}
+        self.existing_profiles = {}  # {nickname_lower: {row, data}}
         
         self._init_headers()
         self._load_tags()
@@ -181,7 +182,7 @@ class SheetsManager:
             log_msg(f"OnlineLog header init failed: {e}")
     
     def _load_tags(self):
-        """Load tags mapping from Tags sheet (nickname-based for legacy compatibility)"""
+        """Load tags mapping from Tags sheet"""
         if not self.tags_ws:
             return
         
@@ -193,7 +194,7 @@ class SheetsManager:
             headers = all_values[0]
             for col_idx, header in enumerate(headers):
                 tag_name = clean_data(header)
-                if not tag_name:
+                if not tag_name or tag_name == "BLANK":
                     continue
                 
                 for row in all_values[1:]:
@@ -213,25 +214,25 @@ class SheetsManager:
             log_msg(f"Tags load failed: {e}")
     
     def _load_existing_profiles(self):
-        """Load existing profiles indexed by ID (Column A)
+        """Load existing profiles indexed by NICKNAME (lowercase)
         
-        PRIMARY KEY: ID is the immutable primary key.
-        Only profiles with valid ID are cached.
+        STEP-6: Primary match key is NICK NAME, not ID
         """
         try:
             rows = self.profiles_ws.get_all_values()[1:]  # Skip header
-            id_idx = Config.COLUMN_ORDER.index("ID")
+            nick_idx = Config.COLUMN_ORDER.index("NICK NAME")
             
             for i, row in enumerate(rows, start=2):
-                if len(row) > id_idx:
-                    profile_id = row[id_idx].strip()  # Keep as string, preserve leading zeros
-                    if profile_id:  # Only cache profiles with ID
-                        self.existing_profiles[profile_id] = {
+                if len(row) > nick_idx:
+                    nickname = row[nick_idx].strip()
+                    if nickname and nickname != "BLANK":
+                        key = nickname.lower()
+                        self.existing_profiles[key] = {
                             'row': i,
                             'data': row
                         }
             
-            log_msg(f"Loaded {len(self.existing_profiles)} existing profiles (indexed by ID)")
+            log_msg(f"Loaded {len(self.existing_profiles)} existing profiles (indexed by nickname)")
         
         except Exception as e:
             log_msg(f"Failed to load existing profiles: {e}")
@@ -239,31 +240,12 @@ class SheetsManager:
     # ==================== PROFILE OPERATIONS ====================
     
     def _compute_profile_state(self, profile_data):
-        """Compute normalized PROFILE_STATE from scraper signals
-        
-        State Mapping Logic:
-        - ACTIVE: Verified, functioning profile
-        - UNVERIFIED: Account exists but not verified
-        - BANNED: Account suspended/blocked by platform
-        - DEAD: Profile deleted, not found, or permanently unavailable
-        
-        Detection Rules:
-        1. Check __skip_reason first (scraper-level signals)
-        2. Check STATUS field (profile-level signals)
-        3. Default to ACTIVE if no issues detected
-        
-        Args:
-            profile_data (dict): Raw profile data from scraper
-            
-        Returns:
-            str: One of ACTIVE | UNVERIFIED | BANNED | DEAD
-        """
+        """Compute normalized PROFILE_STATE from scraper signals"""
         skip_reason = (profile_data.get('__skip_reason') or '').lower()
         status = (profile_data.get('STATUS') or '').strip()
         intro = (profile_data.get('INTRO') or '').lower()
         
         # DEAD: Profile not found, deleted, or inaccessible
-        # Signals: page timeout, 404, profile not found
         if skip_reason:
             if 'timeout' in skip_reason or 'not found' in skip_reason:
                 return Config.PROFILE_STATE_DEAD
@@ -271,26 +253,26 @@ class SheetsManager:
                 return Config.PROFILE_STATE_DEAD
         
         # BANNED: Account suspended by platform
-        # Signals: STATUS="Banned" OR INTRO contains suspension text
         if status == 'Banned':
             return Config.PROFILE_STATE_BANNED
         if 'suspend' in intro or 'banned' in intro or 'blocked' in intro:
             return Config.PROFILE_STATE_BANNED
         
         # UNVERIFIED: Account exists but not verified
-        # Signals: STATUS="Unverified"
         if status == 'Unverified':
             return Config.PROFILE_STATE_UNVERIFIED
         
         # ACTIVE: Default for verified, functioning profiles
-        # Signals: STATUS="Verified" or STATUS="Normal" or no issues
         return Config.PROFILE_STATE_ACTIVE
     
     def write_profile(self, profile_data):
-        """Write profile to ProfilesTarget sheet using ID as primary key
+        """Write profile to ProfilesTarget sheet
         
-        PRIMARY KEY: Column A (ID) is used for all lookups.
-        Nicknames are mutable metadata only.
+        STEP-6 Logic:
+        - Duplicate check by NICKNAME (lowercase)
+        - If duplicate: Update existing row + move to Row 2
+        - If new: Insert at Row 2
+        - Inline update format: "old_value → new_value"
         
         Args:
             profile_data (dict): Profile data with all fields
@@ -298,12 +280,11 @@ class SheetsManager:
         Returns:
             dict: {"status": "new|updated|unchanged", "changed_fields": [...]}
         """
-        profile_id = (profile_data.get("ID") or "").strip()
         nickname = (profile_data.get("NICK NAME") or "").strip()
         
-        # Warn if ID missing
-        if not profile_id:
-            log_msg(f"Warning: Profile {nickname} has no ID, appending as new", "WARNING")
+        if not nickname or nickname == "BLANK":
+            log_msg("Warning: Profile has no nickname, skipping", "WARNING")
+            return {"status": "error", "error": "Missing nickname"}
         
         # Add scrape timestamp
         profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
@@ -311,98 +292,110 @@ class SheetsManager:
         # Compute normalized PROFILE_STATE
         profile_data["PROFILE_STATE"] = self._compute_profile_state(profile_data)
         
-        # Add tags if available (tags use nickname for legacy compatibility)
-        if nickname:
-            tags = self.tags_mapping.get(nickname.lower())
-            if tags:
-                profile_data["TAGS"] = tags
+        # Add tags if available
+        tags = self.tags_mapping.get(nickname.lower())
+        if tags:
+            profile_data["TAGS"] = tags
         
-        # Build row data
+        # Build row data with BLANK handling
         row_data = []
         for col in Config.COLUMN_ORDER:
-            value = clean_data(profile_data.get(col, ""))
+            value = profile_data.get(col, "BLANK")
+            # Clean and apply BLANK logic
+            if not value or str(value).strip() == "":
+                value = "BLANK"
+            else:
+                value = clean_data(value)
             row_data.append(value)
         
-        # Lookup by ID (primary key)
-        existing = self.existing_profiles.get(profile_id) if profile_id else None
+        # Lookup by nickname (primary match key)
+        key = nickname.lower()
+        existing = self.existing_profiles.get(key)
         
         if existing:
-            # Update existing profile
-            row_num = existing['row']
+            # DUPLICATE FOUND: Update existing row
+            old_row_num = existing['row']
             old_data = existing['data']
             
-            # Detect changes
+            # Detect changes with inline update format
             changed_fields = []
+            updated_row = []
+            
             for i, col in enumerate(Config.COLUMN_ORDER):
-                if col in {"DATETIME SCRAP", "LAST POST", "LAST POST TIME", "JOINED", "PROFILE LINK"}:
-                    continue
-                old_val = old_data[i] if i < len(old_data) else ""
+                old_val = old_data[i] if i < len(old_data) else "BLANK"
                 new_val = row_data[i]
+                
+                # Skip timestamp columns from change detection
+                if col in {"DATETIME SCRAP", "LAST POST", "LAST POST TIME"}:
+                    updated_row.append(new_val)
+                    continue
+                
                 if old_val != new_val:
                     changed_fields.append(col)
+                    # STEP-6: Inline update format
+                    updated_row.append(f"{old_val} → {new_val}")
+                else:
+                    updated_row.append(new_val)
             
-            # Update row
-            end_col = self._column_letter(len(Config.COLUMN_ORDER) - 1)
-            self.profiles_ws.update(values=[row_data], range_name=f"A{row_num}:{end_col}{row_num}")
+            # Delete old row
+            self.profiles_ws.delete_rows(old_row_num)
             time.sleep(Config.SHEET_WRITE_DELAY)
             
-            # Update cache with new data
-            self.existing_profiles[profile_id] = {'row': row_num, 'data': row_data}
+            # Insert updated row at Row 2 (after header)
+            self.profiles_ws.insert_row(updated_row, index=2)
+            time.sleep(Config.SHEET_WRITE_DELAY)
+            
+            # Update cache
+            self.existing_profiles[key] = {'row': 2, 'data': updated_row}
             
             status = "updated" if changed_fields else "unchanged"
+            log_msg(f"Updated {nickname} (moved to Row 2)", "OK")
             return {"status": status, "changed_fields": changed_fields}
         
         else:
-            # Add new profile
-            self.profiles_ws.append_row(row_data)
+            # NEW PROFILE: Insert at Row 2
+            self.profiles_ws.insert_row(row_data, index=2)
             time.sleep(Config.SHEET_WRITE_DELAY)
             
-            last_row = len(self.profiles_ws.get_all_values())
+            # Add to cache
+            self.existing_profiles[key] = {'row': 2, 'data': row_data}
             
-            # Add to cache only if ID exists
-            if profile_id:
-                self.existing_profiles[profile_id] = {'row': last_row, 'data': row_data}
-            
+            log_msg(f"New profile {nickname} added at Row 2", "OK")
             return {"status": "new", "changed_fields": list(Config.COLUMN_ORDER)}
     
-    def get_profile(self, profile_id):
-        """Fetch existing profile data by ID (primary key)
+    def get_profile(self, nickname):
+        """Fetch existing profile data by nickname
         
         Args:
-            profile_id (str): Profile ID from Column A
+            nickname (str): Profile nickname
             
         Returns:
             dict: Profile data dictionary, or None if not found
         """
-        if not profile_id:
+        if not nickname:
             return None
             
-        record = self.existing_profiles.get(profile_id.strip())
+        key = nickname.strip().lower()
+        record = self.existing_profiles.get(key)
         if not record:
             return None
             
         data = record['data']
         profile_dict = {}
         for idx, col in enumerate(Config.COLUMN_ORDER):
-            value = data[idx] if idx < len(data) else ""
+            value = data[idx] if idx < len(data) else "BLANK"
             profile_dict[col] = value
         return profile_dict
 
     def create_profile(self, profile_data):
-        """Create a new profile row (compatibility wrapper)"""
+        """Create a new profile row"""
         return self.write_profile(profile_data)
 
-    def update_profile(self, profile_id, profile_data):
-        """Update an existing profile row (compatibility wrapper)
-        
-        Args:
-            profile_id (str): Profile ID (primary key)
-            profile_data (dict): Updated profile data
-        """
-        # Ensure ID is set for lookup
-        if profile_id:
+    def update_profile(self, nickname, profile_data):
+        """Update an existing profile row"""
+        if nickname:
             profile_data = dict(profile_data)
-            profile_data["ID"] = profile_id
+            profile_data["NICK NAME"] = nickname
         return self.write_profile(profile_data)
 
     # ==================== TARGET OPERATIONS ====================
@@ -468,7 +461,7 @@ class SheetsManager:
             log_msg(f"Failed to update target status: {e}", "ERROR")
 
     def update_runlist_status(self, row, status, remarks):
-        """Backward compatible alias for target status updates"""
+        """Backward compatible alias"""
         return self.update_target_status(row, status, remarks)
 
     # ==================== ONLINE LOG OPERATIONS ====================
@@ -490,10 +483,10 @@ class SheetsManager:
     def update_dashboard(self, metrics):
         """Update dashboard with run metrics
         
-        Includes profile state breakdown
+        STEP-6: Populate all columns with "BLANK" if missing
         """
         try:
-            # Basic metrics
+            # Basic metrics with BLANK fallback
             row = [
                 metrics.get("Run Number", 1),
                 metrics.get("Last Run", get_pkt_time().strftime("%d-%b-%y %I:%M %p")),
@@ -504,19 +497,18 @@ class SheetsManager:
                 metrics.get("Updated Profiles", 0),
                 metrics.get("Unchanged Profiles", 0),
                 metrics.get("Trigger", "manual"),
-                metrics.get("Start", ""),
-                metrics.get("End", ""),
+                metrics.get("Start", "BLANK"),
+                metrics.get("End", "BLANK"),
             ]
             
-            # Add state breakdown if available
+            # STEP-6: Always populate state columns (use BLANK if missing)
             state_counts = metrics.get("state_counts", {})
-            if state_counts:
-                row.extend([
-                    state_counts.get("ACTIVE", 0),
-                    state_counts.get("UNVERIFIED", 0),
-                    state_counts.get("BANNED", 0),
-                    state_counts.get("DEAD", 0)
-                ])
+            row.extend([
+                state_counts.get("ACTIVE", "BLANK"),
+                state_counts.get("UNVERIFIED", "BLANK"),
+                state_counts.get("BANNED", "BLANK"),
+                state_counts.get("DEAD", "BLANK")
+            ])
             
             self.dashboard_ws.append_row(row)
             time.sleep(Config.SHEET_WRITE_DELAY)
@@ -538,7 +530,10 @@ class SheetsManager:
         return result
 
     def sort_profiles_by_date(self):
-        """Sort profiles sheet by DATETIME SCRAP descending"""
+        """Sort profiles sheet by DATETIME SCRAP descending
+        
+        STEP-6: Always sort after bulk updates
+        """
         try:
             all_rows = self.profiles_ws.get_all_values()
             if len(all_rows) <= 1:
@@ -553,17 +548,20 @@ class SheetsManager:
 
             def parse_date(row):
                 try:
-                    value = row[date_idx]
-                except IndexError:
-                    value = ""
-                try:
-                    return datetime.strptime(value, "%d-%b-%y %I:%M %p") if value else datetime.min
+                    value = row[date_idx] if date_idx < len(row) else ""
+                    if not value or value == "BLANK":
+                        return datetime.min
+                    return datetime.strptime(value, "%d-%b-%y %I:%M %p")
                 except Exception:
                     return datetime.min
 
             rows.sort(key=parse_date, reverse=True)
+            self.profiles_ws.clear()
             self.profiles_ws.update([header] + rows)
-            # Refresh cache to align row numbers after sort
+            time.sleep(Config.SHEET_WRITE_DELAY)
+            
+            # Refresh cache after sort
             self._load_existing_profiles()
+            log_msg("Profiles sorted by date", "OK")
         except Exception as e:
             log_msg(f"Failed to sort profiles by date: {e}", "ERROR")
