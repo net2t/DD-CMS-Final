@@ -1,0 +1,47 @@
+name: Online Mode Scraper
+
+on:
+  # Run every 15 minutes
+  schedule:
+    - cron: '*/15 * * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: 'Batch size'
+        required: false
+        default: '20'
+        type: string
+
+jobs:
+  scrape-online:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run Online Mode Scraper
+        env:
+          DAMADAM_USERNAME: ${{ secrets.DAMADAM_USERNAME }}
+          DAMADAM_PASSWORD: ${{ secrets.DAMADAM_PASSWORD }}
+          DAMADAM_USERNAME_2: ${{ secrets.DAMADAM_USERNAME_2 }}
+          DAMADAM_PASSWORD_2: ${{ secrets.DAMADAM_PASSWORD_2 }}
+          GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
+        run: |
+          python main.py \
+            --mode online \
+            --batch-size ${{ github.event.inputs.batch_size || '20' }}
