@@ -1,4 +1,4 @@
-"\"\"""
+"""
 RunContext holds the shared state for a single scraper run, including the browser
 instance, login status, and access to the SheetsManager.
 """
