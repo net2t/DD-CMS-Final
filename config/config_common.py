@@ -45,6 +45,7 @@ class Config:
     COOKIE_FILE = SCRIPT_DIR / 'damadam_cookies.pkl'
     
     # ==================== URLS ====================
+    BASE_URL = "https://damadam.pk"
     LOGIN_URL = "https://damadam.pk/login/"
     HOME_URL = "https://damadam.pk/"
     ONLINE_USERS_URL = "https://damadam.pk/online_kon/"

@@ -36,8 +36,8 @@ Examples:
     
     parser.add_argument(
         'mode',
-        choices=['target', 'online'],
-        help='Scraping mode: `target` (from RunList sheet) or `online` (from online users list)'
+        choices=['target', 'online', 'test'],
+        help='Scraping mode: `target` (from RunList sheet), `online` (from online users list), or `test` (runs a predefined set of test profiles)'
     )
     
     parser.add_argument(

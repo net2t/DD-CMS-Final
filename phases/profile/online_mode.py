@@ -15,6 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 from config.config_common import Config
+from config.selectors import OnlineUserSelectors
 from utils.ui import get_pkt_time, log_msg
 from phases.profile.target_mode import ProfileScraper
 
@@ -46,7 +47,7 @@ class OnlineUsersParser:
             
             # Wait for page to load
             WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "h1.clb.cxl.lsp"))
+                EC.presence_of_element_located((By.CSS_SELECTOR, OnlineUserSelectors.PAGE_HEADER))
             )
             
             # Find all nickname elements
@@ -54,7 +55,7 @@ class OnlineUsersParser:
             
             # Strategy 1: Find <b><bdi> elements with nicknames
             try:
-                elements = self.driver.find_elements(By.CSS_SELECTOR, "b.clb bdi")
+                elements = self.driver.find_elements(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_1)
                 for elem in elements:
                     nick = elem.text.strip()
                     if nick:
@@ -66,7 +67,7 @@ class OnlineUsersParser:
             try:
                 forms = self.driver.find_elements(
                     By.CSS_SELECTOR, 
-                    "form[action*='/search/nickname/redirect/']"
+                    OnlineUserSelectors.NICKNAME_STRATEGY_2
                 )
                 
                 for form in forms:
@@ -84,11 +85,11 @@ class OnlineUsersParser:
             
             # Strategy 3: Parse from list items
             try:
-                items = self.driver.find_elements(By.CSS_SELECTOR, "li.mbl.cl.sp")
+                items = self.driver.find_elements(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_3)
                 for item in items:
                     # Find <b> tag inside
                     try:
-                        b_tag = item.find_element(By.CSS_SELECTOR, "b.clb")
+                        b_tag = item.find_element(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_3_CHILD)
                         nick = b_tag.text.strip()
                         if nick:
                             nicknames.add(nick)

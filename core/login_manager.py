@@ -13,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from config.config_common import Config
+from config.selectors import LoginSelectors
 from .browser_manager import save_cookies, load_cookies, log_msg
 
 
@@ -127,25 +128,25 @@ class LoginManager:
         try:
             nick = WebDriverWait(self.driver, 8).until(
                 EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "#nick, input[name='nick']")
+                    (By.CSS_SELECTOR, LoginSelectors.USERNAME_FIELD)
                 )
             )
 
             try:
                 pw = self.driver.find_element(
                     By.CSS_SELECTOR,
-                    "#pass, input[name='pass']"
+                    LoginSelectors.PASSWORD_FIELD_1
                 )
             except:
                 pw = WebDriverWait(self.driver, 8).until(
                     EC.presence_of_element_located(
-                        (By.CSS_SELECTOR, "input[type='password']")
+                        (By.CSS_SELECTOR, LoginSelectors.PASSWORD_FIELD_2)
                     )
                 )
 
             btn = self.driver.find_element(
                 By.CSS_SELECTOR,
-                "button[type='submit'], form button"
+                LoginSelectors.SUBMIT_BUTTON
             )
 
             nick.clear()

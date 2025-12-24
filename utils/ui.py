@@ -41,8 +41,18 @@ def log_msg(msg, level="INFO"):
         "LOGIN": "blue",
         "TIMEOUT": "dim yellow"
     }
+    icon_map = {
+        "INFO": "ℹ️",
+        "OK": "✅",
+        "WARNING": "⚠️",
+        "ERROR": "❌",
+        "SCRAPING": "🔍",
+        "LOGIN": "🔑",
+        "TIMEOUT": "⏳"
+    }
     style = style_map.get(level, "white")
-    console.print(f"[{ts}] ", Text(f"[{level}]", style=style), f" {msg}")
+    icon = icon_map.get(level, "➡️")
+    console.print(f"[{ts}] {icon} ", Text(f"[{level}]", style=style), f" {msg}")
 
 def print_header(title, version):
     """

@@ -20,7 +20,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from config.config_common import Config
+from config.selectors import ProfileSelectors
 from utils.ui import get_pkt_time, log_msg
+from utils.url_builder import get_profile_url, get_public_profile_url
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -225,19 +227,19 @@ class ProfileScraper:
             # Find all mehfil entries
             mehfil_entries = self.driver.find_elements(
                 By.CSS_SELECTOR, 
-                "div.mbl.mtl a[href*='/mehfil/public/']"
+                ProfileSelectors.MEHFIL_ENTRIES
             )
             
             for entry in mehfil_entries:
                 try:
                     # Extract mehfil name
-                    name_elem = entry.find_element(By.CSS_SELECTOR, "div.ow")
+                    name_elem = entry.find_element(By.CSS_SELECTOR, ProfileSelectors.MEHFIL_NAME)
                     mehfil_data['MEH NAME'].append(clean_text(name_elem.text))
                     
                     # Extract mehfil types
                     type_elems = entry.find_elements(
                         By.CSS_SELECTOR, 
-                        "div[style*='background:#f8f7f9']"
+                        ProfileSelectors.MEHFIL_TYPE
                     )
                     types = [clean_text(t.text) for t in type_elems]
                     mehfil_data['MEH TYPE'].append(", ".join(types))
@@ -249,7 +251,7 @@ class ProfileScraper:
                     # Extract join date
                     date_elem = entry.find_element(
                         By.CSS_SELECTOR, 
-                        "div.cs.sp"
+                        ProfileSelectors.MEHFIL_DATE
                     )
                     date_text = clean_text(date_elem.text)
                     if 'since' in date_text.lower():
@@ -268,7 +270,7 @@ class ProfileScraper:
     def _extract_friend_status(self, page_source):
         """Extract friend status from follow button"""
         try:
-            button = self.driver.find_element(By.XPATH, "//form[contains(@action, '/follow/')]/button")
+            button = self.driver.find_element(By.XPATH, ProfileSelectors.FRIEND_STATUS_BUTTON)
             label = button.text.strip().upper()
             if "UNFOLLOW" in label:
                 return "Yes"
@@ -349,14 +351,14 @@ class ProfileScraper:
             log_msg(f"Invalid nickname: {nickname}", "ERROR")
             return None
         
-        url = f"https://damadam.pk/users/{clean_nickname}/"
+        url = get_profile_url(clean_nickname)
         
         try:
             log_msg(f"Scraping: {nickname}", "SCRAPING")
             
             self.driver.get(url)
             WebDriverWait(self.driver, 12).until(
-                EC.presence_of_element_located((By.XPATH, "//h1"))
+                EC.presence_of_element_located((By.XPATH, ProfileSelectors.NICKNAME_HEADER))
             )
 
             page_source = self.driver.page_source
@@ -380,7 +382,7 @@ class ProfileScraper:
             data.update({
                 "ID": user_id,
                 "PROFILE LINK": url.rstrip('/'),
-                "POST URL": f"https://damadam.pk/profile/public/{clean_nickname}",
+                "POST URL": get_public_profile_url(clean_nickname),
                 "FRIEND": friend_status,
                 "FRD": friend_status,
                 "RURL": rank_image,
@@ -416,8 +418,8 @@ class ProfileScraper:
             
             # Extract intro / bio text
             intro_xpaths = [
-                "//b[contains(normalize-space(.), 'Intro')]/following-sibling::span[1]",
-                "//span[contains(@class,'nos')]"
+                ProfileSelectors.INTRO_TEXT_B,
+                ProfileSelectors.INTRO_TEXT_SPAN
             ]
             intro_text = ""
             for xp in intro_xpaths:
@@ -434,15 +436,15 @@ class ProfileScraper:
             # Extract profile fields using multiple selector patterns
             field_selectors = [
                 # Pattern 1: <b>Label:</b> <span>Value</span>
-                ("//b[contains(normalize-space(.), '{}:')]/following-sibling::span[1]", 
+                (ProfileSelectors.DETAIL_PATTERN_1, 
                  lambda e: e.text.strip() if e else None),
                 
                 # Pattern 2: <div><b>Label:</b> Value</div>
-                ("//div[contains(., '{}:') and not(contains(., '<img'))]",
+                (ProfileSelectors.DETAIL_PATTERN_2,
                  lambda e: e.text.split(':', 1)[1].strip() if e and ':' in e.text else None),
                 
                 # Pattern 3: <span class="label">Label:</span> <span>Value</span>
-                ("//span[contains(@class, 'label') and contains(., '{}:')]/following-sibling::span[1]",
+                (ProfileSelectors.DETAIL_PATTERN_3,
                  lambda e: e.text.strip() if e else None)
             ]
             
@@ -489,7 +491,7 @@ class ProfileScraper:
 
 # ==================== TARGET MODE RUNNER ====================
 
-def run_target_mode(driver, sheets, max_profiles=0):
+def run_target_mode(driver, sheets, max_profiles=0, targets=None):
     """
     Orchestrates the scraping process for the 'target' mode.
 
@@ -520,12 +522,13 @@ def run_target_mode(driver, sheets, max_profiles=0):
         "total_found": 0
     }
 
-    # Get pending targets
-    try:
-        targets = sheets.get_pending_targets()
-    except Exception as e:
-        log_msg(f"Error getting pending targets: {e}", "ERROR")
-        return stats
+    # Get pending targets if not provided
+    if targets is None:
+        try:
+            targets = sheets.get_pending_targets()
+        except Exception as e:
+            log_msg(f"Error getting pending targets: {e}", "ERROR")
+            return stats
     
     if not targets:
         log_msg("No pending targets found")
@@ -551,11 +554,6 @@ def run_target_mode(driver, sheets, max_profiles=0):
                 continue
                 
             row = target.get('row')
-            if not row:
-                log_msg(f"Missing row number for {nickname}", "ERROR")
-                stats["failed"] += 1
-                stats["processed"] += 1
-                continue
                 
             log_msg(f"Processing {i}/{len(targets)}: {nickname}")
             
@@ -566,7 +564,8 @@ def run_target_mode(driver, sheets, max_profiles=0):
             if not profile_data:
                 log_msg(f"Failed to scrape {nickname}")
                 stats["failed"] += 1
-                sheets.update_target_status(row, "Error", "Failed to scrape profile")
+                if row:
+                    sheets.update_target_status(row, "Error", "Failed to scrape profile")
                 time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
                 continue
             
@@ -578,7 +577,8 @@ def run_target_mode(driver, sheets, max_profiles=0):
                 
                 # Still write to sheet for record keeping
                 sheets.write_profile(profile_data)
-                sheets.update_target_status(row, "Error", skip_reason)
+                if row:
+                    sheets.update_target_status(row, "Error", skip_reason)
                 time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
                 continue
             
@@ -591,21 +591,24 @@ def run_target_mode(driver, sheets, max_profiles=0):
                 stats[write_status] += 1
                 
                 remarks = f"New profile" if write_status == "new" else f"Profile {write_status}"
-                sheets.update_target_status(row, "Done", remarks)
+                if row:
+                    sheets.update_target_status(row, "Done", remarks)
                 log_msg(f"{nickname}: {write_status}", "OK")
             else:
                 log_msg(f"{nickname}: write failed")
                 stats["failed"] += 1
-                sheets.update_target_status(row, "Error", "Failed to write profile")
+                if row:
+                    sheets.update_target_status(row, "Error", "Failed to write profile")
             
         except Exception as e:
             log_msg(f"Error processing {nickname}: {str(e)}", "ERROR")
             stats["failed"] += 1
             stats["processed"] += 1
-            try:
-                sheets.update_target_status(row, "Error", f"Processing error: {str(e)[:100]}")
-            except:
-                log_msg("Failed to update target status", "ERROR")
+            if row:
+                try:
+                    sheets.update_target_status(row, "Error", f"Processing error: {str(e)[:100]}")
+                except:
+                    log_msg("Failed to update target status", "ERROR")
         
         # Add delay between requests
         if i < len(targets):
