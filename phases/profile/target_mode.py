@@ -1,5 +1,11 @@
 """
-Target Mode Scraper - Scrapes users from Target sheet
+Target Mode scraping logic.
+
+This module contains the core components for the 'target' scraping mode. It defines
+the ProfileScraper class, which is responsible for extracting detailed information
+from an individual user's profile page. It also includes the `run_target_mode`
+function, which orchestrates the process of fetching a list of target users from
+the 'RunList' sheet and scraping each one.
 """
 
 import time
@@ -13,7 +19,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
-from config import Config
+from config.config_common import Config
 from utils.ui import get_pkt_time, log_msg
 
 # ==================== HELPER FUNCTIONS ====================
@@ -193,9 +199,17 @@ def validate_nickname(nickname):
 # ==================== PROFILE SCRAPER ====================
 
 class ProfileScraper:
-    """Scrapes individual user profiles"""
+    """
+    A dedicated scraper for extracting data from a single user profile page.
+
+    This class encapsulates all the logic for navigating to a user's profile,
+    parsing the HTML, and extracting various data points like user info, mehfil
+    details, friend status, and post information. It is designed to be resilient
+    to minor page layout changes by using multiple selectors for key data points.
+    """
     
     def __init__(self, driver):
+        """Initializes the scraper with the WebDriver instance."""
         self.driver = driver
     
     def _extract_mehfil_details(self, page_source):
@@ -314,11 +328,20 @@ class ProfileScraper:
         return ""
     
     def scrape_profile(self, nickname, source="Target"):
-        """Scrape complete profile data
-        
+        """
+        Scrapes a complete user profile.
+
+        Navigates to the user's profile URL and systematically extracts all
+        available information, handling various states like suspended or
+        unverified accounts. It returns a structured dictionary of the data.
+
+        Args:
+            nickname (str): The nickname of the user to scrape.
+            source (str): The source from which this scrape was initiated (e.g., 'Target').
+
         Returns:
-            dict: Profile data with all fields populated
-                  Returns None if profile cannot be scraped
+            dict or None: A dictionary containing the scraped profile data, or None
+                          if a critical error occurs (e.g., page timeout).
         """
         # Sanitize nickname for URL usage
         clean_nickname = sanitize_nickname_for_url(nickname)
@@ -467,15 +490,21 @@ class ProfileScraper:
 # ==================== TARGET MODE RUNNER ====================
 
 def run_target_mode(driver, sheets, max_profiles=0):
-    """Run scraper in Target mode
-    
+    """
+    Orchestrates the scraping process for the 'target' mode.
+
+    This function retrieves a list of pending targets from the 'RunList' sheet,
+    iterates through them, and uses the ProfileScraper to scrape each one. It
+    updates the sheet with the status of each target ('Done' or 'Error') and
+    compiles statistics on the overall run.
+
     Args:
-        driver: WebDriver instance
-        sheets: SheetsManager instance
-        max_profiles: Maximum number of profiles to process (0 for unlimited)
-        
+        driver: The Selenium WebDriver instance.
+        sheets: An initialized SheetsManager instance.
+        max_profiles (int): The maximum number of profiles to process (0 for all).
+
     Returns:
-        dict: Statistics about the scraping operation
+        dict: A dictionary of statistics from the scraping run.
     """
     log_msg("=== TARGET MODE STARTED ===")
     

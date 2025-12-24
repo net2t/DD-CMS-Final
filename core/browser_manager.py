@@ -1,5 +1,10 @@
 """
-Core browser utilities (extracted from browser.py)
+Core browser management utilities.
+
+This module contains the BrowserManager class, which is a wrapper around the
+Selenium WebDriver for starting, configuring, and stopping the browser.
+It also includes helper functions for saving and loading cookies to persist
+login sessions across multiple runs.
 """
 
 import time
@@ -20,13 +25,23 @@ from utils.ui import log_msg
 
 
 class BrowserManager:
-    """Manages Chrome browser instance"""
+    """Manages the lifecycle of the Chrome WebDriver instance."""
 
     def __init__(self):
+        """Initializes the BrowserManager, but does not start the browser."""
         self.driver = None
 
     def start(self):
-        """Initialize Chrome browser"""
+        """
+        Initializes and configures the Chrome WebDriver.
+
+        Sets up headless mode, window size, and various options to avoid
+        detection. It can use a custom ChromeDriver if the path is specified
+        in the config.
+
+        Returns:
+            The configured WebDriver instance, or None on failure.
+        """
         log_msg("Initializing Chrome browser...")
         try:
             opts = Options()
@@ -59,7 +74,7 @@ class BrowserManager:
             return None
 
     def close(self):
-        """Close browser safely"""
+        """Safely closes the WebDriver instance, ignoring any errors."""
         if self.driver:
             try:
                 self.driver.quit()
@@ -69,7 +84,18 @@ class BrowserManager:
 
 
 def save_cookies(driver):
-    """Save cookies to file"""
+    """
+    Saves the current browser session cookies to a file using pickle.
+
+    This allows the scraper to persist logins between sessions, avoiding the need
+    to re-authenticate with a username and password every time.
+
+    Args:
+        driver: The Selenium WebDriver instance.
+
+    Returns:
+        bool: True if cookies were saved successfully, False otherwise.
+    """
     try:
         with open(Config.COOKIE_FILE, 'wb') as f:
             cookies = driver.get_cookies()
@@ -82,7 +108,18 @@ def save_cookies(driver):
 
 
 def load_cookies(driver):
-    """Load cookies from file"""
+    """
+    Loads cookies from a file and adds them to the current browser session.
+
+    This is used at the start of a run to attempt to restore a previous login
+    session, which is faster and less likely to trigger security measures.
+
+    Args:
+        driver: The Selenium WebDriver instance.
+
+    Returns:
+        bool: True if cookies were loaded successfully, False otherwise.
+    """
     try:
         if not Config.COOKIE_FILE.exists():
             log_msg("No saved cookies found")

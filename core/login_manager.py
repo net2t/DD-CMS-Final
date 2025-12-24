@@ -1,6 +1,10 @@
 """
-Login utilities extracted from browser.py
-DO NOT CHANGE LOGIC
+Manages the login process for the DamaDam website.
+
+This module encapsulates the logic for authenticating the scraper's session,
+using either saved cookies for a quick login or credentials for a fresh start.
+It is designed to be resilient, with a fallback to a secondary account if the
+primary one fails.
 """
 
 import time
@@ -13,13 +17,22 @@ from .browser_manager import save_cookies, load_cookies, log_msg
 
 
 class LoginManager:
-    """Handles DamaDam login"""
+    """Handles the DamaDam authentication process."""
 
     def __init__(self, driver):
+        """Initializes the LoginManager with the WebDriver instance."""
         self.driver = driver
 
     def login(self):
-        """Attempt login with saved cookies or credentials"""
+        """Orchestrates the login process.
+
+        It first attempts a quick login using saved session cookies. If that fails
+        or no cookies are available, it proceeds with a full, fresh login using
+        stored credentials.
+
+        Returns:
+            bool: True if login is successful, False otherwise.
+        """
         log_msg("Starting authentication...", "LOGIN")
 
         try:
@@ -33,6 +46,7 @@ class LoginManager:
             return False
 
     def _try_cookie_login(self):
+        """Attempts to log in by loading saved cookies into the browser."""
         log_msg("Attempting cookie-based login...", "LOGIN")
 
         try:
@@ -56,6 +70,13 @@ class LoginManager:
             return False
 
     def _fresh_login(self):
+        """
+        Performs a fresh login using username and password.
+
+        It will try the primary account first. If that fails and a secondary
+        account is configured, it will attempt to log in with the secondary
+        credentials.
+        """
         log_msg("Starting fresh login...", "LOGIN")
 
         try:
@@ -88,6 +109,19 @@ class LoginManager:
             return False
 
     def _try_account(self, username, password, label):
+        """
+        Attempts to log in with a specific set of credentials.
+
+        Finds the username and password fields, fills them, and submits the form.
+
+        Args:
+            username (str): The account username.
+            password (str): The account password.
+            label (str): A label for logging (e.g., 'Primary', 'Secondary').
+
+        Returns:
+            bool: True on successful login, False otherwise.
+        """
         log_msg(f"Attempting login with {label} account...", "LOGIN")
 
         try:

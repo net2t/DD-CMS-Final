@@ -91,16 +91,24 @@ def create_gsheets_client(credentials_json=None, credentials_path=None):
 # ==================== SHEETS MANAGER ====================
 
 class SheetsManager:
-    """Manages all Google Sheets operations
-    
-    STEP-6 Updates:
-    - Nickname-based duplicate detection
-    - Row 2 insertion for new/updated data
-    - Dashboard blank value handling
-    - Sorting by DATETIME SCRAP descending
+    """
+    Manages all interactions with the Google Sheets document.
+
+    This class acts as a high-level API for all sheet-related operations. It handles
+    authentication, worksheet creation, header initialization, and provides methods
+    for reading and writing data in a structured way. It also contains the core logic
+    for caching existing profiles to avoid redundant reads and for handling duplicate
+    entries based on nicknames.
     """
     
     def __init__(self, client=None, credentials_json=None, credentials_path=None):
+        """
+        Initializes the SheetsManager.
+
+        Sets up the connection to Google Sheets, gets or creates all required
+        worksheets, and pre-loads caches for existing profiles and tags to
+        optimize performance during the run.
+        """
         if client is None:
             client = create_gsheets_client(
                 credentials_json=credentials_json,
@@ -130,7 +138,7 @@ class SheetsManager:
         log_msg("Google Sheets connected successfully", "OK")
     
     def _get_or_create(self, name, cols=20, rows=1000):
-        """Get or create worksheet"""
+        """Safely gets a worksheet by name, creating it if it doesn't exist."""
         try:
             return self.spreadsheet.worksheet(name)
         except WorksheetNotFound:
@@ -138,7 +146,7 @@ class SheetsManager:
             return self.spreadsheet.add_worksheet(title=name, rows=rows, cols=cols)
     
     def _get_sheet_if_exists(self, name):
-        """Get sheet if it exists, return None otherwise"""
+        """Safely gets a worksheet by name, returning None if it doesn't exist."""
         try:
             return self.spreadsheet.worksheet(name)
         except WorksheetNotFound:
@@ -184,7 +192,12 @@ class SheetsManager:
             log_msg(f"Failed to apply header format for '{ws.title}': {e}", "WARNING")
     
     def _load_tags(self):
-        """Load tags mapping from Tags sheet"""
+        """
+        Loads the tag-to-nickname mappings from the 'Tags' sheet.
+
+        This creates an in-memory dictionary that maps a lowercase nickname to a
+        comma-separated string of tags, allowing for quick enrichment of profile data.
+        """
         if not self.tags_ws:
             return
         
@@ -216,7 +229,13 @@ class SheetsManager:
             log_msg(f"Tags load failed: {e}")
     
     def _load_existing_profiles(self):
-        """Load existing profiles indexed by NICKNAME (lowercase)."""
+        """
+        Loads all existing profiles from the 'Profiles' sheet into an in-memory cache.
+
+        The cache is a dictionary where the key is the lowercase nickname and the
+        value contains the row number and the full row data. This is the core
+        mechanism for the nickname-based duplicate detection.
+        """
         try:
             rows = self.profiles_ws.get_all_values()[1:]  # Skip header
             nick_idx = Config.COLUMN_ORDER.index("NICK NAME")
@@ -239,7 +258,21 @@ class SheetsManager:
     # ==================== PROFILE OPERATIONS ====================
 
     def _perform_write_operation(self, operation, *args, **kwargs):
-        """Perform a sheet write operation with retry logic for API rate limits."""
+        """
+        A robust wrapper for all gspread write operations.
+
+        This method automatically handles the Google Sheets API's rate limits (429 errors)
+        by implementing a retry mechanism with an exponential backoff. This makes all
+        write actions more resilient to temporary API issues.
+
+        Args:
+            operation: The gspread worksheet method to call (e.g., `ws.update`).
+            *args: Positional arguments for the operation.
+            **kwargs: Keyword arguments for the operation.
+
+        Returns:
+            bool: True if the operation succeeded, False otherwise.
+        """
         for attempt in range(3):
             try:
                 operation(*args, **kwargs)
@@ -260,7 +293,18 @@ class SheetsManager:
         return False
 
     def _compute_profile_state(self, profile_data):
-        """Compute normalized PROFILE_STATE from scraper signals."""
+        """
+        Computes a normalized profile state based on various scraped data points.
+
+        This centralizes the logic for determining if a profile is ACTIVE, BANNED,
+        UNVERIFIED, or DEAD, making the state logic consistent across the application.
+
+        Args:
+            profile_data (dict): The raw scraped profile data.
+
+        Returns:
+            str: The normalized profile state (e.g., 'ACTIVE').
+        """
         skip_reason = (profile_data.get('__skip_reason') or '').lower()
         status = (profile_data.get('STATUS') or '').strip()
         intro = (profile_data.get('INTRO') or '').lower()
@@ -274,7 +318,25 @@ class SheetsManager:
         return Config.PROFILE_STATE_ACTIVE
 
     def write_profile(self, profile_data):
-        """Write profile to Profiles sheet with nickname-based duplicate handling."""
+        """
+        Writes a profile to the 'Profiles' sheet with advanced duplicate handling.
+
+        This is the primary method for persisting scraped data. Its logic is as follows:
+        1.  It checks if a profile with the same nickname already exists in the cache.
+        2.  If it's a new profile, it's inserted at Row 2.
+        3.  If it's a duplicate, it compares the new data with the old data.
+        4.  If there are changes, it formats the changed cells with an inline diff
+            (e.g., "Before: old\nNow: new"), deletes the old row, and inserts the
+            updated row at Row 2.
+        5.  If there are no changes, it returns an 'unchanged' status.
+        6.  After any structural change (add/delete), the local cache is refreshed.
+
+        Args:
+            profile_data (dict): A dictionary of the scraped profile data.
+
+        Returns:
+            dict: A status dictionary indicating the result ('new', 'updated', 'unchanged', 'error').
+        """
         nickname = (profile_data.get("NICK NAME") or "").strip()
         if not nickname:
             log_msg("Profile has no nickname, skipping write.", "WARNING")
@@ -325,7 +387,15 @@ class SheetsManager:
             return {"status": "error", "error": "Failed to write to sheet"}
 
     def get_profile(self, nickname):
-        """Fetch existing profile data by nickname."""
+        """
+        Fetches a single profile's data from the in-memory cache.
+
+        Args:
+            nickname (str): The nickname of the profile to retrieve.
+
+        Returns:
+            dict or None: A dictionary of the profile data, or None if not found.
+        """
         record = self.existing_profiles.get((nickname or "").strip().lower())
         if not record:
             return None
@@ -335,7 +405,15 @@ class SheetsManager:
     # ==================== TARGET OPERATIONS ====================
 
     def get_pending_targets(self):
-        """Get pending targets from the RunList sheet."""
+        """
+        Retrieves all rows from the 'RunList' sheet that are marked as pending.
+
+        This is used in 'target' mode to build the queue of profiles to be scraped.
+
+        Returns:
+            list[dict]: A list of target dictionaries, each containing the nickname,
+                        row number, and source.
+        """
         try:
             rows = self.target_ws.get_all_values()[1:]
             return [
@@ -348,7 +426,14 @@ class SheetsManager:
             return []
 
     def update_target_status(self, row_num, status, remarks):
-        """Update the status and remarks for a target in the RunList sheet."""
+        """
+        Updates the status and remarks for a specific target in the 'RunList' sheet.
+
+        Args:
+            row_num (int): The row number of the target to update.
+            status (str): The new status (e.g., 'Done', 'Error').
+            remarks (str): Any relevant remarks about the scraping attempt.
+        """
         status_map = {
             'pending': Config.TARGET_STATUS_PENDING,
             'done': Config.TARGET_STATUS_DONE,
@@ -363,14 +448,25 @@ class SheetsManager:
     # ==================== ONLINE LOG OPERATIONS ====================
 
     def log_online_user(self, nickname, timestamp=None):
-        """Log an online user to the OnlineLog sheet."""
+        """
+        Appends a new row to the 'OnlineLog' sheet to record when a user was seen online.
+
+        Args:
+            nickname (str): The nickname of the user.
+            timestamp (str, optional): The timestamp of when the user was seen. Defaults to now.
+        """
         ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
         self._perform_write_operation(self.online_log_ws.append_row, [ts, nickname, ts])
 
     # ==================== DASHBOARD OPERATIONS ====================
 
     def update_dashboard(self, metrics):
-        """Update the dashboard with run metrics, using empty strings for missing values."""
+        """
+        Appends a summary of a scraper run to the 'Dashboard' sheet.
+
+        Args:
+            metrics (dict): A dictionary containing the statistics of the completed run.
+        """
         state_counts = metrics.get("state_counts", {})
         row = [
             metrics.get("Run Number", 1),
@@ -395,7 +491,13 @@ class SheetsManager:
     # ==================== HELPERS ====================
 
     def sort_profiles_by_date(self):
-        """Sort the Profiles sheet by DATETIME SCRAP descending."""
+        """
+        Sorts the entire 'Profiles' sheet by the 'DATETIME SCRAP' column in descending order.
+
+        This is typically called at the end of a run to ensure the most recently
+        scraped or updated profiles are always at the top of the sheet.
+        After sorting, it refreshes the local profile cache to ensure row numbers are correct.
+        """
         log_msg("Sorting profiles by date...")
         try:
             all_rows = self.profiles_ws.get_all_values()

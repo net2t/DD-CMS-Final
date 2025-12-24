@@ -19,9 +19,10 @@ from phases import phase_profile, phase_mehfil, phase_posts
 # ==================== MAIN FUNCTION ====================
 
 def main():
-    """Main entry point"""
+    """Main entry point for the DamaDam Scraper."""
     
-    # Parse arguments
+    # --- Argument Parsing ---
+    # Sets up the command-line interface to accept the mode and other options.
     parser = argparse.ArgumentParser(
         description=f"DamaDam Scraper {Config.SCRIPT_VERSION}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -55,26 +56,35 @@ Examples:
     
     args = parser.parse_args()
     
-    # Print header
+    # --- Header --- 
+    # Displays a styled header with the script title, version, and mode.
     print_header(f"DamaDam Scraper - {args.mode.upper()} MODE", Config.SCRIPT_VERSION)
     
-    # Update config
+    # --- Configuration ---
+    # Updates the global configuration with any command-line arguments.
     Config.BATCH_SIZE = args.batch_size
     Config.MAX_PROFILES_PER_RUN = args.max_profiles
     
-    # Start time
+    # --- Initialization ---
+    # Records the start time and initializes the RunContext, which manages the browser
+    # and other shared resources for the duration of the script run.
     start_time = get_pkt_time()
     
 
     context = RunContext()
     try:
+        # --- Main Execution Block ---
+        # The core logic is wrapped in a try...finally block to ensure cleanup.
+        
         # Start browser and login
         context.start_browser()
         if not context.login():
             log_msg("Login failed", "ERROR")
             return 1
 
-        # Run profile phase
+        # --- Phase Execution ---
+        # The core scraping logic is divided into phases. Currently, only the profile
+        # phase is fully implemented. It returns run statistics and the sheets manager.
         stats, sheets = phase_profile.run(context, args.mode, args.max_profiles)
 
         # Mehfil and Posts phases are stubs for now
@@ -84,7 +94,8 @@ Examples:
         log_msg("=== RUNNING POSTS PHASE (STUB) ===")
         phase_posts.run(context)
 
-        # Sort profiles by date after scraping if a sheet was used
+        # --- Finalization ---
+        # After scraping, sort the profiles sheet by the scrape date for consistency.
         if sheets:
             log_msg("Sorting profiles by date...")
             sheets.sort_profiles_by_date()
@@ -92,7 +103,9 @@ Examples:
         # End time
         end_time = get_pkt_time()
         
-        # Update dashboard and print summary
+        # --- Reporting ---
+        # Updates the dashboard sheet with metrics from the run and prints a final
+        # summary table to the console.
         if sheets:
             trigger = "scheduled" if Config.IS_CI else "manual"
             dashboard_data = {
@@ -115,20 +128,24 @@ Examples:
         return 0
     
     except KeyboardInterrupt:
+        # Handle graceful shutdown on user interruption (Ctrl+C).
         print()
         log_msg("Interrupted by user", "WARNING")
         return 1
     
     except Exception as e:
+        # Catch any unexpected errors and log them before exiting.
         log_msg(f"Fatal error: {e}", "ERROR")
         import traceback
         traceback.print_exc()
         return 1
     
     finally:
+        # --- Cleanup ---
+        # Ensures the browser is always closed, even if errors occur during the run.
         context.close()
 
-# ==================== ENTRY POINT ====================
+# ==================== SCRIPT ENTRY POINT ====================
 
 if __name__ == '__main__':
     sys.exit(main())

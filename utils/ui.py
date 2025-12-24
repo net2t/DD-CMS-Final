@@ -1,7 +1,10 @@
 """
-UI Module for DamaDam Scraper
+UI Module for the DamaDam Scraper.
 
-Handles all terminal output using the 'rich' library for a modern look.
+This module centralizes all terminal output for the application, using the 'rich'
+library to create a modern, readable, and visually appealing command-line
+interface. It provides standardized functions for logging, displaying headers,
+and printing summary tables.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -10,6 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+# Initialize a global Rich Console instance for consistent output.
 console = Console()
 
 def get_pkt_time():
@@ -17,7 +21,16 @@ def get_pkt_time():
     return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=5)
 
 def log_msg(msg, level="INFO"):
-    """Logger using rich for styled output."""
+    """
+    A styled logger that replaces the standard print function.
+
+    It adds a timestamp and a color-coded level (e.g., INFO, OK, ERROR) to each
+    message, making the log output easier to scan and debug.
+
+    Args:
+        msg (str): The message to log.
+        level (str): The log level, which determines the color and label.
+    """
     ts = get_pkt_time().strftime('%H:%M:%S')
     style_map = {
         "INFO": "cyan",
@@ -32,12 +45,31 @@ def log_msg(msg, level="INFO"):
     console.print(f"[{ts}] ", Text(f"[{level}]", style=style), f" {msg}")
 
 def print_header(title, version):
-    """Prints a styled header panel."""
+    """
+    Displays a prominent, styled header at the start of the script.
+
+    It uses a Rich Panel to draw a box around the title and version, clearly
+    announcing the start of the application.
+
+    Args:
+        title (str): The main title to display in the header.
+        version (str): The script version to display.
+    """
     header_text = f"[bold cyan]{title}[/bold cyan]\n[dim]{version}[/dim]"
     console.print(Panel(Text(header_text, justify="center"), expand=False, border_style="blue"))
 
 def print_summary(stats, mode, duration):
-    """Prints a summary of the scraping operation in a table."""
+    """
+    Displays a summary of the completed scraping run in a clean, formatted table.
+
+    It uses a Rich Table to present the final statistics, such as the number of
+    successful, failed, and new profiles, along with the total duration.
+
+    Args:
+        stats (dict): A dictionary of statistics from the run.
+        mode (str): The scraping mode that was run ('online' or 'target').
+        duration (float): The total duration of the run in seconds.
+    """
     table = Table(title="Scraping Completed", show_header=True, header_style="bold magenta")
     table.add_column("Metric", style="dim", width=20)
     table.add_column("Value", justify="right")

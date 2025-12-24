@@ -1,6 +1,10 @@
 """
-Online Mode Scraper - Scrapes users from online list
-STEP-6: Enforce MAX_PROFILES limit
+Online Mode scraping logic.
+
+This module handles the 'online' scraping mode. It first fetches a list of
+currently online users and then scrapes the profile of each user, similar to
+the target mode. It reuses the `ProfileScraper` for the individual profile
+scraping logic.
 """
 
 import time
@@ -17,13 +21,24 @@ from phases.profile.target_mode import ProfileScraper
 # ==================== ONLINE USERS PARSER ====================
 
 class OnlineUsersParser:
-    """Parses the online users page"""
+    """
+    Parses the 'Online Users' page to extract a list of nicknames.
+
+    It uses multiple strategies to find nicknames on the page to make the scraper
+    more resilient to changes in the website's HTML structure.
+    """
     
     def __init__(self, driver):
+        """Initializes the parser with the WebDriver instance."""
         self.driver = driver
     
     def get_online_nicknames(self):
-        """Extract all online user nicknames"""
+        """
+        Fetches and extracts all unique nicknames from the online users page.
+
+        Returns:
+            list[str]: A sorted list of unique nicknames.
+        """
         try:
             log_msg("Fetching online users list...")
             
@@ -99,17 +114,20 @@ class OnlineUsersParser:
 # ==================== ONLINE MODE RUNNER ====================
 
 def run_online_mode(driver, sheets, max_profiles=0):
-    """Run scraper in Online mode
-    
-    STEP-6: Added max_profiles parameter to enforce limit
-    
+    """
+    Orchestrates the scraping process for the 'online' mode.
+
+    This function fetches the list of online users, logs each one to the
+    'OnlineLog' sheet, and then uses the `ProfileScraper` to scrape their
+    profile. It compiles and returns statistics on the run.
+
     Args:
-        driver: WebDriver instance
-        sheets: SheetsManager instance
-        max_profiles: Maximum profiles to process (0 = unlimited)
-        
+        driver: The Selenium WebDriver instance.
+        sheets: An initialized SheetsManager instance.
+        max_profiles (int): The maximum number of profiles to process (0 for all).
+
     Returns:
-        dict: Statistics about the scraping operation
+        dict: A dictionary of statistics from the scraping run.
     """
     log_msg("=== ONLINE MODE STARTED ===")
     
