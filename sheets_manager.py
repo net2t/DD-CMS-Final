@@ -45,7 +45,7 @@ def clean_data(value):
 
 # ==================== GOOGLE SHEETS CLIENT ====================
 
-def create_gsheets_client():
+def create_gsheets_client(credentials_json=None, credentials_path=None):
     """Create authenticated Google Sheets client"""
     log_msg("Authenticating with Google Sheets API...")
     
@@ -59,23 +59,29 @@ def create_gsheets_client():
     ]
     
     try:
-        # Try using raw JSON first (GitHub Actions)
-        if Config.GOOGLE_CREDENTIALS_JSON:
-            log_msg("Using credentials from GitHub Secrets")
+        json_source = credentials_json or Config.GOOGLE_CREDENTIALS_JSON
+        path_source = credentials_path
+        
+        # fallback to global path if none provided
+        if not path_source:
+            default_cred = Config.get_credentials_path()
+            path_source = default_cred if default_cred else None
+
+        # Try using raw JSON first (GitHub Actions or override)
+        if json_source:
+            log_msg("Using credentials from provided JSON")
             try:
-                cred_data = json.loads(Config.GOOGLE_CREDENTIALS_JSON)
+                cred_data = json.loads(json_source)
                 creds = Credentials.from_service_account_info(cred_data, scopes=scope)
                 return gspread.authorize(creds)
             except json.JSONDecodeError as e:
                 log_msg(f"Invalid JSON in credentials: {e}", "ERROR")
                 raise
         
-        # Try file path (local development)
-        cred_path = Config.get_credentials_path()
-        
-        if cred_path and Path(cred_path).exists():
-            log_msg(f"Using credentials file: {cred_path}")
-            creds = Credentials.from_service_account_file(str(cred_path), scopes=scope)
+        # Try file path (local development or override)
+        if path_source and Path(path_source).exists():
+            log_msg(f"Using credentials file: {path_source}")
+            creds = Credentials.from_service_account_file(str(path_source), scopes=scope)
             return gspread.authorize(creds)
         
         # No credentials found
@@ -98,9 +104,12 @@ class SheetsManager:
     - Sorting by DATETIME SCRAP descending
     """
     
-    def __init__(self, client=None):
+    def __init__(self, client=None, credentials_json=None, credentials_path=None):
         if client is None:
-            client = create_gsheets_client()
+            client = create_gsheets_client(
+                credentials_json=credentials_json,
+                credentials_path=credentials_path
+            )
         
         self.client = client
         self.spreadsheet = client.open_by_url(Config.GOOGLE_SHEET_URL)

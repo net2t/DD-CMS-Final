@@ -1,3 +1,6 @@
+# LEGACY FILE
+# DO NOT IMPORT
+# Used only as reference during refactor
 """
 Browser Manager - Chrome setup and login handling
 """
