@@ -4,7 +4,7 @@ from typing import Optional
 
 from .browser_manager import BrowserManager, log_msg
 from .login_manager import LoginManager
-from sheets_manager import SheetsManager
+from utils.sheets_manager import SheetsManager
 
 
 class RunContext:

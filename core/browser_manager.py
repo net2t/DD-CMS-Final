@@ -16,19 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from config.config_common import Config
-
-
-def get_pkt_time():
-    """Get current Pakistan time (UTC+5)"""
-    return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=5)
-
-
-def log_msg(msg, level="INFO"):
-    """Simple logger with timestamp"""
-    ts = get_pkt_time().strftime('%H:%M:%S')
-    print(f"[{ts}] [{level}] {msg}")
-    import sys
-    sys.stdout.flush()
+from utils.ui import log_msg
 
 
 class BrowserManager:

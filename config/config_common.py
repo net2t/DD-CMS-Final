@@ -52,46 +52,42 @@ class Config:
     # ==================== ENVIRONMENT ====================
     IS_CI = bool(os.getenv('GITHUB_ACTIONS'))
     IS_GITHUB_ACTIONS = IS_CI
+    SCRIPT_VERSION = "v2.100.0.13"
     
     # ==================== SHEET NAMES ====================
-    SHEET_PROFILES = "ProfilesTarget"
-    SHEET_TARGET = "Target"
+    SHEET_PROFILES = "Profiles"
+    SHEET_TARGET = "RunList"
     SHEET_DASHBOARD = "Dashboard"
     SHEET_TAGS = "Tags"
     SHEET_ONLINE_LOG = "OnlineLog"
     
     # ==================== COLUMN CONFIGURATION ====================
-    # STEP-6: Cleaned and reordered columns
-    # Order: 0 1 2 3 4 6 5 6 7 8 9 11 24 12 13 21 20 22 10 19 15 16 18 17 23
-    # Removed: DELETE COL L, DELCOL U
     COLUMN_ORDER = [
-        "ID",                  # 0
-        "NICK NAME",          # 1
-        "TAGS",               # 2
-        "CITY",               # 3
-        "GENDER",             # 4
-        "AGE",                # 5 (was 6, swapped with MARRIED)
-        "MARRIED",            # 6 (was 5, swapped with AGE)
-        "JOINED",             # 7
-        "FOLLOWERS",          # 8
-        "STATUS",             # 9
-        "INTRO",              # 10 (was 11, moved up)
-        "PROFILE_STATE",      # 11 (was 24, moved up)
-        "SOURCE",             # 12
-        "DATETIME SCRAP",     # 13
-        "RURL",               # 14 (was 21, moved up)
-        "POST URL",           # 15 (was 20, moved up)
-        "PROFILE LINK",       # 16 (was 22, moved up)
-        "POSTS",              # 17 (was 10, moved down)
-        "LAST POST TIME",     # 18 (was 19, moved up)
-        "IMAGE",              # 19 (was 15, moved down)
-        "LAST POST",          # 20 (was 16, moved down)
-        "FRD",                # 21 (was 18, moved down)
-        "FRIEND",             # 22 (was 17, moved down)
-        "MEH NAME",           # 23 (was 23, same)
-        "MEH TYPE",           # 24
-        "MEH LINK",           # 25 - NEXT PHASE: Mehfil scraping source
-        "MEH DATE"            # 26
+        "ID",
+        "NICK NAME",
+        "TAGS",
+        "CITY",
+        "GENDER",
+        "MARRIED",
+        "AGE",
+        "JOINED",
+        "FOLLOWERS",
+        "STATUS",
+        "POSTS",
+        "INTRO",
+        "SOURCE",
+        "DATETIME SCRAP",
+        "LAST POST",
+        "LAST POST TIME",
+        "IMAGE",
+        "PROFILE LINK",
+        "POST URL",
+        "RURL",
+        "MEH NAME",
+        "MEH TYPE",
+        "MEH LINK",
+        "MEH DATE",
+        "PROFILE_STATE"
     ]
     
     ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen"]
@@ -117,34 +113,31 @@ class Config:
     ]
     
     # ==================== DEFAULT VALUES ====================
-    # STEP-6: Use "BLANK" instead of empty strings
     DEFAULT_VALUES = {
-        "ID": "BLANK",
-        "NICK NAME": "BLANK",
-        "TAGS": "BLANK",
-        "CITY": "BLANK",
-        "GENDER": "BLANK",
-        "MARRIED": "BLANK",
-        "AGE": "BLANK",
-        "JOINED": "BLANK",
-        "FOLLOWERS": "BLANK",
+        "ID": "",
+        "NICK NAME": "",
+        "TAGS": "",
+        "CITY": "",
+        "GENDER": "",
+        "MARRIED": "",
+        "AGE": "",
+        "JOINED": "",
+        "FOLLOWERS": "",
         "STATUS": "Normal",
-        "POSTS": "BLANK",
-        "INTRO": "BLANK",
-        "SOURCE": "BLANK",
-        "DATETIME SCRAP": "BLANK",
-        "LAST POST": "BLANK",
-        "LAST POST TIME": "BLANK",
-        "IMAGE": "BLANK",
-        "PROFILE LINK": "BLANK",
-        "POST URL": "BLANK",
-        "FRIEND": "BLANK",
-        "FRD": "BLANK",
-        "RURL": "BLANK",
-        "MEH NAME": "BLANK",
-        "MEH TYPE": "BLANK",
-        "MEH LINK": "BLANK",
-        "MEH DATE": "BLANK",
+        "POSTS": "",
+        "INTRO": "",
+        "SOURCE": "",
+        "DATETIME SCRAP": "",
+        "LAST POST": "",
+        "LAST POST TIME": "",
+        "IMAGE": "",
+        "PROFILE LINK": "",
+        "POST URL": "",
+        "RURL": "",
+        "MEH NAME": "",
+        "MEH TYPE": "",
+        "MEH LINK": "",
+        "MEH DATE": "",
         "PROFILE_STATE": "ACTIVE"
     }
     

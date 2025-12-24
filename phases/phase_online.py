@@ -1,6 +1,6 @@
 """Online phase runner (delegates to existing scraper logic)"""
 
-from scraper_online import run_online_mode
+from phases.profile.online_mode import run_online_mode
 from config.config_online import OnlinePhaseConfig
 
 
@@ -15,4 +15,5 @@ def run(context, max_profiles=0):
         credentials_path=OnlinePhaseConfig.CREDENTIALS_PATH
     )
 
-    return run_online_mode(driver, sheets, max_profiles)
+    stats = run_online_mode(driver, sheets, max_profiles)
+    return stats, sheets

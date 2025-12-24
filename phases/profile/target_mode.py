@@ -14,7 +14,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from config import Config
-from core.browser_manager import get_pkt_time, log_msg
+from utils.ui import get_pkt_time, log_msg
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -299,12 +299,12 @@ class ProfileScraper:
         """Extract user ID from hidden input field"""
         try:
             # Look for <input type="hidden" name="tid" value="3405367">
-            match = re.search(r'name=["\']tid["\']\s+value=["\'](\d+)["\']', page_source)
+            match = re.search(r'name=[\"\']tid[\"\']\s+value=[\"\'](\d+)[\"\']', page_source)
             if match:
                 return match.group(1)
                 
             # Alternative: Look for it in follow form
-            match = re.search(r'name=["\']pl["\']\s+value=["\']\*\*\*\d+\*(\d+)\*', page_source)
+            match = re.search(r'name=[\"\']pl[\"\']\s+value=[\"\']\*\*\*\d+\*(\d+)\*', page_source)
             if match:
                 return match.group(1)
                 

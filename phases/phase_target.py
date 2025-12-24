@@ -1,6 +1,6 @@
 """Target phase runner (delegates to existing scraper logic)"""
 
-from scraper_target import run_target_mode
+from phases.profile.target_mode import run_target_mode
 from config.config_target import TargetPhaseConfig
 
 
