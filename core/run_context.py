@@ -1,1 +1,41 @@
-"\"\"\"RunContext holds shared browser/login state for phases\"\"\"\n+\n+from typing import Optional\n+\n+from .browser_manager import BrowserManager, log_msg\n+from .login_manager import LoginManager\n+from sheets_manager import SheetsManager\n+\n+\n+class RunContext:\n+    \"\"\"Context that keeps browser/login and provides sheets\"\"\"\n+\n+    def __init__(self):\n+        self.browser_manager = BrowserManager()\n+        self.driver = None\n+        self.login_manager: Optional[LoginManager] = None\n+\n+    def start_browser(self):\n+        if not self.driver:\n+            self.driver = self.browser_manager.start()\n+        return self.driver\n+\n+    def login(self):\n+        driver = self.start_browser()\n+        if not driver:\n+            log_msg(\"Cannot login without driver\", \"ERROR\")\n+            return False\n+\n+        if not self.login_manager:\n+            self.login_manager = LoginManager(driver)\n+\n+        return self.login_manager.login()\n+\n+    def get_sheets_manager(self, credentials_json=None, credentials_path=None):\n+        return SheetsManager(\n+            credentials_json=credentials_json,\n+            credentials_path=credentials_path\n+        )\n+\n+    def close(self):\n+        self.browser_manager.close()\n*** End Patch***  
+"\"\"""RunContext holds shared browser/login state for phases"""
+
+from typing import Optional
+
+from .browser_manager import BrowserManager, log_msg
+from .login_manager import LoginManager
+from sheets_manager import SheetsManager
+
+
+class RunContext:
+    """Context that keeps browser/login and provides sheets"""
+
+    def __init__(self):
+        self.browser_manager = BrowserManager()
+        self.driver = None
+        self.login_manager: Optional[LoginManager] = None
+
+    def start_browser(self):
+        if not self.driver:
+            self.driver = self.browser_manager.start()
+        return self.driver
+
+    def login(self):
+        driver = self.start_browser()
+        if not driver:
+            log_msg("Cannot login without driver", "ERROR")
+            return False
+
+        if not self.login_manager:
+            self.login_manager = LoginManager(driver)
+
+        return self.login_manager.login()
+
+    def get_sheets_manager(self, credentials_json=None, credentials_path=None):
+        return SheetsManager(
+            credentials_json=credentials_json,
+            credentials_path=credentials_path
+        )
+
+    def close(self):
+        self.browser_manager.close()

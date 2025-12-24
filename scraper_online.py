@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 from config import Config
-from browser import get_pkt_time, log_msg
+from core.browser_manager import get_pkt_time, log_msg
 from scraper_target import ProfileScraper
 
 # ==================== ONLINE USERS PARSER ====================

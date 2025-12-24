@@ -9,11 +9,15 @@ import sys
 import argparse
 from datetime import datetime
 
-from config import Config
-from browser import BrowserManager, LoginManager, get_pkt_time, log_msg
-from sheets_manager import SheetsManager
-from scraper_target import run_target_mode
-from scraper_online import run_online_mode
+from config.config_common import Config
+from core.run_context import RunContext
+from core.browser_manager import get_pkt_time, log_msg
+
+# Import phase runners
+from phases import phase_online
+from phases import phase_target
+from phases import phase_mehfil
+from phases import phase_posts
 
 # ==================== MAIN FUNCTION ====================
 
@@ -72,34 +76,40 @@ Examples:
     # Start time
     start_time = get_pkt_time()
     
-    # Initialize browser
-    browser = BrowserManager()
-    driver = browser.setup()
-    
-    if not driver:
-        log_msg("Failed to initialize browser", "ERROR")
-        sys.exit(1)
-    
+    # Validate configuration before starting
+    Config.validate()
+
+    context = RunContext()
     try:
-        # Login
-        login_mgr = LoginManager(driver)
-        if not login_mgr.login():
+        # Start browser and login
+        context.start_browser()
+        if not context.login():
             log_msg("Login failed", "ERROR")
             return 1
+
+        # Run phases
+        stats = {}
+        sheets = None
+
+        if args.mode == 'online':
+            log_msg("=== RUNNING ONLINE PHASE ===")
+            stats, sheets = phase_online.run(context, args.max_profiles)
         
-        # Connect to Google Sheets
-        log_msg("Connecting to Google Sheets...")
-        sheets = SheetsManager()
-        
-        # Run appropriate mode (STEP-6: Both modes now accept max_profiles)
         if args.mode == 'target':
-            stats = run_target_mode(driver, sheets, args.max_profiles)
-        else:  # online
-            stats = run_online_mode(driver, sheets, args.max_profiles)
-        
-        # STEP-6: Sort profiles by date after scraping
-        log_msg("Sorting profiles by date...")
-        sheets.sort_profiles_by_date()
+            log_msg("=== RUNNING TARGET PHASE ===")
+            stats, sheets = phase_target.run(context, args.max_profiles)
+
+        # Mehfil and Posts phases are stubs for now
+        log_msg("=== RUNNING MEHFIL PHASE (STUB) ===")
+        phase_mehfil.run(context)
+
+        log_msg("=== RUNNING POSTS PHASE (STUB) ===")
+        phase_posts.run(context)
+
+        # Sort profiles by date after scraping if a sheet was used
+        if sheets:
+            log_msg("Sorting profiles by date...")
+            sheets.sort_profiles_by_date()
         
         # End time
         end_time = get_pkt_time()
@@ -160,7 +170,7 @@ Examples:
         return 1
     
     finally:
-        browser.close()
+        context.close()
 
 # ==================== ENTRY POINT ====================
 
