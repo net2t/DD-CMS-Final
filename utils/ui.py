@@ -7,6 +7,7 @@ interface. It provides standardized functions for logging, displaying headers,
 and printing summary tables.
 """
 
+import sys
 from datetime import datetime, timedelta, timezone
 from rich.console import Console
 from rich.panel import Panel
@@ -32,6 +33,8 @@ def log_msg(msg, level="INFO"):
         level (str): The log level, which determines the color and label.
     """
     ts = get_pkt_time().strftime('%H:%M:%S')
+    is_windows = sys.platform.startswith('win')
+
     style_map = {
         "INFO": "cyan",
         "OK": "green",
@@ -41,18 +44,26 @@ def log_msg(msg, level="INFO"):
         "LOGIN": "blue",
         "TIMEOUT": "dim yellow"
     }
+    
     icon_map = {
-        "INFO": "ℹ️",
-        "OK": "✅",
-        "WARNING": "⚠️",
-        "ERROR": "❌",
-        "SCRAPING": "🔍",
-        "LOGIN": "🔑",
-        "TIMEOUT": "⏳"
+        "INFO": "ℹ️", "OK": "✅", "WARNING": "⚠️", "ERROR": "❌",
+        "SCRAPING": "🔍", "LOGIN": "🔑", "TIMEOUT": "⏳"
     }
+    
+    ascii_map = {
+        "INFO": "[INFO]", "OK": "[OK]", "WARNING": "[WARN]", "ERROR": "[ERR]",
+        "SCRAPING": "[SCRAPE]", "LOGIN": "[LOGIN]", "TIMEOUT": "[TIMEOUT]"
+    }
+
     style = style_map.get(level, "white")
-    icon = icon_map.get(level, "➡️")
-    console.print(f"[{ts}] {icon} ", Text(f"[{level}]", style=style), f" {msg}")
+    
+    if is_windows:
+        # On Windows, use ASCII text instead of icons to avoid UnicodeEncodeError
+        icon_text = ascii_map.get(level, "[----]")
+        console.print(f"[{ts}]", Text(icon_text, style=style), f" {msg}")
+    else:
+        icon = icon_map.get(level, "➡️")
+        console.print(f"[{ts}] {icon} ", Text(f"[{level}]", style=style), f" {msg}")
 
 def print_header(title, version):
     """
