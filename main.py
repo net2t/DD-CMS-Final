@@ -34,10 +34,19 @@ Examples:
         """
     )
     
+    # Allow mode to be specified as a positional argument or with a --mode flag for flexibility.
     parser.add_argument(
-        'mode',
+        'mode_pos',
+        nargs='?',
         choices=['target', 'online', 'test'],
-        help='Scraping mode: `target` (from RunList sheet), `online` (from online users list), or `test` (runs a predefined set of test profiles)'
+        default=None,
+        help='Scraping mode (e.g., `python main.py target`)'
+    )
+    parser.add_argument(
+        '--mode',
+        dest='mode_opt',
+        choices=['target', 'online', 'test'],
+        help='Scraping mode (e.g., `python main.py --mode target`)'
     )
     
     parser.add_argument(
@@ -55,6 +64,11 @@ Examples:
     )
     
     args = parser.parse_args()
+
+    # Determine the final mode from either the positional or optional argument.
+    args.mode = args.mode_opt or args.mode_pos
+    if not args.mode:
+        parser.error("No mode specified. Choose 'target', 'online', or 'test'.")
     
     # --- Header --- 
     # Displays a styled header with the script title, version, and mode.
