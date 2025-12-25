@@ -25,11 +25,22 @@ class ProfileSelectors:
     # Friend/Follow status
     FRIEND_STATUS_BUTTON = "//form[contains(@action, '/follow/')]/button"
     
+    # Stats
+    FOLLOWERS_COUNT = "//a[contains(@href, '/followers/')]/b"
+    POSTS_COUNT = "//a[contains(@href, '/posts/')]/b"
+
+    # Last Post
+    LAST_POST_TEXT = "//div[contains(@class, 'pst')]/a"
+    LAST_POST_TIME = "//div[contains(@class, 'pst')]/following-sibling::div/span[contains(@class, 'gry') and contains(@class, 'sp') and not(contains(@class, 'lk'))]"
+
+    # Profile Image
+    PROFILE_IMAGE = "//img[contains(@class, 'dp') and contains(@class, 's') and contains(@class, 'cov')]"
+
     # Mehfil section
     MEHFIL_ENTRIES = "div.mbl.mtl a[href*='/mehfil/public/']"
-    MEHFIL_NAME = ".//div[contains(@class, 'ow')]"
-    MEHFIL_TYPE = ".//div[contains(@style, 'background:#f8f7f9')]"
-    MEHFIL_DATE = ".//div[contains(@class, 'cs') and contains(@class, 'sp')]"
+    MEHFIL_NAME = "div.ow"
+    MEHFIL_TYPE = "div[style*='background:#f8f7f9']"
+    MEHFIL_DATE = "div.cs.sp"
 
 class OnlineUserSelectors:
     """Selectors for the 'Online Users' page."""

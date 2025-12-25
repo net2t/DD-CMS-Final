@@ -329,6 +329,49 @@ class ProfileScraper:
             
         return ""
     
+    def _extract_stats(self):
+        """Extracts follower and post counts."""
+        stats = {'FOLLOWERS': '', 'POSTS': ''}
+        try:
+            followers_elem = self.driver.find_element(By.XPATH, ProfileSelectors.FOLLOWERS_COUNT)
+            stats['FOLLOWERS'] = clean_text(followers_elem.text)
+        except Exception:
+            pass  # Keep default value if not found
+
+        try:
+            posts_elem = self.driver.find_element(By.XPATH, ProfileSelectors.POSTS_COUNT)
+            stats['POSTS'] = clean_text(posts_elem.text)
+        except Exception:
+            pass  # Keep default value if not found
+
+        return stats
+
+    def _extract_last_post(self):
+        """Extracts the last post text and time."""
+        last_post = {'LAST POST': '', 'LAST POST TIME': ''}
+        try:
+            post_text_elem = self.driver.find_element(By.XPATH, ProfileSelectors.LAST_POST_TEXT)
+            last_post['LAST POST'] = clean_text(post_text_elem.text)
+        except Exception:
+            pass
+
+        try:
+            post_time_elem = self.driver.find_element(By.XPATH, ProfileSelectors.LAST_POST_TIME)
+            last_post['LAST POST TIME'] = normalize_post_datetime(post_time_elem.text)
+        except Exception:
+            pass
+
+        return last_post
+
+    def _extract_profile_image(self):
+        """Extracts the profile image URL."""
+        try:
+            image_elem = self.driver.find_element(By.XPATH, ProfileSelectors.PROFILE_IMAGE)
+            image_url = image_elem.get_attribute('src')
+            return image_url if image_url and image_url.startswith('http') else f"https://damadam.pk{image_url}"
+        except Exception:
+            return ""
+
     def scrape_profile(self, nickname, source="Target"):
         """
         Scrapes a complete user profile.
@@ -377,6 +420,9 @@ class ProfileScraper:
             friend_status = self._extract_friend_status(page_source)
             _, rank_image = self._extract_rank(page_source)
             user_id = self._extract_user_id(page_source)
+            stats_data = self._extract_stats()
+            last_post_data = self._extract_last_post()
+            image_url = self._extract_profile_image()
 
             # Update data with all fields
             data.update({
@@ -386,6 +432,11 @@ class ProfileScraper:
                 "FRIEND": friend_status,
                 "FRD": friend_status,
                 "RURL": rank_image,
+                "FOLLOWERS": stats_data['FOLLOWERS'],
+                "POSTS": stats_data['POSTS'],
+                "LAST POST": last_post_data['LAST POST'],
+                "LAST POST TIME": last_post_data['LAST POST TIME'],
+                "IMAGE": image_url,
                 "MEH NAME": "\n".join(mehfil_data['MEH NAME']) if mehfil_data['MEH NAME'] else "",
                 "MEH TYPE": "\n".join(mehfil_data['MEH TYPE']) if mehfil_data['MEH TYPE'] else "",
                 "MEH LINK": "\n".join(mehfil_data['MEH LINK']) if mehfil_data['MEH LINK'] else "",

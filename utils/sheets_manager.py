@@ -177,6 +177,24 @@ class SheetsManager:
             except Exception as e:
                 log_msg(f"Header initialization for '{ws.title}' failed: {e}", "ERROR")
 
+    def _apply_row_format(self, ws, row_index):
+        """Apply 'Quantico' font to a specific row."""
+        try:
+            log_msg(f"Applying 'Quantico' font to row {row_index} in '{ws.title}'...", "INFO")
+            row_range = f'A{row_index}:{gspread.utils.rowcol_to_a1(row_index, ws.col_count)}'
+            self._perform_write_operation(
+                ws.format, 
+                row_range, 
+                {
+                    "textFormat": {
+                        "fontFamily": "Quantico",
+                        "bold": False
+                    }
+                }
+            )
+        except Exception as e:
+            log_msg(f"Failed to apply row format for '{ws.title}' at row {row_index}: {e}", "WARNING")
+
     def _apply_header_format(self, ws):
         """Apply 'Quantico' font and bold style to the header row."""
         try:
@@ -375,12 +393,14 @@ class SheetsManager:
 
             if self._perform_write_operation(self.profiles_ws.delete_rows, old_row_num):
                 if self._perform_write_operation(self.profiles_ws.insert_row, updated_row, index=2):
+                    self._apply_row_format(self.profiles_ws, 2)
                     log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
                     self._load_existing_profiles() # Refresh cache after structural change
                     return {"status": "updated", "changed_fields": changed_fields}
             return {"status": "error", "error": "Failed to update sheet"}
         else:
             if self._perform_write_operation(self.profiles_ws.insert_row, row_data, index=2):
+                self._apply_row_format(self.profiles_ws, 2)
                 log_msg(f"New profile {nickname} added at Row 2.", "OK")
                 self._load_existing_profiles() # Refresh cache after structural change
                 return {"status": "new"}

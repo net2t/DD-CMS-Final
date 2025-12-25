@@ -17,7 +17,7 @@ from selenium.common.exceptions import TimeoutException
 from config.config_common import Config
 from config.selectors import OnlineUserSelectors
 from utils.ui import get_pkt_time, log_msg
-from phases.profile.target_mode import ProfileScraper
+from phases.profile.target_mode import run_target_mode, validate_nickname
 
 # ==================== ONLINE USERS PARSER ====================
 
@@ -118,9 +118,9 @@ def run_online_mode(driver, sheets, max_profiles=0):
     """
     Orchestrates the scraping process for the 'online' mode.
 
-    This function fetches the list of online users, logs each one to the
-    'OnlineLog' sheet, and then uses the `ProfileScraper` to scrape their
-    profile. It compiles and returns statistics on the run.
+    This function fetches the list of online users and then delegates the scraping
+    to the `run_target_mode` function. This ensures that the same, consistent
+    scraping and data handling logic is used across all modes.
 
     Args:
         driver: The Selenium WebDriver instance.
@@ -139,81 +139,31 @@ def run_online_mode(driver, sheets, max_profiles=0):
     if not nicknames:
         log_msg("No online users found")
         return {
-            "success": 0,
-            "failed": 0,
-            "new": 0,
-            "updated": 0,
-            "unchanged": 0,
-            "logged": 0
+            "success": 0, "failed": 0, "new": 0,
+            "updated": 0, "unchanged": 0, "logged": 0
         }
-    
-    # STEP-6: Enforce max_profiles limit
-    original_count = len(nicknames)
-    if max_profiles > 0:
-        nicknames = nicknames[:max_profiles]
-        log_msg(f"Limited to {max_profiles} profiles (from {original_count} available)")
-    
-    log_msg(f"Processing {len(nicknames)} online users...")
-    
-    scraper = ProfileScraper(driver)
-    stats = {
-        "success": 0,
-        "failed": 0,
-        "new": 0,
-        "updated": 0,
-        "unchanged": 0,
-        "logged": 0
-    }
-    
+
+    # Log all users to the OnlineLog sheet first
     timestamp = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+    for nick in nicknames:
+        sheets.log_online_user(nick, timestamp)
+
+    # Format nicknames into the target structure for run_target_mode
+    targets = [
+        {'nickname': nick, 'source': 'Online'}
+        for nick in nicknames if validate_nickname(nick)
+    ]
+
+    # Delegate the scraping to the centralized target mode runner
+    stats = run_target_mode(driver, sheets, max_profiles, targets)
     
-    for i, nickname in enumerate(nicknames, 1):
-        log_msg(f"[{i}/{len(nicknames)}] Processing: {nickname}")
-        
-        try:
-            # Log to OnlineLog sheet
-            sheets.log_online_user(nickname, timestamp)
-            stats['logged'] += 1
-            
-            # Scrape profile
-            profile = scraper.scrape_profile(nickname, source="Online")
-            
-            if not profile:
-                log_msg(f"Failed to scrape {nickname}")
-                stats['failed'] += 1
-                time.sleep(Config.MIN_DELAY)
-                continue
-            
-            # Check skip reason
-            skip_reason = profile.get('__skip_reason')
-            if skip_reason:
-                log_msg(f"Skipping {nickname}: {skip_reason}")
-                sheets.write_profile(profile)
-                stats['failed'] += 1
-            else:
-                # Write profile
-                result = sheets.write_profile(profile)
-                status = result.get("status", "error")
-                
-                if status in {"new", "updated", "unchanged"}:
-                    stats['success'] += 1
-                    stats[status] += 1
-                    log_msg(f"{nickname}: {status}", "OK")
-                else:
-                    log_msg(f"{nickname}: write failed")
-                    stats['failed'] += 1
-        
-        except Exception as e:
-            log_msg(f"Error processing {nickname}: {e}", "ERROR")
-            stats['failed'] += 1
-        
-        # Delay between profiles
-        time.sleep(Config.MIN_DELAY)
+    # Add online-specific stats
+    stats['logged'] = len(nicknames)
     
     log_msg("=== ONLINE MODE COMPLETED ===")
     log_msg(
-        f"Results: {stats['success']} success, {stats['failed']} failed, "
-        f"{stats['logged']} logged"
+        f"Results: {stats.get('success', 0)} success, {stats.get('failed', 0)} failed, "
+        f"{stats.get('logged', 0)} logged"
     )
     
     return stats
