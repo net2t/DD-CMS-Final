@@ -447,7 +447,6 @@ class ProfileScraper:
             suspend_reason = detect_suspension(page_source)
             if suspend_reason:
                 data['STATUS'] = 'Banned'
-                data['INTRO'] = "Account Suspended"[:250]
                 data['__skip_reason'] = 'Account Suspended'
                 return data
             
@@ -466,23 +465,6 @@ class ProfileScraper:
                 data['__skip_reason'] = 'Unverified user'
             else:
                 data['STATUS'] = 'Verified'
-            
-            # Extract intro / bio text
-            intro_xpaths = [
-                ProfileSelectors.INTRO_TEXT_B,
-                ProfileSelectors.INTRO_TEXT_SPAN
-            ]
-            intro_text = ""
-            for xp in intro_xpaths:
-                try:
-                    intro_elem = self.driver.find_element(By.XPATH, xp)
-                    intro_text = clean_text(intro_elem.text.strip())
-                    if intro_text:
-                        break
-                except:
-                    continue
-            
-            data['INTRO'] = intro_text
 
             # Extract profile fields using multiple selector patterns
             field_selectors = [

@@ -75,7 +75,6 @@ class Config:
         "FOLLOWERS",
         "STATUS",
         "POSTS",
-        "INTRO",
         "SOURCE",
         "DATETIME SCRAP",
         "LAST POST",
@@ -86,12 +85,11 @@ class Config:
         "RURL",
         "MEH NAME",
         "MEH TYPE",
-        "MEH LINK",
-        "MEH DATE",
-        "PROFILE_STATE"
+        "PROFILE_STATE",
+        "ICONS / SYMBOLS (QUICK SCAN)"
     ]
     
-    ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen"]
+    ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen", "Batch No"]
     
     # ==================== TARGET STATUS ====================
     TARGET_STATUS_PENDING = "⚡ Pending"
@@ -126,7 +124,6 @@ class Config:
         "FOLLOWERS": "",
         "STATUS": "Normal",
         "POSTS": "",
-        "INTRO": "",
         "SOURCE": "",
         "DATETIME SCRAP": "",
         "LAST POST": "",
@@ -137,9 +134,8 @@ class Config:
         "RURL": "",
         "MEH NAME": "",
         "MEH TYPE": "",
-        "MEH LINK": "",
-        "MEH DATE": "",
-        "PROFILE_STATE": "ACTIVE"
+        "PROFILE_STATE": "ACTIVE",
+        "ICONS / SYMBOLS (QUICK SCAN)": ""
     }
     
     @classmethod

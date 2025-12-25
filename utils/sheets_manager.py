@@ -122,7 +122,7 @@ class SheetsManager:
         self.profiles_ws = self._get_or_create(Config.SHEET_PROFILES, cols=len(Config.COLUMN_ORDER))
         self.target_ws = self._get_or_create(Config.SHEET_TARGET, cols=4)
         self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD, cols=15)
-        self.online_log_ws = self._get_or_create(Config.SHEET_ONLINE_LOG, cols=3)
+        self.online_log_ws = self._get_or_create(Config.SHEET_ONLINE_LOG, cols=4)
         
         # Optional sheets
         self.tags_ws = self._get_sheet_if_exists(Config.SHEET_TAGS)
@@ -240,19 +240,32 @@ class SheetsManager:
         """
         try:
             rows = self.profiles_ws.get_all_values()[1:]  # Skip header
+            id_idx = Config.COLUMN_ORDER.index("ID")
             nick_idx = Config.COLUMN_ORDER.index("NICK NAME")
             
             for i, row in enumerate(rows, start=2):
-                if len(row) > nick_idx:
-                    nickname = row[nick_idx].strip()
+                if len(row) > max(id_idx, nick_idx):
+                    # Create keys for both ID and nickname matching
+                    id_val = row[id_idx].strip() if len(row) > id_idx else ""
+                    nickname = row[nick_idx].strip() if len(row) > nick_idx else ""
+                    
+                    # Use nickname as primary key, but also store ID for matching
                     if nickname:
                         key = nickname.lower()
                         self.existing_profiles[key] = {
                             'row': i,
-                            'data': row
+                            'data': row,
+                            'id': id_val
+                        }
+                    elif id_val:  # If no nickname but ID exists, use ID as key
+                        key = f"id_{id_val}"
+                        self.existing_profiles[key] = {
+                            'row': i,
+                            'data': row,
+                            'id': id_val
                         }
             
-            log_msg(f"Loaded {len(self.existing_profiles)} existing profiles (indexed by nickname)")
+            log_msg(f"Loaded {len(self.existing_profiles)} existing profiles (indexed by nickname/ID)")
         
         except Exception as e:
             log_msg(f"Failed to load existing profiles: {e}")
@@ -294,6 +307,36 @@ class SheetsManager:
         log_msg("Failed to perform write operation after multiple retries.", "ERROR")
         return False
 
+    def _strip_status_symbols(self, value):
+        """Remove any existing status symbols from a string."""
+        if not value:
+            return ""
+        for symbol in ["🔴", "🆕", "🟢"]:
+            value = value.replace(symbol, "")
+        return value.strip()
+
+    def _format_status_with_symbol(self, value, symbol):
+        """Attach the specified symbol to the status text."""
+        text = self._strip_status_symbols(value)
+        if not text:
+            return symbol
+        return f"{symbol} {text}"
+
+    def _strip_status_symbols(self, value):
+        """Remove status symbols from a string."""
+        if not value:
+            return ""
+        for symbol in ["🔴", "🆕", "🟢"]:
+            value = value.replace(symbol, "")
+        return value.strip()
+
+    def _format_status_with_symbol(self, value, symbol):
+        """Attach a status symbol to the text."""
+        text = self._strip_status_symbols(value)
+        if not text:
+            return symbol
+        return f"{symbol} {text}"
+
     def _compute_profile_state(self, profile_data):
         """
         Computes a normalized profile state based on various scraped data points.
@@ -309,11 +352,10 @@ class SheetsManager:
         """
         skip_reason = (profile_data.get('__skip_reason') or '').lower()
         status = (profile_data.get('STATUS') or '').strip()
-        intro = (profile_data.get('INTRO') or '').lower()
 
         if any(reason in skip_reason for reason in ['timeout', 'not found', 'page timeout']):
             return Config.PROFILE_STATE_DEAD
-        if status == 'Banned' or any(word in intro for word in ['suspend', 'banned', 'blocked']):
+        if status == 'Banned':
             return Config.PROFILE_STATE_BANNED
         if status == 'Unverified':
             return Config.PROFILE_STATE_UNVERIFIED
@@ -323,14 +365,17 @@ class SheetsManager:
         """
         Writes a profile to the 'Profiles' sheet with advanced duplicate handling.
         
+        - Matches by ID (Col A) or nickname (Col B)
         - New profiles are inserted at Row 2.
-        - Updated profiles have their old values moved to cell notes.
+        - Updated profiles have their old values moved to cell notes with highlighting.
         - All write operations are batched to avoid API rate limits.
         """
         nickname = (profile_data.get("NICK NAME") or "").strip()
-        if not nickname:
-            log_msg("Profile has no nickname, skipping write.", "WARNING")
-            return {"status": "error", "error": "Missing nickname"}
+        profile_id = (profile_data.get("ID") or "").strip()
+        
+        if not nickname and not profile_id:
+            log_msg("Profile has no nickname or ID, skipping write.", "WARNING")
+            return {"status": "error", "error": "Missing nickname and ID"}
 
         profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
         profile_data["PROFILE_STATE"] = self._compute_profile_state(profile_data)
@@ -338,48 +383,62 @@ class SheetsManager:
             profile_data["TAGS"] = self.tags_mapping[nickname.lower()]
 
         row_data = [clean_data(profile_data.get(col, "")) for col in Config.COLUMN_ORDER]
+
+        status_idx = Config.COLUMN_ORDER.index("STATUS")
+        icons_idx = Config.COLUMN_ORDER.index("ICONS / SYMBOLS (QUICK SCAN)")
         
-        key = nickname.lower()
-        existing = self.existing_profiles.get(key)
+        # Try to find existing profile by nickname or ID
+        existing = None
+        if nickname:
+            key = nickname.lower()
+            existing = self.existing_profiles.get(key)
+        
+        if not existing and profile_id:
+            key = f"id_{profile_id}"
+            existing = self.existing_profiles.get(key)
 
         if existing:
             old_row_num = existing['row']
             old_data = existing['data']
             changed_fields = []
-            updated_row = []
-            notes_to_add = []
-
             for i, col in enumerate(Config.COLUMN_ORDER):
                 old_val = old_data[i] if i < len(old_data) else ""
                 new_val = row_data[i]
-                
-                if col in {"DATETIME SCRAP", "SOURCE"}:
-                    updated_row.append(new_val)
+                if col in {"DATETIME SCRAP", "SOURCE", "ICONS / SYMBOLS (QUICK SCAN)"}:
                     continue
 
-                if old_val != new_val:
+                compare_old = self._strip_status_symbols(old_val) if col == "STATUS" else old_val
+                compare_new = self._strip_status_symbols(new_val) if col == "STATUS" else new_val
+
+                if compare_old != compare_new:
                     changed_fields.append(col)
-                    notes_to_add.append({
-                        "range": gspread.utils.rowcol_to_a1(old_row_num, i + 1),
-                        "note": f"Before: {old_val}"
-                    })
-                
-                updated_row.append(new_val)
 
             if not changed_fields:
-                # Even if no data changed, update the timestamp
-                update_range = f'{gspread.utils.rowcol_to_a1(old_row_num, Config.COLUMN_ORDER.index("DATETIME SCRAP") + 1)}'
-                self._perform_write_operation(self.profiles_ws.update, update_range, [[profile_data["DATETIME SCRAP"]]])
-                return {"status": "unchanged"}
+                icons_symbol = "🟢"
+                row_data[status_idx] = self._format_status_with_symbol(row_data[status_idx], icons_symbol)
+                row_data[icons_idx] = icons_symbol
+                if self._perform_batch_update(self.profiles_ws, old_row_num, row_data, []):
+                    log_msg(f"Profile {nickname or profile_id} unchanged, timestamp refreshed at Row {old_row_num}.", "OK")
+                    self.existing_profiles[key]['data'] = row_data
+                    self._move_row_to_top(old_row_num)
+                    return {"status": "unchanged"}
+                return {"status": "error", "error": "Failed to update sheet"}
 
-            if self._perform_batch_update(self.profiles_ws, old_row_num, updated_row, notes_to_add):
-                log_msg(f"Updated profile {nickname} at Row {old_row_num}.", "OK")
-                self.existing_profiles[key]['data'] = updated_row # Update cache
+            icons_symbol = "🔴"
+            row_data[status_idx] = self._format_status_with_symbol(row_data[status_idx], icons_symbol)
+            row_data[icons_idx] = icons_symbol
+            if self._perform_batch_update(self.profiles_ws, old_row_num, row_data, []):
+                log_msg(f"Updated profile {nickname or profile_id} at Row {old_row_num}.", "OK")
+                self.existing_profiles[key]['data'] = row_data  # Update cache
+                self._move_row_to_top(old_row_num)
                 return {"status": "updated", "changed_fields": changed_fields}
             return {"status": "error", "error": "Failed to update sheet"}
         else:
+            icons_symbol = "🆕"
+            row_data[status_idx] = self._format_status_with_symbol(row_data[status_idx], icons_symbol)
+            row_data[icons_idx] = icons_symbol
             self.new_profiles_buffer.append(row_data)
-            log_msg(f"New profile {nickname} added to buffer.", "OK")
+            log_msg(f"New profile {nickname or profile_id} added to buffer.", "OK")
             return {"status": "new"}
 
     def get_profile(self, nickname):
@@ -443,21 +502,26 @@ class SheetsManager:
 
     # ==================== ONLINE LOG OPERATIONS ====================
 
-    def batch_log_online_users(self, nicknames, timestamp=None):
+    def batch_log_online_users(self, nicknames, timestamp=None, batch_no=None):
         """
         Appends multiple rows to the 'OnlineLog' sheet in a single batch operation.
 
         Args:
             nicknames (list[str]): A list of nicknames to log.
             timestamp (str, optional): The timestamp for all entries. Defaults to now.
+            batch_no (str, optional): The batch number for all entries. Defaults to generated.
         """
         if not nicknames:
             return
         
         ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        rows_to_add = [[ts, nickname, ts] for nickname in nicknames]
+        # Generate batch number if not provided (format: YYYYMMDD_HHMM)
+        if batch_no is None:
+            batch_no = get_pkt_time().strftime("%Y%m%d_%H%M")
         
-        log_msg(f"Logging {len(rows_to_add)} online users to the sheet...", "INFO")
+        rows_to_add = [[ts, nickname, ts, batch_no] for nickname in nicknames]
+        
+        log_msg(f"Logging {len(rows_to_add)} online users to the sheet with batch {batch_no}...", "INFO")
         self._perform_write_operation(self.online_log_ws.append_rows, rows_to_add)
 
     # ==================== DASHBOARD OPERATIONS ====================
@@ -487,7 +551,7 @@ class SheetsManager:
             state_counts.get("BANNED", 0),
             state_counts.get("DEAD", 0)
         ]
-        if self._perform_write_operation(self.dashboard_ws.append_row, row):
+        if self._perform_write_operation(self.dashboard_ws.insert_row, row, 2):
             log_msg("Dashboard updated successfully.", "OK")
 
     # ==================== HELPERS ====================
@@ -526,6 +590,95 @@ class SheetsManager:
         except Exception as e:
             log_msg(f"Batch update for row {row_num} failed: {e}", "ERROR")
             return False
+
+    def _highlight_changed_cells(self, row_num, changed_fields):
+        """Highlight changed cells with background color."""
+        try:
+            for field in changed_fields:
+                if field in Config.COLUMN_ORDER:
+                    col_idx = Config.COLUMN_ORDER.index(field) + 1
+                    cell_range = gspread.utils.rowcol_to_a1(row_num, col_idx)
+                    
+                    # Apply yellow background highlight
+                    self.profiles_ws.format(cell_range, {
+                        "backgroundColor": {
+                            "red": 1.0,
+                            "green": 1.0,
+                            "blue": 0.8
+                        }
+                    })
+        except Exception as e:
+            log_msg(f"Failed to highlight changed cells: {e}", "WARNING")
+
+    def _move_row_to_top(self, row_num):
+        """Move a row to the top (Row 2) of the sheet."""
+        try:
+            # Get the row data
+            row_data = self.profiles_ws.row_values(row_num)
+            
+            # Delete the original row
+            self.profiles_ws.delete_rows(row_num)
+            
+            # Insert at Row 2 (below header)
+            self.profiles_ws.insert_row(row_data, 2)
+            
+            # Update cache
+            self._load_existing_profiles()
+            
+        except Exception as e:
+            log_msg(f"Failed to move row to top: {e}", "WARNING")
+
+    def format_all_sheets(self):
+        """Applies 'Quantico' font to all sheets in the spreadsheet."""
+        log_msg("Applying 'Quantico' font to all sheets...", "INFO")
+        
+        all_worksheets = [
+            self.profiles_ws, self.target_ws, self.dashboard_ws, 
+            self.online_log_ws
+        ]
+        
+        # Add tags sheet if it exists
+        if self.tags_ws:
+            all_worksheets.append(self.tags_ws)
+        
+        for ws in all_worksheets:
+            if not ws:
+                continue
+                
+            try:
+                # Get the current number of rows and columns
+                row_count = ws.row_count
+                col_count = ws.col_count
+                if row_count <= 1:
+                    continue
+
+                # Define the range for all data rows (excluding the header)
+                data_range = f'A2:{gspread.utils.rowcol_to_a1(row_count, col_count)}'
+
+                # Create the format request
+                request = {
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": ws.id,
+                            "startRowIndex": 1,  # Starts after the header
+                            "endRowIndex": row_count
+                        },
+                        "cell": {
+                            "userEnteredFormat": {
+                                "textFormat": {
+                                    "fontFamily": "Quantico",
+                                    "bold": False
+                                }
+                            }
+                        },
+                        "fields": "userEnteredFormat.textFormat"
+                    }
+                }
+                self.spreadsheet.batch_update({'requests': [request]})
+                log_msg(f"Font formatting applied to '{ws.title}' sheet.", "OK")
+                
+            except Exception as e:
+                log_msg(f"Failed to apply sheet-wide format for '{ws.title}': {e}", "WARNING")
 
     def format_profile_sheet(self):
         """Applies 'Quantico' font to the entire data range of the profiles sheet."""

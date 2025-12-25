@@ -145,7 +145,8 @@ def run_online_mode(driver, sheets, max_profiles=0):
 
     # Log all users to the OnlineLog sheet in a single batch operation
     timestamp = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-    sheets.batch_log_online_users(nicknames, timestamp)
+    batch_no = get_pkt_time().strftime("%Y%m%d_%H%M")
+    sheets.batch_log_online_users(nicknames, timestamp, batch_no)
 
     # Format nicknames into the target structure for run_target_mode
     targets = [

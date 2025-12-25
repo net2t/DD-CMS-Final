@@ -109,12 +109,11 @@ Examples:
         phase_posts.run(context)
 
         # --- Finalization ---
-        # After scraping, flush any buffered new profiles, format the sheet, and then
+        # After scraping, flush any buffered new profiles, format all sheets, and then
         # sort the profiles sheet by the scrape date for consistency.
         if sheets:
             sheets.flush_new_profiles()
-            sheets.format_profile_sheet()
-            log_msg("Sorting profiles by date...")
+            sheets.format_all_sheets()  # Apply font to all sheets
             sheets.sort_profiles_by_date()
         
         # End time
