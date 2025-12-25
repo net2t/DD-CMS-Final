@@ -443,16 +443,22 @@ class SheetsManager:
 
     # ==================== ONLINE LOG OPERATIONS ====================
 
-    def log_online_user(self, nickname, timestamp=None):
+    def batch_log_online_users(self, nicknames, timestamp=None):
         """
-        Appends a new row to the 'OnlineLog' sheet to record when a user was seen online.
+        Appends multiple rows to the 'OnlineLog' sheet in a single batch operation.
 
         Args:
-            nickname (str): The nickname of the user.
-            timestamp (str, optional): The timestamp of when the user was seen. Defaults to now.
+            nicknames (list[str]): A list of nicknames to log.
+            timestamp (str, optional): The timestamp for all entries. Defaults to now.
         """
+        if not nicknames:
+            return
+        
         ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        self._perform_write_operation(self.online_log_ws.append_row, [ts, nickname, ts])
+        rows_to_add = [[ts, nickname, ts] for nickname in nicknames]
+        
+        log_msg(f"Logging {len(rows_to_add)} online users to the sheet...", "INFO")
+        self._perform_write_operation(self.online_log_ws.append_rows, rows_to_add)
 
     # ==================== DASHBOARD OPERATIONS ====================
 
