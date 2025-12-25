@@ -130,6 +130,7 @@ class SheetsManager:
         # Load data
         self.tags_mapping = {}
         self.existing_profiles = {}  # {nickname_lower: {row, data}}
+        self.new_profiles_buffer = []
         
         self._init_headers()
         self._load_tags()
@@ -177,23 +178,6 @@ class SheetsManager:
             except Exception as e:
                 log_msg(f"Header initialization for '{ws.title}' failed: {e}", "ERROR")
 
-    def _apply_row_format(self, ws, row_index):
-        """Apply 'Quantico' font to a specific row."""
-        try:
-            log_msg(f"Applying 'Quantico' font to row {row_index} in '{ws.title}'...", "INFO")
-            row_range = f'A{row_index}:{gspread.utils.rowcol_to_a1(row_index, ws.col_count)}'
-            self._perform_write_operation(
-                ws.format, 
-                row_range, 
-                {
-                    "textFormat": {
-                        "fontFamily": "Quantico",
-                        "bold": False
-                    }
-                }
-            )
-        except Exception as e:
-            log_msg(f"Failed to apply row format for '{ws.title}' at row {row_index}: {e}", "WARNING")
 
     def _apply_header_format(self, ws):
         """Apply 'Quantico' font and bold style to the header row."""
@@ -338,22 +322,10 @@ class SheetsManager:
     def write_profile(self, profile_data):
         """
         Writes a profile to the 'Profiles' sheet with advanced duplicate handling.
-
-        This is the primary method for persisting scraped data. Its logic is as follows:
-        1.  It checks if a profile with the same nickname already exists in the cache.
-        2.  If it's a new profile, it's inserted at Row 2.
-        3.  If it's a duplicate, it compares the new data with the old data.
-        4.  If there are changes, it formats the changed cells with an inline diff
-            (e.g., "Before: old\nNow: new"), deletes the old row, and inserts the
-            updated row at Row 2.
-        5.  If there are no changes, it returns an 'unchanged' status.
-        6.  After any structural change (add/delete), the local cache is refreshed.
-
-        Args:
-            profile_data (dict): A dictionary of the scraped profile data.
-
-        Returns:
-            dict: A status dictionary indicating the result ('new', 'updated', 'unchanged', 'error').
+        
+        - New profiles are inserted at Row 2.
+        - Updated profiles have their old values moved to cell notes.
+        - All write operations are batched to avoid API rate limits.
         """
         nickname = (profile_data.get("NICK NAME") or "").strip()
         if not nickname:
@@ -375,36 +347,40 @@ class SheetsManager:
             old_data = existing['data']
             changed_fields = []
             updated_row = []
+            notes_to_add = []
 
             for i, col in enumerate(Config.COLUMN_ORDER):
                 old_val = old_data[i] if i < len(old_data) else ""
                 new_val = row_data[i]
+                
                 if col in {"DATETIME SCRAP", "SOURCE"}:
                     updated_row.append(new_val)
                     continue
+
                 if old_val != new_val:
                     changed_fields.append(col)
-                    updated_row.append(f"Before: {old_val}\nNow: {new_val}")
-                else:
-                    updated_row.append(new_val)
+                    notes_to_add.append({
+                        "range": gspread.utils.rowcol_to_a1(old_row_num, i + 1),
+                        "note": f"Before: {old_val}"
+                    })
+                
+                updated_row.append(new_val)
 
             if not changed_fields:
+                # Even if no data changed, update the timestamp
+                update_range = f'{gspread.utils.rowcol_to_a1(old_row_num, Config.COLUMN_ORDER.index("DATETIME SCRAP") + 1)}'
+                self._perform_write_operation(self.profiles_ws.update, update_range, [[profile_data["DATETIME SCRAP"]]])
                 return {"status": "unchanged"}
 
-            if self._perform_write_operation(self.profiles_ws.delete_rows, old_row_num):
-                if self._perform_write_operation(self.profiles_ws.insert_row, updated_row, index=2):
-                    self._apply_row_format(self.profiles_ws, 2)
-                    log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
-                    self._load_existing_profiles() # Refresh cache after structural change
-                    return {"status": "updated", "changed_fields": changed_fields}
+            if self._perform_batch_update(self.profiles_ws, old_row_num, updated_row, notes_to_add):
+                log_msg(f"Updated profile {nickname} at Row {old_row_num}.", "OK")
+                self.existing_profiles[key]['data'] = updated_row # Update cache
+                return {"status": "updated", "changed_fields": changed_fields}
             return {"status": "error", "error": "Failed to update sheet"}
         else:
-            if self._perform_write_operation(self.profiles_ws.insert_row, row_data, index=2):
-                self._apply_row_format(self.profiles_ws, 2)
-                log_msg(f"New profile {nickname} added at Row 2.", "OK")
-                self._load_existing_profiles() # Refresh cache after structural change
-                return {"status": "new"}
-            return {"status": "error", "error": "Failed to write to sheet"}
+            self.new_profiles_buffer.append(row_data)
+            log_msg(f"New profile {nickname} added to buffer.", "OK")
+            return {"status": "new"}
 
     def get_profile(self, nickname):
         """
@@ -509,6 +485,78 @@ class SheetsManager:
             log_msg("Dashboard updated successfully.", "OK")
 
     # ==================== HELPERS ====================
+
+    def flush_new_profiles(self):
+        """Writes all new profiles from the buffer to the sheet in a single batch."""
+        if not self.new_profiles_buffer:
+            return
+        
+        log_msg(f"Writing {len(self.new_profiles_buffer)} new profiles to the sheet...", "INFO")
+        if self._perform_write_operation(self.profiles_ws.insert_rows, self.new_profiles_buffer, row=2):
+            self.new_profiles_buffer.clear()
+            self._load_existing_profiles() # Refresh cache after structural change
+            log_msg("New profiles flushed successfully.", "OK")
+        else:
+            log_msg("Failed to flush new profiles.", "ERROR")
+
+    def _perform_batch_update(self, ws, row_num, row_data, notes):
+        """Performs a batch update for a row's values and notes in a single API call."""
+        try:
+            # Update the row values directly
+            update_range = f'A{row_num}:{gspread.utils.rowcol_to_a1(row_num, len(row_data))}'
+            self._perform_write_operation(ws.update, update_range, [row_data])
+
+            # Update notes for changed cells
+            if notes:
+                note_payload = []
+                for note in notes:
+                    note_payload.append({
+                        'range': note['range'],
+                        'values': [[note['note']]]
+                    })
+                self._perform_write_operation(ws.batch_update, note_payload, value_input_option='USER_ENTERED')
+
+            return True
+        except Exception as e:
+            log_msg(f"Batch update for row {row_num} failed: {e}", "ERROR")
+            return False
+
+    def format_profile_sheet(self):
+        """Applies 'Quantico' font to the entire data range of the profiles sheet."""
+        log_msg("Applying 'Quantico' font to the entire sheet...", "INFO")
+        try:
+            # Get the current number of rows and columns
+            row_count = self.profiles_ws.row_count
+            col_count = self.profiles_ws.col_count
+            if row_count <= 1:
+                return
+
+            # Define the range for all data rows (excluding the header)
+            data_range = f'A2:{gspread.utils.rowcol_to_a1(row_count, col_count)}'
+
+            # Create the format request
+            request = {
+                "repeatCell": {
+                    "range": {
+                        "sheetId": self.profiles_ws.id,
+                        "startRowIndex": 1,  # Starts after the header
+                        "endRowIndex": row_count
+                    },
+                    "cell": {
+                        "userEnteredFormat": {
+                            "textFormat": {
+                                "fontFamily": "Quantico",
+                                "bold": False
+                            }
+                        }
+                    },
+                    "fields": "userEnteredFormat.textFormat"
+                }
+            }
+            self.spreadsheet.batch_update({'requests': [request]})
+            log_msg("Font formatting applied successfully.", "OK")
+        except Exception as e:
+            log_msg(f"Failed to apply sheet-wide format: {e}", "WARNING")
 
     def sort_profiles_by_date(self):
         """
