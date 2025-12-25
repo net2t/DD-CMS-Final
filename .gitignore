@@ -48,4 +48,13 @@ temp/
 # ============ BROWSER ============
 chromedriver.exe
 chromedriver
-.env_example
+
+# ============ BROWSER PROFILE ============
+user-data/
+downloads/
+screenshots/
+*.png
+*.jpg
+
+# ============ PICKLE FILES ============
+*.pkl
