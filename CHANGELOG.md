@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.100.0.14] - 2025-12-25
+
+### Fixed
+- **Sheet Formatting**: Corrected an issue where the 'Quantico' font was only applied to headers and not to data rows.
+- **Scraping Logic**: Restored scraping logic for several blank columns, including `FOLLOWERS`, `POSTS`, `LAST POST`, `IMAGE`, and all `MEHFIL` data.
+- **Selectors**: Fixed an `InvalidSelectorException` by converting incorrect XPath selectors to the proper CSS selector format for the Mehfil section.
+- **Mode Consistency**: Refactored the `online` mode to use the same centralized `ProfileScraper` as the `target` and `test` modes, ensuring all fixes are applied consistently.
+
+---
+
 ## [2.100.0.13] - 2025-12-25
 
 ### Added
