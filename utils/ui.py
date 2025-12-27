@@ -1,108 +1,240 @@
 """
 UI Module for the DamaDam Scraper.
 
-This module centralizes all terminal output for the application, using the 'rich'
-library to create a modern, readable, and visually appealing command-line
-interface. It provides standardized functions for logging, displaying headers,
-and printing summary tables.
+Enhanced with emojis, colors, animations, and beautiful terminal output.
 """
 
+import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.live import Live
+from rich import box
 
-# Initialize a global Rich Console instance for consistent output.
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
+# Initialize a global Rich Console instance
 console = Console()
 
+
 def get_pkt_time():
-    """Get current Pakistan time"""
+    """Get current Pakistan time (UTC+5)"""
     return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=5)
+
 
 def log_msg(msg, level="INFO"):
     """
-    A styled logger that replaces the standard print function.
-
-    It adds a timestamp and a color-coded level (e.g., INFO, OK, ERROR) to each
-    message, making the log output easier to scan and debug.
+    Enhanced styled logger with emojis and colors.
 
     Args:
         msg (str): The message to log.
-        level (str): The log level, which determines the color and label.
+        level (str): The log level (INFO, OK, WARNING, ERROR, SCRAPING, LOGIN, TIMEOUT).
     """
     ts = get_pkt_time().strftime('%H:%M:%S')
-    is_windows = sys.platform.startswith('win')
-
+    
     style_map = {
         "INFO": "cyan",
         "OK": "green",
+        "SUCCESS": "bold green",
         "WARNING": "yellow",
         "ERROR": "bold red",
         "SCRAPING": "magenta",
         "LOGIN": "blue",
-        "TIMEOUT": "dim yellow"
+        "TIMEOUT": "dim yellow",
+        "SKIP": "dim"
     }
     
     icon_map = {
-        "INFO": "ℹ️", "OK": "✅", "WARNING": "⚠️", "ERROR": "❌",
-        "SCRAPING": "🔍", "LOGIN": "🔑", "TIMEOUT": "⏳"
+        "INFO": "ℹ️",
+        "OK": "✅",
+        "SUCCESS": "🎉",
+        "WARNING": "⚠️",
+        "ERROR": "❌",
+        "SCRAPING": "🔍",
+        "LOGIN": "🔑",
+        "TIMEOUT": "⏳",
+        "SKIP": "⏭️"
     }
     
-    ascii_map = {
-        "INFO": "[INFO]", "OK": "[OK]", "WARNING": "[WARN]", "ERROR": "[ERR]",
-        "SCRAPING": "[SCRAPE]", "LOGIN": "[LOGIN]", "TIMEOUT": "[TIMEOUT]"
-    }
-
     style = style_map.get(level, "white")
+    icon = icon_map.get(level, "➡️")
     
-    if is_windows:
-        # On Windows, use ASCII text instead of icons to avoid UnicodeEncodeError
-        icon_text = ascii_map.get(level, "[----]")
-        console.print(f"[{ts}]", Text(icon_text, style=style), f" {msg}")
-    else:
-        icon = icon_map.get(level, "➡️")
-        console.print(f"[{ts}] {icon} ", Text(f"[{level}]", style=style), f" {msg}")
+    console.print(f"[dim]{ts}[/dim] {icon} [{style}]{msg}[/{style}]")
+
 
 def print_header(title, version):
     """
-    Displays a prominent, styled header at the start of the script.
-
-    It uses a Rich Panel to draw a box around the title and version, clearly
-    announcing the start of the application.
+    Displays a prominent, animated header at the start of the script.
 
     Args:
-        title (str): The main title to display in the header.
-        version (str): The script version to display.
+        title (str): The main title to display.
+        version (str): The script version.
     """
-    header_text = f"[bold cyan]{title}[/bold cyan]\n[dim]{version}[/dim]"
-    console.print(Panel(Text(header_text, justify="center"), expand=False, border_style="blue"))
+    console.print()
+    
+    # Animated border
+    for _ in range(3):
+        console.print("=" * 80, style="bold cyan")
+        time.sleep(0.1)
+    
+    header_text = Text()
+    header_text.append("🚀 ", style="bold yellow")
+    header_text.append(title, style="bold cyan")
+    header_text.append(" 🚀", style="bold yellow")
+    header_text.append("\n")
+    header_text.append(f"Version: {version}", style="dim italic")
+    header_text.append("\n")
+    header_text.append("Powered by Selenium + Google Sheets", style="dim")
+    
+    console.print(
+        Panel(
+            header_text,
+            expand=False,
+            border_style="cyan",
+            box=box.DOUBLE,
+            padding=(1, 4)
+        ),
+        justify="center"
+    )
+    
+    console.print("=" * 80, style="bold cyan")
+    console.print()
+
 
 def print_summary(stats, mode, duration):
     """
-    Displays a summary of the completed scraping run in a clean, formatted table.
-
-    It uses a Rich Table to present the final statistics, such as the number of
-    successful, failed, and new profiles, along with the total duration.
+    Displays a comprehensive summary table at the end of the run.
 
     Args:
-        stats (dict): A dictionary of statistics from the run.
-        mode (str): The scraping mode that was run ('online' or 'target').
-        duration (float): The total duration of the run in seconds.
+        stats (dict): Run statistics.
+        mode (str): The scraping mode ('online' or 'target').
+        duration (float): Total duration in seconds.
     """
-    table = Table(title="Scraping Completed", show_header=True, header_style="bold magenta")
-    table.add_column("Metric", style="dim", width=20)
-    table.add_column("Value", justify="right")
-
-    table.add_row("Mode", mode.upper())
-    table.add_row("Success", str(stats.get('success', 0)))
-    table.add_row("Failed", str(stats.get('failed', 0)))
-    table.add_row("New", str(stats.get('new', 0)))
-    table.add_row("Updated", str(stats.get('updated', 0)))
-    table.add_row("Unchanged", str(stats.get('unchanged', 0)))
+    console.print()
+    console.print("=" * 80, style="bold green")
+    console.print()
+    
+    # Create summary table
+    table = Table(
+        title="📊 Scraping Run Summary",
+        show_header=True,
+        header_style="bold magenta",
+        border_style="green",
+        box=box.DOUBLE_EDGE
+    )
+    
+    table.add_column("Metric", style="cyan", width=25)
+    table.add_column("Value", justify="right", style="bold yellow", width=15)
+    table.add_column("Status", justify="center", width=10)
+    
+    # Mode
+    table.add_row("🎯 Mode", mode.upper(), "")
+    table.add_row("", "", "")  # Spacer
+    
+    # Results
+    success_icon = "✅" if stats.get('success', 0) > 0 else "⚠️"
+    table.add_row("✅ Successful", str(stats.get('success', 0)), success_icon)
+    
+    failed_icon = "❌" if stats.get('failed', 0) > 0 else "✅"
+    table.add_row("❌ Failed", str(stats.get('failed', 0)), failed_icon)
+    
+    table.add_row("", "", "")  # Spacer
+    
+    # Profile breakdown
+    table.add_row("🆕 New Profiles", str(stats.get('new', 0)), "")
+    table.add_row("🔄 Updated Profiles", str(stats.get('updated', 0)), "")
+    table.add_row("💤 Unchanged Profiles", str(stats.get('unchanged', 0)), "")
+    
+    # Online mode specific
     if mode == 'online':
-        table.add_row("Logged", str(stats.get('logged', 0)))
-    table.add_row("Duration", f"{duration:.0f}s")
+        table.add_row("", "", "")  # Spacer
+        table.add_row("📝 Logged Online Users", str(stats.get('logged', 0)), "")
+    
+    # Duration
+    table.add_row("", "", "")  # Spacer
+    duration_str = f"{int(duration // 60)}m {int(duration % 60)}s"
+    duration_icon = "⚡" if duration < 300 else "🐌"
+    table.add_row("⏱️ Duration", duration_str, duration_icon)
+    
+    console.print(table, justify="center")
+    console.print()
+    console.print("=" * 80, style="bold green")
+    console.print()
 
-    console.print(table)
+
+def print_phase_start(phase_name):
+    """
+    Announces the start of a scraping phase.
+
+    Args:
+        phase_name (str): Name of the phase (e.g., 'PROFILE', 'POSTS').
+    """
+    console.print()
+    console.print(
+        Panel(
+            f"[bold cyan]Starting {phase_name} Phase[/bold cyan]",
+            border_style="yellow",
+            expand=False
+        )
+    )
+    console.print()
+
+
+def print_online_users_found(count):
+    """
+    Displays a summary of found online users.
+
+    Args:
+        count (int): Number of online users found.
+    """
+    if count == 0:
+        console.print("⚠️ [yellow]No online users found[/yellow]")
+    else:
+        console.print(f"✅ [green]Found {count} online users[/green]")
+
+
+def create_progress_bar():
+    """
+    Creates a reusable progress bar for batch operations.
+
+    Returns:
+        Progress: A rich Progress instance.
+    """
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(complete_style="green", finished_style="bold green"),
+        TaskProgressColumn(),
+        console=console
+    )
+
+
+def print_mode_config(mode, max_profiles, batch_size):
+    """
+    Displays the configuration for the current run.
+
+    Args:
+        mode (str): The scraping mode.
+        max_profiles (int): Maximum profiles to scrape (0 = unlimited).
+        batch_size (int): Batch size for processing.
+    """
+    config_table = Table(show_header=False, border_style="dim", box=None)
+    config_table.add_column("Key", style="cyan")
+    config_table.add_column("Value", style="yellow")
+    
+    config_table.add_row("🎯 Mode", mode.upper())
+    config_table.add_row("🔢 Max Profiles", "Unlimited" if max_profiles == 0 else str(max_profiles))
+    config_table.add_row("📦 Batch Size", str(batch_size))
+    
+    console.print(config_table)
+    console.print()

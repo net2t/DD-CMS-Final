@@ -1,15 +1,16 @@
-name: Target Mode Scraper
+name: Target Mode Scraper (Manual)
 
 on:
+  # Manual trigger only - Run on demand
   workflow_dispatch:
     inputs:
       max_profiles:
-        description: 'Max profiles to scrape (0 = All)'
+        description: 'Max profiles to scrape (0 = All pending targets)'
         required: false
         default: '0'
         type: string
       batch_size:
-        description: 'Batch size'
+        description: 'Batch size for processing'
         required: false
         default: '20'
         type: string
@@ -19,31 +20,47 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
       
-      - name: Setup Python
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       
-      - name: Install Dependencies
+      - name: 📦 Install Dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run Target Mode Scraper
+      - name: 🎯 Run Target Mode Scraper
         env:
+          # Primary Account
           DAMADAM_USERNAME: ${{ secrets.DAMADAM_USERNAME }}
           DAMADAM_PASSWORD: ${{ secrets.DAMADAM_PASSWORD }}
+          
+          # Backup Account (optional but recommended)
           DAMADAM_USERNAME_2: ${{ secrets.DAMADAM_USERNAME_2 }}
           DAMADAM_PASSWORD_2: ${{ secrets.DAMADAM_PASSWORD_2 }}
+          
+          # Google Sheets Configuration
           GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          
+          # Run Configuration
           MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '0' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
         run: |
-          python main.py \
-            --mode target \
+          python main.py target \
             --max-profiles ${{ github.event.inputs.max_profiles || '0' }} \
             --batch-size ${{ github.event.inputs.batch_size || '20' }}
+      
+      - name: 📊 Upload Logs (if available)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: target-mode-logs
+          path: |
+            *.log
+            logs/
+          if-no-files-found: ignore

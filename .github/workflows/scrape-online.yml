@@ -1,15 +1,20 @@
-name: Online Mode Scraper
+name: Online Mode Scraper (Auto-Scheduled)
 
 on:
-  # Run every 15 minutes
+  # Run every 15 minutes automatically
   schedule:
     - cron: '*/15 * * * *'
   
-  # Allow manual trigger
+  # Also allow manual trigger for testing
   workflow_dispatch:
     inputs:
+      max_profiles:
+        description: 'Max profiles to scrape (0 = All online users, recommended: 20-50)'
+        required: false
+        default: '30'
+        type: string
       batch_size:
-        description: 'Batch size'
+        description: 'Batch size for processing'
         required: false
         default: '20'
         type: string
@@ -19,29 +24,49 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
       
-      - name: Setup Python
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       
-      - name: Install Dependencies
+      - name: 📦 Install Dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run Online Mode Scraper
+      - name: 🌐 Run Online Mode Scraper
         env:
+          # Primary Account
           DAMADAM_USERNAME: ${{ secrets.DAMADAM_USERNAME }}
           DAMADAM_PASSWORD: ${{ secrets.DAMADAM_PASSWORD }}
+          
+          # Backup Account (optional but recommended)
           DAMADAM_USERNAME_2: ${{ secrets.DAMADAM_USERNAME_2 }}
           DAMADAM_PASSWORD_2: ${{ secrets.DAMADAM_PASSWORD_2 }}
+          
+          # Google Sheets Configuration
           GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          
+          # Run Configuration
+          # For scheduled runs: limit to 30 profiles to avoid timeouts
+          # For manual runs: use input value
+          MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '30' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
         run: |
-          python main.py \
-            --mode online \
+          python main.py online \
+            --max-profiles ${{ github.event.inputs.max_profiles || '30' }} \
             --batch-size ${{ github.event.inputs.batch_size || '20' }}
+      
+      - name: 📊 Upload Logs (if available)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: online-mode-logs-${{ github.run_number }}
+          path: |
+            *.log
+            logs/
+          if-no-files-found: ignore
