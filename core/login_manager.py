@@ -1,10 +1,10 @@
 """
 Manages the login process for the DamaDam website.
 
-This module encapsulates the logic for authenticating the scraper's session,
-using either saved cookies for a quick login or credentials for a fresh start.
-It is designed to be resilient, with a fallback to a secondary account if the
-primary one fails.
+Enhanced with:
+- Cookie-based session persistence
+- Automatic backup account failover
+- GitHub Actions compatibility (no cookies)
 """
 
 import time
@@ -14,41 +14,69 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from config.config_common import Config
 from config.selectors import LoginSelectors
-from .browser_manager import save_cookies, load_cookies, log_msg
+from .browser_manager import save_cookies, load_cookies
+from utils.ui import log_msg
 
 
 class LoginManager:
-    """Handles the DamaDam authentication process."""
+    """Handles the DamaDam authentication process with cookies and backup login."""
 
     def __init__(self, driver):
         """Initializes the LoginManager with the WebDriver instance."""
         self.driver = driver
 
     def login(self):
-        """Orchestrates the login process.
+        """Orchestrates the login process with cookie persistence and backup failover.
 
-        It first attempts a quick login using saved session cookies. If that fails
-        or no cookies are available, it proceeds with a full, fresh login using
-        stored credentials.
+        Login Strategy:
+        1. Try cookie-based login (if not in CI/GitHub Actions)
+        2. Try primary account fresh login
+        3. Try backup account fresh login (if configured)
 
         Returns:
             bool: True if login is successful, False otherwise.
         """
-        log_msg("Starting authentication...", "LOGIN")
+        log_msg("🔐 Starting authentication...", "LOGIN")
 
         try:
-            if self._try_cookie_login():
+            # Skip cookie login in GitHub Actions (no file persistence)
+            if not Config.IS_GITHUB_ACTIONS:
+                if self._try_cookie_login():
+                    log_msg("✅ Cookie login successful", "OK")
+                    return True
+                else:
+                    log_msg("⚠️ Cookie login failed, trying fresh login...", "WARNING")
+
+            # Try fresh login with primary account
+            if self._fresh_login(
+                Config.DAMADAM_USERNAME,
+                Config.DAMADAM_PASSWORD,
+                "Primary"
+            ):
+                log_msg("✅ Primary account login successful", "OK")
                 return True
 
-            return self._fresh_login()
+            # Try backup account if configured
+            if Config.DAMADAM_USERNAME_2 and Config.DAMADAM_PASSWORD_2:
+                log_msg("⚠️ Primary login failed, trying backup account...", "WARNING")
+                if self._fresh_login(
+                    Config.DAMADAM_USERNAME_2,
+                    Config.DAMADAM_PASSWORD_2,
+                    "Backup"
+                ):
+                    log_msg("✅ Backup account login successful", "OK")
+                    return True
+
+            log_msg("❌ All login attempts failed", "ERROR")
+            return False
 
         except Exception as e:
-            log_msg(f"Login failed: {e}", "ERROR")
+            log_msg(f"❌ Login failed: {e}", "ERROR")
             return False
 
     def _try_cookie_login(self):
         """Attempts to log in by loading saved cookies into the browser."""
-        log_msg("Attempting cookie-based login...", "LOGIN")
+        log_msg("🍪 Attempting cookie-based login...", "LOGIN")
 
         try:
             self.driver.get(Config.HOME_URL)
@@ -61,77 +89,40 @@ class LoginManager:
             time.sleep(3)
 
             if "login" not in self.driver.current_url.lower():
-                log_msg("Cookie login successful", "OK")
                 return True
 
             return False
 
         except Exception as e:
-            log_msg(f"Cookie login failed: {e}", "LOGIN")
+            log_msg(f"⚠️ Cookie login failed: {e}", "LOGIN")
             return False
 
-    def _fresh_login(self):
+    def _fresh_login(self, username, password, label):
         """
         Performs a fresh login using username and password.
 
-        It will try the primary account first. If that fails and a secondary
-        account is configured, it will attempt to log in with the secondary
-        credentials.
+        Args:
+            username (str): The account username.
+            password (str): The account password.
+            label (str): A label for logging (e.g., 'Primary', 'Backup').
+
+        Returns:
+            bool: True on successful login, False otherwise.
         """
-        log_msg("Starting fresh login...", "LOGIN")
+        log_msg(f"🔑 Attempting fresh login with {label} account...", "LOGIN")
 
         try:
             self.driver.get(Config.LOGIN_URL)
             time.sleep(3)
 
-            if self._try_account(
-                Config.DAMADAM_USERNAME,
-                Config.DAMADAM_PASSWORD,
-                "Primary"
-            ):
-                save_cookies(self.driver)
-                log_msg("Fresh login successful", "OK")
-                return True
-
-            if Config.DAMADAM_USERNAME_2 and Config.DAMADAM_PASSWORD_2:
-                if self._try_account(
-                    Config.DAMADAM_USERNAME_2,
-                    Config.DAMADAM_PASSWORD_2,
-                    "Secondary"
-                ):
-                    save_cookies(self.driver)
-                    log_msg("Fresh login successful (secondary)", "OK")
-                    return True
-
-            return False
-
-        except Exception as e:
-            log_msg(f"Fresh login failed: {e}", "ERROR")
-            return False
-
-    def _try_account(self, username, password, label):
-        """
-        Attempts to log in with a specific set of credentials.
-
-        Finds the username and password fields, fills them, and submits the form.
-
-        Args:
-            username (str): The account username.
-            password (str): The account password.
-            label (str): A label for logging (e.g., 'Primary', 'Secondary').
-
-        Returns:
-            bool: True on successful login, False otherwise.
-        """
-        log_msg(f"Attempting login with {label} account...", "LOGIN")
-
-        try:
+            # Find username field
             nick = WebDriverWait(self.driver, 8).until(
                 EC.presence_of_element_located(
                     (By.CSS_SELECTOR, LoginSelectors.USERNAME_FIELD)
                 )
             )
 
+            # Find password field
             try:
                 pw = self.driver.find_element(
                     By.CSS_SELECTOR,
@@ -144,11 +135,13 @@ class LoginManager:
                     )
                 )
 
+            # Find submit button
             btn = self.driver.find_element(
                 By.CSS_SELECTOR,
                 LoginSelectors.SUBMIT_BUTTON
             )
 
+            # Fill and submit
             nick.clear()
             nick.send_keys(username)
             time.sleep(0.5)
@@ -160,13 +153,17 @@ class LoginManager:
             btn.click()
             time.sleep(4)
 
+            # Check success
             if "login" not in self.driver.current_url.lower():
-                log_msg(f"{label} account login successful", "OK")
+                # Save cookies for future use (skip in CI)
+                if not Config.IS_GITHUB_ACTIONS:
+                    save_cookies(self.driver)
+                    log_msg("💾 Session cookies saved", "OK")
                 return True
 
-            log_msg(f"{label} account login failed", "LOGIN")
+            log_msg(f"⚠️ {label} account login failed", "LOGIN")
             return False
 
         except Exception as e:
-            log_msg(f"{label} account error: {e}", "LOGIN")
+            log_msg(f"❌ {label} account error: {e}", "LOGIN")
             return False

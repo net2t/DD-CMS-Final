@@ -170,7 +170,7 @@ def sanitize_nickname_for_url(nickname):
     if not nickname or not isinstance(nickname, str):
         return None
     
-    # Strip leading/trailing whitespace
+    # Strip whitespace only; nickname must remain unchanged
     nickname = nickname.strip()
     
     # Reject if empty after strip
@@ -186,7 +186,7 @@ def sanitize_nickname_for_url(nickname):
         return None
     
     # Validate format: alphanumeric, dots, hyphens, underscores only
-    if not re.match(r'^[\w\.\-_]+$', nickname):
+    if not re.match(r'^[\w\.\-_@]+$', nickname):
         return None
     
     return nickname
@@ -329,7 +329,7 @@ class ProfileScraper:
             
         return ""
     
-    def _extract_stats(self):
+    def _extract_stats(self, page_source):
         """Extracts follower and post counts."""
         stats = {'FOLLOWERS': '', 'POSTS': ''}
         try:
@@ -344,9 +344,22 @@ class ProfileScraper:
         except Exception:
             pass  # Keep default value if not found
 
+        if not stats['FOLLOWERS']:
+            follower_patterns = [
+                r'([\d,\.]+)\s+verified\s+followers',
+                r'([\d,\.]+)\s+unverified\s+followers',
+                r'([\d,\.]+)\s+followers'
+            ]
+            stats['FOLLOWERS'] = self._match_stat(page_source, follower_patterns)
+        if not stats['POSTS']:
+            post_patterns = [
+                r'([\d,\.]+)\s+posts?'
+            ]
+            stats['POSTS'] = self._match_stat(page_source, post_patterns)
+
         return stats
 
-    def _extract_last_post(self):
+    def _extract_last_post(self, page_source):
         """Extracts the last post text and time."""
         last_post = {'LAST POST': '', 'LAST POST TIME': ''}
         try:
@@ -361,16 +374,51 @@ class ProfileScraper:
         except Exception:
             pass
 
+        if not last_post['LAST POST']:
+            post_patterns = [
+                r'<div[^>]+class="[^"]*pst[^"]*"[^>]*>.*?<a[^>]*>([^<]+)</a>',
+                r'Last\s+post[:\s]+([^<\n\r]+)'
+            ]
+            match = self._match_stat(page_source, post_patterns)
+            if match:
+                last_post['LAST POST'] = match
+
+        if not last_post['LAST POST TIME']:
+            time_patterns = [
+                r'<div[^>]+class="[^"]*pst[^"]*"[^>]*>.*?<span[^>]*class="[^"]*(gry|sp)[^"]*"[^>]*>([^<]+)</span>',
+                r'<span[^>]+class="[^"]*gry[^"]*"[^>]*>([^<]+ ago)</span>'
+            ]
+            match = self._match_stat(page_source, time_patterns)
+            if match:
+                last_post['LAST POST TIME'] = normalize_post_datetime(match)
+
         return last_post
 
-    def _extract_profile_image(self):
+    def _extract_profile_image(self, page_source):
         """Extracts the profile image URL."""
         try:
             image_elem = self.driver.find_element(By.XPATH, ProfileSelectors.PROFILE_IMAGE)
             image_url = image_elem.get_attribute('src')
             return image_url if image_url and image_url.startswith('http') else f"https://damadam.pk{image_url}"
         except Exception:
+            pass
+
+        match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', page_source, re.IGNORECASE)
+        if match:
+            url = match.group(1)
+            return url if url.startswith('http') else f"https://damadam.pk{url}"
+        return ""
+
+    def _match_stat(self, text, patterns):
+        if not text:
             return ""
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            if match:
+                val = match.group(1) if match.groups() else match.group(0)
+                if val:
+                    return clean_text(val)
+        return ""
 
     def scrape_profile(self, nickname, source="Target"):
         """
@@ -420,9 +468,9 @@ class ProfileScraper:
             friend_status = self._extract_friend_status(page_source)
             _, rank_image = self._extract_rank(page_source)
             user_id = self._extract_user_id(page_source)
-            stats_data = self._extract_stats()
-            last_post_data = self._extract_last_post()
-            image_url = self._extract_profile_image()
+            stats_data = self._extract_stats(page_source)
+            last_post_data = self._extract_last_post(page_source)
+            image_url = self._extract_profile_image(page_source)
 
             # Update data with all fields
             data.update({

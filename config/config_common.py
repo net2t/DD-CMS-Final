@@ -1,5 +1,5 @@
 """
-Configuration Manager for DamaDam Scraper v4.0
+Configuration Manager for DamaDam Scraper v2.1
 Handles all environment variables and settings
 """
 
@@ -53,7 +53,7 @@ class Config:
     # ==================== ENVIRONMENT ====================
     IS_CI = bool(os.getenv('GITHUB_ACTIONS'))
     IS_GITHUB_ACTIONS = IS_CI
-    SCRIPT_VERSION = "v2.100.0.13"
+    SCRIPT_VERSION = "v2.100.0.15"
     
     # ==================== SHEET NAMES ====================
     SHEET_PROFILES = "Profiles"
@@ -63,33 +63,35 @@ class Config:
     SHEET_ONLINE_LOG = "OnlineLog"
     
     # ==================== COLUMN CONFIGURATION ====================
+    # FIXED: Removed INTRO column (was position 11)
     COLUMN_ORDER = [
-        "ID",
-        "NICK NAME",
-        "TAGS",
-        "CITY",
-        "GENDER",
-        "MARRIED",
-        "AGE",
-        "JOINED",
-        "FOLLOWERS",
-        "STATUS",
-        "POSTS",
-        "SOURCE",
-        "DATETIME SCRAP",
-        "LAST POST",
-        "LAST POST TIME",
-        "IMAGE",
-        "PROFILE LINK",
-        "POST URL",
-        "RURL",
-        "MEH NAME",
-        "MEH TYPE",
-        "PROFILE_STATE",
-        "ICONS / SYMBOLS (QUICK SCAN)"
+        "ID",                  # 0
+        "NICK NAME",          # 1
+        "TAGS",               # 2
+        "CITY",               # 3
+        "GENDER",             # 4
+        "MARRIED",            # 5
+        "AGE",                # 6
+        "JOINED",             # 7
+        "FOLLOWERS",          # 8
+        "STATUS",             # 9
+        "POSTS",              # 10
+        "SOURCE",             # 11
+        "DATETIME SCRAP",     # 12
+        "LAST POST",          # 13
+        "LAST POST TIME",     # 14
+        "IMAGE",              # 15
+        "PROFILE LINK",       # 16
+        "POST URL",           # 17
+        "RURL",               # 18
+        "MEH NAME",           # 19
+        "MEH TYPE",           # 20
+        "MEH LINK",           # 21
+        "MEH DATE",           # 22
+        "PROFILE_STATE"       # 23
     ]
     
-    ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen", "Batch No"]
+    ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen"]
     
     # ==================== TARGET STATUS ====================
     TARGET_STATUS_PENDING = "⚡ Pending"
@@ -134,8 +136,9 @@ class Config:
         "RURL": "",
         "MEH NAME": "",
         "MEH TYPE": "",
-        "PROFILE_STATE": "ACTIVE",
-        "ICONS / SYMBOLS (QUICK SCAN)": ""
+        "MEH LINK": "",
+        "MEH DATE": "",
+        "PROFILE_STATE": "ACTIVE"
     }
     
     @classmethod
@@ -208,4 +211,3 @@ class Config:
     def get_credentials_path(cls):
         """Public method to get credentials path"""
         return cls._get_credentials_path()
-
