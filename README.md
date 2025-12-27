@@ -8,9 +8,20 @@
 
 ---
 
+## 🎯 What's New in v2.100.0.16
+
+### 🚀 Improvements
+
+- **Pending-only Target Selection:** Only rows with 'pending' in Col B are processed in Target mode; 'Error', 'Done', etc. are always skipped.
+- **Literal Nickname Handling:** Nicknames (including @ and special characters) are used as-is for scraping and URLs. No modification.
+- **Auto GitHub Workflow:** After every successful run, all files are committed and merged to `main` (or a branch) automatically.
+
+---
+
 ## 🎯 What's New in v2.100.0.15
 
 ### ✅ **FIXED Issues**
+
 - ✅ **Missing Data Extraction**: Restored all working selectors
   - FOLLOWERS count now extracted correctly
   - POSTS count now extracted correctly
@@ -56,11 +67,13 @@ pip install -r requirements.txt
 ### 2. Setup Credentials
 
 **A. Create `.env` file:**
+
 ```bash
 cp .env.example .env
 ```
 
 **B. Edit `.env` with your credentials:**
+
 ```env
 # Primary Account (Required)
 DAMADAM_USERNAME=your_username
@@ -75,6 +88,7 @@ GOOGLE_SHEET_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit
 ```
 
 **C. Add Google Service Account:**
+
 1. Download `credentials.json` from Google Cloud Console
 2. Place it in the project root directory
 3. Share your Google Sheet with the service account email
@@ -97,29 +111,34 @@ python main.py target --max-profiles 0
 ## 📋 Features
 
 ### 🎯 **Multi-Mode Scraping**
+
 - **Online Mode**: Scrapes currently online users (auto-scheduled every 15 min)
 - **Target Mode**: Scrapes from 'RunList' sheet (manual trigger)
 - **Test Mode**: Quick testing with predefined profiles
 
 ### 🔐 **Robust Authentication**
+
 - Cookie-based session persistence (faster login)
 - Dual account system with automatic failover
 - Prevents account blocking from repeated logins
 - GitHub Actions ready (no file persistence needed)
 
 ### 📊 **Smart Data Handling**
+
 - Nickname-based duplicate detection
 - Inline diffs for changed data
 - Profile state tracking (ACTIVE, UNVERIFIED, BANNED, DEAD)
 - Automatic sorting by scrape date
 
 ### 🎨 **Modern Terminal UI**
+
 - Rich color-coded output with emojis
 - Progress bars with animations
 - Comprehensive summary reports
 - Beautiful formatted tables
 
 ### 🛡️ **Resilient & Scalable**
+
 - API rate limit handling with retries
 - Session timeout recovery
 - Minor HTML change tolerance
@@ -145,6 +164,7 @@ python main.py target --max-profiles 0
 ### Google Sheets Setup
 
 **Required Sheets:**
+
 1. **Profiles** - Main profile data storage
 2. **RunList** - Queue for target mode
 3. **OnlineLog** - Log of all users seen online
@@ -152,6 +172,7 @@ python main.py target --max-profiles 0
 5. **Tags** (optional) - Tag-to-user mappings
 
 **RunList Sheet Format:**
+
 | Nickname | Status | Remarks | Source |
 |---|---|---|---|
 | user123 | ⚡ Pending | | Target |
@@ -175,6 +196,7 @@ Go to **Settings → Secrets and variables → Actions** and add:
 ### 2. Workflows
 
 #### **Target Mode (Manual)**
+
 - Navigate to **Actions → Target Mode Scraper**
 - Click **Run workflow**
 - Set options:
@@ -182,6 +204,7 @@ Go to **Settings → Secrets and variables → Actions** and add:
   - `batch_size`: Processing batch size (default: 20)
 
 #### **Online Mode (Automatic)**
+
 - Runs every 15 minutes automatically
 - Can also trigger manually for testing
 - Recommended `max_profiles`: 20-50 (to avoid timeouts)
@@ -253,6 +276,7 @@ DD-CMS-Final/
 ## 🎨 Terminal Output Examples
 
 ### Header
+
 ```
 ================================================================================
 🚀 DamaDam Scraper - TARGET MODE 🚀
@@ -262,6 +286,7 @@ Powered by Selenium + Google Sheets
 ```
 
 ### During Run
+
 ```
 12:34:56 🔐 [LOGIN] Attempting cookie-based login...
 12:34:58 ✅ [OK] Cookie login successful
@@ -270,6 +295,7 @@ Powered by Selenium + Google Sheets
 ```
 
 ### Summary Report
+
 ```
 📊 Scraping Run Summary
 ┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
@@ -316,6 +342,7 @@ The scraper is designed for easy extension:
 **Issue**: API quota exceeded errors
 
 **Solution**: Reduce `max_profiles` or increase delay in config:
+
 ```python
 SHEET_WRITE_DELAY = 2.0  # Increase from 1.0
 ```
@@ -331,6 +358,7 @@ SHEET_WRITE_DELAY = 2.0  # Increase from 1.0
 ## ✨ Credits
 
 **Developed by:**
+
 - **Author**: Nadeem
   - **Email**: `net2outlawzz@gmail.com`
   - **Social**: `@net2nadeem` (Instagram, Facebook)
@@ -347,7 +375,8 @@ This project is for educational purposes only. Please respect the website's term
 ## 🆘 Support
 
 For issues, questions, or feature requests:
-- **Email**: net2outlawzz@gmail.com
+
+- **Email**: <net2outlawzz@gmail.com>
 - **Instagram**: @net2nadeem
 - **Issues**: [GitHub Issues](https://github.com/net2t/DD-CMS-Final/issues)
 

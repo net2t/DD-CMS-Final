@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.100.0.16] - 2025-12-28
+
+### 🚀 Improvements
+
+- **Pending-only Target Selection:** Now only rows with 'pending' in Col B are processed in Target mode; 'Error', 'Done', etc. are always skipped.
+- **Literal Nickname Handling:** No changes are made to nicknames (including @ and special characters). URLs and scraping use the exact value from the sheet.
+- **Auto GitHub Workflow:** After every successful run, all files are committed and merged to `main` (or a branch) for full traceability.
+- **Docs:** Minor clarifications in README and workflow description.
+
+---
+
 ## [2.100.0.15] - 2025-12-26
 
 ### 🎉 Major Release - Production Ready
@@ -11,6 +22,7 @@ All notable changes to this project will be documented in this file.
 This release fixes all critical data extraction issues and enhances the entire system for production deployment.
 
 ### ✅ Fixed - Data Extraction (Critical)
+
 - **FOLLOWERS Extraction**: Restored working selectors from old codebase
   - Primary selector: `//a[contains(@href, '/followers/')]/b`
   - Fallback selectors added for resilience
@@ -42,18 +54,21 @@ This release fixes all critical data extraction issues and enhances the entire s
   - MEH DATE: `div.cs.sp` with date normalization
 
 ### ✅ Fixed - Column Management
+
 - **Removed INTRO Column**: Deleted from `COLUMN_ORDER` (was position 11)
 - **Dashboard Simplified**: Removed state count columns (L, M, N, O)
   - Removed: ACTIVE, UNVERIFIED, BANNED, DEAD counts
   - Kept: Run#, Timestamp, Profiles, Success, Failed, New, Updated, Unchanged, Trigger, Start, End
 
 ### ✅ Fixed - Font Formatting
+
 - **Quantico Font Applied to ALL Rows**: Previously only headers had Quantico font
   - `_apply_row_format()` now called on every profile write
   - Applies to both new profiles and updated profiles
   - Consistent formatting across all sheets
 
 ### ✅ Enhanced - Login System
+
 - **Cookie Persistence**: Implemented for local runs
   - Saves session cookies after successful login
   - Loads cookies on next run for instant authentication
@@ -66,6 +81,7 @@ This release fixes all critical data extraction issues and enhances the entire s
   - Prevents account blocking from repeated logins
   
 - **Smart Login Flow**:
+
   ```
   1. Try cookie login (local only)
   2. Try primary account fresh login
@@ -74,6 +90,7 @@ This release fixes all critical data extraction issues and enhances the entire s
   ```
 
 ### ✅ Enhanced - Terminal UI
+
 - **Rich Library Integration**: Beautiful colored output
   - Color-coded log levels (INFO=cyan, OK=green, ERROR=red)
   - Emoji icons for each log type (🔍 SCRAPING, 🔑 LOGIN, ✅ OK, ❌ ERROR)
@@ -93,6 +110,7 @@ This release fixes all critical data extraction issues and enhances the entire s
   - Displays success/failure counts live
 
 ### ✅ Enhanced - GitHub Actions
+
 - **Target Mode Workflow**: Manual trigger with inputs
   - Input: `max_profiles` (0 = all pending)
   - Input: `batch_size` (default: 20)
@@ -106,6 +124,7 @@ This release fixes all critical data extraction issues and enhances the entire s
   - Rate-limited for stability
 
 ### ✅ Enhanced - Error Handling
+
 - **API Rate Limit Resilience**: Automatic retry with exponential backoff
   - Catches 429 errors from Google Sheets API
   - Waits 60/120/180 seconds before retry
@@ -117,6 +136,7 @@ This release fixes all critical data extraction issues and enhances the entire s
   - Logs warnings but continues on failure
 
 ### 📝 Changed - Code Organization
+
 - **Modular Phase System**: Prepared for future expansion
   - `phases/phase_profile.py` - Profile scraping orchestrator
   - `phases/phase_mehfil.py` - Stub for Mehfil phase
@@ -133,6 +153,7 @@ This release fixes all critical data extraction issues and enhances the entire s
   - Easy to update if site structure changes
 
 ### 📚 Documentation
+
 - **Enhanced README.md**: Complete production-ready guide
   - Quick start instructions (5 minutes)
   - GitHub Actions setup guide
@@ -146,7 +167,9 @@ This release fixes all critical data extraction issues and enhances the entire s
   - Migration guides included
 
 ### 🔧 Configuration Changes
-- **COLUMN_ORDER Updated**: 
+
+- **COLUMN_ORDER Updated**:
+
   ```python
   # Old (24 columns including INTRO)
   ["ID", "NICK NAME", ..., "INTRO", ..., "PROFILE_STATE"]
@@ -156,6 +179,7 @@ This release fixes all critical data extraction issues and enhances the entire s
   ```
 
 - **Dashboard Headers Simplified**:
+
   ```python
   # Old (15 columns)
   [..., "Trigger", "Start", "End", "Active", "Unverified", "Banned", "Dead"]
@@ -165,13 +189,16 @@ This release fixes all critical data extraction issues and enhances the entire s
   ```
 
 ### ⚠️ Breaking Changes
+
 - **INTRO Column Removed**: If you have existing sheets with INTRO data, it will be ignored
 - **Dashboard Format Changed**: Old dashboard data incompatible (create new sheet or manually remove columns L-O)
 
 ### 🐛 Known Issues
+
 - None reported in this version
 
 ### 🔮 Coming Soon
+
 - Phase 2: Posts scraping
 - Phase 3: Comments scraping
 - Phase 4: Advanced Mehfil scraping
@@ -182,6 +209,7 @@ This release fixes all critical data extraction issues and enhances the entire s
 ## [2.100.0.14] - 2025-12-25
 
 ### Fixed
+
 - **Sheet Formatting**: Corrected an issue where the 'Quantico' font was only applied to headers and not to data rows.
 - **Scraping Logic**: Restored scraping logic for several blank columns, including `FOLLOWERS`, `POSTS`, `LAST POST`, `IMAGE`, and all `MEHFIL` data.
 - **Selectors**: Fixed an `InvalidSelectorException` by converting incorrect XPath selectors to the proper CSS selector format for the Mehfil section.
@@ -192,12 +220,14 @@ This release fixes all critical data extraction issues and enhances the entire s
 ## [2.100.0.13] - 2025-12-25
 
 ### Added
+
 - Created a `CHANGELOG.md` to track versions and fixes.
 - Modernized terminal output with the `rich` library for better readability.
 - Centralized UI components in `utils/ui.py`.
 - Unified profile scraping logic under a new `phase_profile.py` orchestrator.
 
 ### Changed
+
 - **Major Refactor**: Overhauled the entire project structure for clarity and maintainability.
 - Migrated core logic into `core`, `phases`, `utils`, and `config` directories.
 - **SheetsManager Overhaul**: Rewrote `utils/sheets_manager.py` to handle nickname-based duplicates with an inline diff format, move new/updated profiles to the top, and manage API rate limits gracefully.
@@ -205,11 +235,13 @@ This release fixes all critical data extraction issues and enhances the entire s
 - Refactored `main.py` to use the new phase-based architecture and modernized UI.
 
 ### Removed
+
 - Deleted legacy files: `Scraper.py`, `scraper_online.py`, `scraper_target.py`, `sheets_manager.py`.
 - Removed all "BLANK" value logic in favor of empty strings.
 - Removed redundant logging functions from individual modules.
 
 ### Fixed
+
 - Corrected a `ValueError` in the online mode runner.
 
 ---
@@ -217,12 +249,14 @@ This release fixes all critical data extraction issues and enhances the entire s
 ## [2.0.0] - 2025-12-20
 
 ### Added
+
 - Initial refactored version with modular architecture
 - Dual mode support (Target and Online)
 - Google Sheets integration
 - Basic profile scraping functionality
 
 ### Changed
+
 - Complete rewrite from v1.x
 - New project structure
 - Improved error handling
@@ -232,6 +266,7 @@ This release fixes all critical data extraction issues and enhances the entire s
 ## [1.0.0] - 2025-12-01
 
 ### Added
+
 - Initial release
 - Basic scraping functionality
 - Single-mode operation
