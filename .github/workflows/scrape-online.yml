@@ -63,7 +63,7 @@ jobs:
       
       - name: 📊 Upload Logs (if available)
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: online-mode-logs-${{ github.run_number }}
           path: |
