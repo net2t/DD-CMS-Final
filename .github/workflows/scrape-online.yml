@@ -1,9 +1,9 @@
 name: Online Mode Scraper (Auto-Scheduled)
 
 on:
-  # Run every 15 minutes automatically
+  # Run every 9 minutes automatically
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/9 * * * *'
   
   # Also allow manual trigger for testing
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
       max_profiles:
         description: 'Max profiles to scrape (0 = All online users, recommended: 20-50)'
         required: false
-        default: '30'
+        default: '0'
         type: string
       batch_size:
         description: 'Batch size for processing'
