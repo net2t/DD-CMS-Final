@@ -185,8 +185,9 @@ def sanitize_nickname_for_url(nickname):
     if len(nickname) > 50:
         return None
     
-    # Validate format: alphanumeric, dots, hyphens, underscores only
-    if not re.match(r'^[\w\.\-_@]+$', nickname):
+    # Allow most printable non-whitespace unicode characters (including emoji, symbols, etc.), but block whitespace
+    # Block only if contains any whitespace or is too long
+    if not re.match(r'^[^\s]{1,50}$', nickname):
         return None
     
     return nickname
