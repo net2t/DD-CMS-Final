@@ -1,9 +1,9 @@
-name: Online Mode Scraper (Auto-Scheduled)
+name: Online Mode ⭕ (AUTO)
 
 on:
-  # Run every 9 minutes automatically
+  # Run every 11 minutes automatically
   schedule:
-    - cron: '*/9 * * * *'
+    - cron: '*/11 * * * *'
   
   # Also allow manual trigger for testing
   workflow_dispatch:
