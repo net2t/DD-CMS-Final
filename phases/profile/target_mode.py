@@ -185,8 +185,9 @@ def sanitize_nickname_for_url(nickname):
     if len(nickname) > 50:
         return None
     
-    # Validate format: alphanumeric, dots, hyphens, underscores only
-    if not re.match(r'^[\w\.\-_@]+$', nickname):
+    # Allow most special characters but still prevent potential security issues
+    # Disallowed: < > " ' & | ; ` \ ( ) [ ] { } \t \n \r
+    if re.search(r'[<>"\'&|;`\\()\[\]{}[\t\n\r]]', nickname):
         return None
     
     return nickname
