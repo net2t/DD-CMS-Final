@@ -353,10 +353,7 @@ class ProfileScraper:
             ]
             stats['FOLLOWERS'] = self._match_stat(page_source, follower_patterns)
         if not stats['POSTS']:
-            post_patterns = [
-                r'([\d,\.]+)\s+posts?'
-            ]
-            stats['POSTS'] = self._match_stat(page_source, post_patterns)
+            stats['POSTS'] = self._match_stat(page_source, self._post_count_patterns())
 
         return stats
 
@@ -393,7 +390,67 @@ class ProfileScraper:
             if match:
                 last_post['LAST POST TIME'] = normalize_post_datetime(match)
 
+        fallback = self._extract_last_post_from_text(page_source)
+        if not last_post['LAST POST'] and fallback['LAST POST']:
+            last_post['LAST POST'] = fallback['LAST POST']
+        if not last_post['LAST POST TIME'] and fallback['LAST POST TIME']:
+            last_post['LAST POST TIME'] = fallback['LAST POST TIME']
+
         return last_post
+
+    def _post_count_patterns(self):
+        return [
+            r'([\d,\.]+)\s+posts?\b',
+            r'posts?\s*[:\-]?\s*([\d,\.]+)'
+        ]
+
+    def _extract_last_post_from_text(self, text):
+        result = {'LAST POST': '', 'LAST POST TIME': ''}
+        if not text:
+            return result
+
+        post_patterns = [
+            r'<div[^>]+class="[^"]*pst[^"]*"[^>]*>.*?<a[^>]*>([^<]+)</a>',
+            r'Last\s+post[:\s]+([^<\n\r]+)',
+            r'<a[^>]+href="[^"]*profile/public[^"]*"[^>]*>([^<]+)</a>'
+        ]
+        match = self._match_stat(text, post_patterns)
+        if match:
+            result['LAST POST'] = match
+
+        time_patterns = [
+            r'<div[^>]+class="[^"]*pst[^"]*"[^>]*>.*?<span[^>]*class="[^"]*(gry|sp)[^"]*"[^>]*>([^<]+)</span>',
+            r'<span[^>]+class="[^"]*gry[^"]*"[^>]*>([^<]+ ago)</span>',
+            r'Last\s+post\s+time[:\s]+([^<\n\r]+)'
+        ]
+        match = self._match_stat(text, time_patterns)
+        if match:
+            result['LAST POST TIME'] = normalize_post_datetime(match)
+
+        return result
+
+    def _scrape_public_profile_details(self, nickname):
+        public_url = get_public_profile_url(nickname)
+        if not public_url:
+            return {}
+
+        public_data = {'POSTS': '', 'LAST POST': '', 'LAST POST TIME': ''}
+        try:
+            self.driver.get(public_url)
+            WebDriverWait(self.driver, 8).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+        except Exception:
+            pass
+
+        page_source = self.driver.page_source
+        public_data['POSTS'] = self._match_stat(page_source, self._post_count_patterns())
+        fallback = self._extract_last_post_from_text(page_source)
+        if fallback['LAST POST']:
+            public_data['LAST POST'] = fallback['LAST POST']
+        if fallback['LAST POST TIME']:
+            public_data['LAST POST TIME'] = fallback['LAST POST TIME']
+        return public_data
 
     def _extract_profile_image(self, page_source):
         """Extracts the profile image URL."""
