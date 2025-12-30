@@ -1,7 +1,11 @@
 name: Target Mode 🔰 (Manual)
 
 on:
-  # Manual trigger only - Run on demand
+  # Run every 55 minutes automatically
+  schedule:
+    - cron: '*/55 * * * *'
+
+  # Manual trigger - Run on demand
   workflow_dispatch:
     inputs:
       max_profiles:
