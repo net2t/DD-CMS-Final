@@ -345,6 +345,26 @@ class ProfileScraper:
         except Exception:
             pass  # Keep default value if not found
 
+        if not stats['POSTS']:
+            try:
+                posts_elem = self.driver.find_element(
+                    By.XPATH,
+                    "//button[contains(., 'POSTS') or contains(., 'Posts')]//div[1]"
+                )
+                stats['POSTS'] = clean_text(posts_elem.text)
+            except Exception:
+                pass
+
+        if not stats['POSTS']:
+            try:
+                posts_elem = self.driver.find_element(
+                    By.XPATH,
+                    "//a[contains(@href, '/profile/public/') and (contains(., 'POSTS') or contains(., 'Posts'))]//div[1]"
+                )
+                stats['POSTS'] = clean_text(posts_elem.text)
+            except Exception:
+                pass
+
         if not stats['FOLLOWERS']:
             follower_patterns = [
                 r'([\d,\.]+)\s+verified\s+followers',
@@ -360,7 +380,7 @@ class ProfileScraper:
 
         return stats
 
-    def _extract_last_post(self, page_source):
+    def _extract_last_post(self, nickname, page_source):
         """Extracts the last post text and time."""
         last_post = {'LAST POST': '', 'LAST POST TIME': ''}
         try:
@@ -392,6 +412,79 @@ class ProfileScraper:
             match = self._match_stat(page_source, time_patterns)
             if match:
                 last_post['LAST POST TIME'] = normalize_post_datetime(match)
+
+        if (not last_post['LAST POST'] or not last_post['LAST POST TIME']) and nickname:
+            private_url = self.driver.current_url
+            public_url = get_public_profile_url(nickname)
+            try:
+                log_msg(f"Fetching last post from public page: {public_url}", "INFO")
+                self.driver.get(public_url)
+                WebDriverWait(self.driver, 12).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "article"))
+                )
+
+                try:
+                    first_post = self.driver.find_element(By.CSS_SELECTOR, "article.mbl.bas-sh")
+                except Exception:
+                    try:
+                        first_post = self.driver.find_element(By.CSS_SELECTOR, "article")
+                    except Exception:
+                        first_post = None
+
+                if not first_post:
+                    return last_post
+
+                try:
+                    text_elem = first_post.find_element(By.CSS_SELECTOR, "h2.main_txt")
+                    last_post['LAST POST'] = clean_text(text_elem.text)
+                except Exception:
+                    try:
+                        last_post['LAST POST'] = clean_text(first_post.text)
+                    except Exception:
+                        last_post['LAST POST'] = ""
+
+                raw_time = ""
+                try:
+                    time_elem = first_post.find_element(By.CSS_SELECTOR, "time.sp.cxs.cgy")
+                    raw_time = clean_text(time_elem.text)
+                except Exception:
+                    pass
+
+                if not raw_time:
+                    try:
+                        time_elem = first_post.find_element(By.CSS_SELECTOR, "time")
+                        raw_time = clean_text(time_elem.text)
+                    except Exception:
+                        pass
+
+                if not raw_time:
+                    try:
+                        time_elem = first_post.find_element(By.CSS_SELECTOR, ".gry, .sp")
+                        raw_time = clean_text(time_elem.text)
+                    except Exception:
+                        pass
+
+                if raw_time:
+                    last_post['LAST POST TIME'] = normalize_post_datetime(raw_time)
+
+                if last_post.get('LAST POST') or last_post.get('LAST POST TIME'):
+                    log_msg(
+                        f"Public last post extracted for {nickname}: "
+                        f"text_len={len(last_post.get('LAST POST') or '')}, time='{last_post.get('LAST POST TIME')}'",
+                        "OK"
+                    )
+
+            except Exception:
+                log_msg(f"Public last post scrape failed for {nickname}", "WARNING")
+                pass
+            finally:
+                try:
+                    self.driver.get(private_url)
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.XPATH, ProfileSelectors.NICKNAME_HEADER))
+                    )
+                except Exception:
+                    pass
 
         return last_post
 
@@ -470,7 +563,7 @@ class ProfileScraper:
             _, rank_image = self._extract_rank(page_source)
             user_id = self._extract_user_id(page_source)
             stats_data = self._extract_stats(page_source)
-            last_post_data = self._extract_last_post(page_source)
+            last_post_data = self._extract_last_post(clean_nickname, page_source)
             image_url = self._extract_profile_image(page_source)
 
             # Update data with all fields

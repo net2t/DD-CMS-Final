@@ -305,18 +305,16 @@ class SheetsManager:
             old_data = existing['data']
             changed_fields = []
             updated_row = []
+            preserve_if_blank = {"POSTS", "LAST POST", "LAST POST TIME"}
 
             for i, col in enumerate(Config.COLUMN_ORDER):
                 old_val = old_data[i] if i < len(old_data) else ""
                 new_val = row_data[i]
-                if col in {"DATETIME SCRAP", "SOURCE"}:
-                    updated_row.append(new_val)
-                    continue
-                if old_val != new_val:
+                if col in preserve_if_blank and (not new_val) and old_val:
+                    new_val = old_val
+                if col not in {"DATETIME SCRAP", "SOURCE"} and old_val != new_val:
                     changed_fields.append(col)
-                    updated_row.append(f"Before: {old_val}\nNow: {new_val}")
-                else:
-                    updated_row.append(new_val)
+                updated_row.append(new_val)
 
             if not changed_fields:
                 return {"status": "unchanged"}
