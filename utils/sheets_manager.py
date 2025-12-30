@@ -65,6 +65,10 @@ def create_gsheets_client(credentials_json=None, credentials_path=None):
             log_msg("Using credentials from provided JSON")
             try:
                 cred_data = json.loads(json_source)
+                if isinstance(cred_data, dict):
+                    pk = cred_data.get("private_key")
+                    if isinstance(pk, str) and "\\n" in pk:
+                        cred_data["private_key"] = pk.replace("\\n", "\n")
                 creds = Credentials.from_service_account_info(cred_data, scopes=scope)
                 return gspread.authorize(creds)
             except json.JSONDecodeError as e:
