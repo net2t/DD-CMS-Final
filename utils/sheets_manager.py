@@ -156,10 +156,20 @@ class SheetsManager:
                 continue
             try:
                 current_headers = ws.row_values(1)
-                if not current_headers or current_headers != headers:
+                if not current_headers:
                     log_msg(f"Initializing headers for '{ws.title}' sheet...")
-                    ws.clear()
                     ws.append_row(headers)
+                    self._apply_header_format(ws)
+
+                # If headers differ, update only the header row (do NOT clear the sheet).
+                elif current_headers != headers:
+                    log_msg(
+                        f"Updating header row for '{ws.title}' sheet (preserving existing data)...",
+                        "WARNING"
+                    )
+                    end_a1 = gspread.utils.rowcol_to_a1(1, len(headers))
+                    header_range = f"A1:{end_a1}"
+                    ws.update(header_range, [headers])
                     self._apply_header_format(ws)
             except Exception as e:
                 log_msg(f"Header initialization for '{ws.title}' failed: {e}", "ERROR")
@@ -316,7 +326,7 @@ class SheetsManager:
                 new_val = row_data[i]
                 if col in preserve_if_blank and (not new_val) and old_val:
                     new_val = old_val
-                if col not in {"DATETIME SCRAP", "SOURCE"} and old_val != new_val:
+                if col not in {"DATETIME SCRAP", "SKIP/DEL"} and old_val != new_val:
                     changed_fields.append(col)
                 updated_row.append(new_val)
 

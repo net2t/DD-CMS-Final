@@ -76,7 +76,7 @@ class Config:
         "FOLLOWERS",          # 8
         "STATUS",             # 9
         "POSTS",              # 10
-        "SOURCE",             # 11
+        "SKIP/DEL",           # 11
         "DATETIME SCRAP",     # 12
         "LAST POST",          # 13
         "LAST POST TIME",     # 14
@@ -126,7 +126,7 @@ class Config:
         "FOLLOWERS": "",
         "STATUS": "Normal",
         "POSTS": "",
-        "SOURCE": "",
+        "SKIP/DEL": "",
         "DATETIME SCRAP": "",
         "LAST POST": "",
         "LAST POST TIME": "",

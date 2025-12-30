@@ -554,7 +554,7 @@ class ProfileScraper:
             
             # Ensure nickname is set in the data
             data["NICK NAME"] = clean_nickname
-            data["SOURCE"] = source
+            data["SKIP/DEL"] = source
             data["DATETIME SCRAP"] = now.strftime("%d-%b-%y %I:%M %p")
             
             # Extract additional data

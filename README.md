@@ -315,7 +315,7 @@ DD-CMS-Final/
 | 8 | FOLLOWERS | Follower count (FIXED) |
 | 9 | STATUS | Normal/Banned/Unverified |
 | 10 | POSTS | Post count (FIXED) |
-| 11 | SOURCE | Online/Target |
+| 11 | SKIP/DEL | Online/Target (future: Skip/Del markers) |
 | 12 | DATETIME SCRAP | Scrape timestamp |
 | 13 | LAST POST | Last post text (FIXED) |
 | 14 | LAST POST TIME | Last post time (FIXED) |
