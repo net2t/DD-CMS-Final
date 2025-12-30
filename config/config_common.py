@@ -97,6 +97,7 @@ class Config:
     TARGET_STATUS_PENDING = "⚡ Pending"
     TARGET_STATUS_DONE = "Done 💀"
     TARGET_STATUS_ERROR = "Error 💥"
+    TARGET_STATUS_SKIP_DEL = "Skip/Del 🚫"
     
     # ==================== PROFILE STATES ====================
     PROFILE_STATE_ACTIVE = "ACTIVE"

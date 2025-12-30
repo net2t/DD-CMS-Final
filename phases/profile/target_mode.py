@@ -766,6 +766,17 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
             # Write successful profile
             result = sheets.write_profile(profile_data)
             write_status = result.get("status", "error")
+
+            # If profile is unverified, mark target as Skip/Del so it won't be re-processed.
+            profile_state = (profile_data.get("PROFILE_STATE") or "").strip().upper()
+            profile_status = (profile_data.get("STATUS") or "").strip().lower()
+            if profile_state == Config.PROFILE_STATE_UNVERIFIED or profile_status == "unverified":
+                stats["success"] += 1
+                remarks = "UNVERIFIED - auto skipped"
+                if row:
+                    sheets.update_target_status(row, "unverified", remarks)
+                log_msg(f"{nickname}: unverified -> Skip/Del", "WARNING")
+                continue
             
             if write_status in {"new", "updated", "unchanged"}:
                 stats["success"] += 1
