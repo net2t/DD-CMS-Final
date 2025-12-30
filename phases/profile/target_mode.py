@@ -683,6 +683,8 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
     Returns:
         dict: A dictionary of statistics from the scraping run.
     """
+    # Shared runner used by both Target mode (RunList) and Online mode (online users).
+    # `run_label` ensures logs clearly show which mode triggered the same scraping pipeline.
     label = (run_label or "TARGET").strip().upper()
     log_msg(f"=== {label} MODE STARTED ===")
     
@@ -700,6 +702,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
     # Get pending targets if not provided
     if targets is None:
+        # Target mode path: fetch pending nicknames from the RunList sheet.
         try:
             targets = sheets.get_pending_targets()
         except Exception as e:
@@ -734,6 +737,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
             log_msg(f"Processing {i}/{len(targets)}: {nickname}")
             
             # Scrape profile
+            # Keep SOURCE consistent (Online/Target) based on the caller.
             scrape_source = (target.get('source') or label.title())
             profile_data = scraper.scrape_profile(nickname, source=scrape_source)
             stats["processed"] += 1

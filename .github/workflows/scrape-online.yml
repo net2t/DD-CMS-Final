@@ -1,9 +1,9 @@
 name: Online Mode ⭕ (AUTO)
 
 on:
-  # Run every 11 minutes automatically
+  # Run every 15 minutes automatically
   schedule:
-    - cron: '*/11 * * * *'
+    - cron: '*/15 * * * *'
   
   # Also allow manual trigger for testing
   workflow_dispatch:
