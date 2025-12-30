@@ -155,7 +155,7 @@ def run_online_mode(driver, sheets, max_profiles=0):
     ]
 
     # Delegate the scraping to the centralized target mode runner
-    stats = run_target_mode(driver, sheets, max_profiles, targets)
+    stats = run_target_mode(driver, sheets, max_profiles, targets, run_label="ONLINE")
     
     # Add online-specific stats
     stats['logged'] = len(nicknames)

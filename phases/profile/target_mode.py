@@ -666,7 +666,7 @@ class ProfileScraper:
 
 # ==================== TARGET MODE RUNNER ====================
 
-def run_target_mode(driver, sheets, max_profiles=0, targets=None):
+def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TARGET"):
     """
     Orchestrates the scraping process for the 'target' mode.
 
@@ -683,7 +683,8 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
     Returns:
         dict: A dictionary of statistics from the scraping run.
     """
-    log_msg("=== TARGET MODE STARTED ===")
+    label = (run_label or "TARGET").strip().upper()
+    log_msg(f"=== {label} MODE STARTED ===")
     
     stats = {
         "success": 0,
@@ -714,7 +715,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
         targets = targets[:max_profiles]
 
     stats["total_found"] = len(targets)
-    log_msg(f"Processing {len(targets)} target(s)...")
+    log_msg(f"Processing {len(targets)} profile(s)...")
 
     scraper = ProfileScraper(driver)
 
@@ -733,7 +734,8 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
             log_msg(f"Processing {i}/{len(targets)}: {nickname}")
             
             # Scrape profile
-            profile_data = scraper.scrape_profile(nickname, source="Target")
+            scrape_source = (target.get('source') or label.title())
+            profile_data = scraper.scrape_profile(nickname, source=scrape_source)
             stats["processed"] += 1
             
             if not profile_data:
@@ -789,7 +791,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
         if i < len(targets):
             time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
     
-    log_msg("=== TARGET MODE COMPLETED ===")
+    log_msg(f"=== {label} MODE COMPLETED ===")
     log_msg(
         f"Results: {stats['success']} success, {stats['failed']} failed, "
         f"{stats['skipped']} skipped"
