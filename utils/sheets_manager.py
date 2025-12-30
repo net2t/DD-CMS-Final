@@ -302,12 +302,19 @@ class SheetsManager:
             return {"status": "error", "error": "Missing nickname"}
 
         profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        profile_data["PROFILE_STATE"] = self._compute_profile_state(profile_data)
+        # PROFILE_STATE column was removed from the sheet schema; keep internal state only.
+        profile_data["_PROFILE_STATE"] = self._compute_profile_state(profile_data)
         
         if nickname.lower() in self.tags_mapping:
             profile_data["TAGS"] = self.tags_mapping[nickname.lower()]
 
-        row_data = [clean_data(profile_data.get(col, "")) for col in Config.COLUMN_ORDER]
+        uppercase_cols = {"CITY", "GENDER", "MARRIED", "STATUS"}
+        row_data = []
+        for col in Config.COLUMN_ORDER:
+            val = clean_data(profile_data.get(col, ""))
+            if col in uppercase_cols and val:
+                val = val.upper()
+            row_data.append(val)
         
         key = nickname.lower()
         existing = self.existing_profiles.get(key)

@@ -87,8 +87,7 @@ class Config:
         "MEH NAME",           # 19
         "MEH TYPE",           # 20
         "MEH LINK",           # 21
-        "MEH DATE",           # 22
-        "PROFILE_STATE"       # 23
+        "MEH DATE"            # 22
     ]
     
     ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen"]
@@ -138,8 +137,7 @@ class Config:
         "MEH NAME": "",
         "MEH TYPE": "",
         "MEH LINK": "",
-        "MEH DATE": "",
-        "PROFILE_STATE": "ACTIVE"
+        "MEH DATE": ""
     }
     
     @classmethod

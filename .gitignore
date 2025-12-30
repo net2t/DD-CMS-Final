@@ -45,6 +45,10 @@ logs/
 tmp/
 temp/
 
+# ============ LOCAL TRACKING (NOT FOR GITHUB) ============
+Issue-1.md
+issue-1.md
+
 # ============ BROWSER ============
 chromedriver.exe
 chromedriver

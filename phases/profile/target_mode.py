@@ -768,7 +768,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
             write_status = result.get("status", "error")
 
             # If profile is unverified, mark target as Skip/Del so it won't be re-processed.
-            profile_state = (profile_data.get("PROFILE_STATE") or "").strip().upper()
+            profile_state = (profile_data.get("_PROFILE_STATE") or profile_data.get("PROFILE_STATE") or "").strip().upper()
             profile_status = (profile_data.get("STATUS") or "").strip().lower()
             if profile_state == Config.PROFILE_STATE_UNVERIFIED or profile_status == "unverified":
                 stats["success"] += 1
