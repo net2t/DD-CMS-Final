@@ -3,6 +3,7 @@
 .env.local
 credentials.json
 *.key
+.env.sample
 
 # ============ PYTHON ============
 __pycache__/
@@ -45,6 +46,10 @@ logs/
 tmp/
 temp/
 
+# ============ LOCAL TRACKING (NOT FOR GITHUB) ============
+Issue-1.md
+issue-1.md
+
 # ============ BROWSER ============
 chromedriver.exe
 chromedriver
@@ -58,3 +63,4 @@ screenshots/
 
 # ============ PICKLE FILES ============
 *.pkl
+.env.sample

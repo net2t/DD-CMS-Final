@@ -65,6 +65,10 @@ def create_gsheets_client(credentials_json=None, credentials_path=None):
             log_msg("Using credentials from provided JSON")
             try:
                 cred_data = json.loads(json_source)
+                if isinstance(cred_data, dict):
+                    pk = cred_data.get("private_key")
+                    if isinstance(pk, str) and "\\n" in pk:
+                        cred_data["private_key"] = pk.replace("\\n", "\n")
                 creds = Credentials.from_service_account_info(cred_data, scopes=scope)
                 return gspread.authorize(creds)
             except json.JSONDecodeError as e:
@@ -152,16 +156,26 @@ class SheetsManager:
                 continue
             try:
                 current_headers = ws.row_values(1)
-                if not current_headers or current_headers != headers:
+                if not current_headers:
                     log_msg(f"Initializing headers for '{ws.title}' sheet...")
-                    ws.clear()
                     ws.append_row(headers)
+                    self._apply_header_format(ws)
+
+                # If headers differ, update only the header row (do NOT clear the sheet).
+                elif current_headers != headers:
+                    log_msg(
+                        f"Updating header row for '{ws.title}' sheet (preserving existing data)...",
+                        "WARNING"
+                    )
+                    end_a1 = gspread.utils.rowcol_to_a1(1, len(headers))
+                    header_range = f"A1:{end_a1}"
+                    ws.update(header_range, [headers])
                     self._apply_header_format(ws)
             except Exception as e:
                 log_msg(f"Header initialization for '{ws.title}' failed: {e}", "ERROR")
 
     def _apply_row_format(self, ws, row_index):
-        """FIXED: Apply 'Quantico' font to a specific data row."""
+        """Apply 'Quantico' font to a specific data row (font-only)."""
         try:
             row_range = f'A{row_index}:{gspread.utils.rowcol_to_a1(row_index, ws.col_count)}'
             self._perform_write_operation(
@@ -169,8 +183,7 @@ class SheetsManager:
                 row_range, 
                 {
                     "textFormat": {
-                        "fontFamily": "Quantico",
-                        "bold": False
+                        "fontFamily": "Quantico"
                     }
                 }
             )
@@ -178,13 +191,12 @@ class SheetsManager:
             log_msg(f"Failed to apply row format for '{ws.title}' at row {row_index}: {e}", "WARNING")
 
     def _apply_header_format(self, ws):
-        """Apply 'Quantico' font and bold style to the header row."""
+        """Apply 'Quantico' font to the header row (font-only)."""
         try:
             header_range = f'A1:{gspread.utils.rowcol_to_a1(1, ws.col_count)}'
             ws.format(header_range, {
                 "textFormat": {
-                    "fontFamily": "Quantico",
-                    "bold": True
+                    "fontFamily": "Quantico"
                 }
             })
         except Exception as e:
@@ -290,12 +302,19 @@ class SheetsManager:
             return {"status": "error", "error": "Missing nickname"}
 
         profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        profile_data["PROFILE_STATE"] = self._compute_profile_state(profile_data)
+        # PROFILE_STATE column was removed from the sheet schema; keep internal state only.
+        profile_data["_PROFILE_STATE"] = self._compute_profile_state(profile_data)
         
         if nickname.lower() in self.tags_mapping:
             profile_data["TAGS"] = self.tags_mapping[nickname.lower()]
 
-        row_data = [clean_data(profile_data.get(col, "")) for col in Config.COLUMN_ORDER]
+        uppercase_cols = {"CITY", "GENDER", "MARRIED", "STATUS"}
+        row_data = []
+        for col in Config.COLUMN_ORDER:
+            val = clean_data(profile_data.get(col, ""))
+            if col in uppercase_cols and val:
+                val = val.upper()
+            row_data.append(val)
         
         key = nickname.lower()
         existing = self.existing_profiles.get(key)
@@ -312,7 +331,7 @@ class SheetsManager:
                 new_val = row_data[i]
                 if col in preserve_if_blank and (not new_val) and old_val:
                     new_val = old_val
-                if col not in {"DATETIME SCRAP", "SOURCE"} and old_val != new_val:
+                if col not in {"DATETIME SCRAP", "SKIP/DEL"} and old_val != new_val:
                     changed_fields.append(col)
                 updated_row.append(new_val)
 
@@ -374,17 +393,26 @@ class SheetsManager:
             'complete': Config.TARGET_STATUS_DONE,
             'error': Config.TARGET_STATUS_ERROR,
             'suspended': Config.TARGET_STATUS_ERROR,
-            'unverified': Config.TARGET_STATUS_ERROR
+            'unverified': Config.TARGET_STATUS_SKIP_DEL,
+            'skip': Config.TARGET_STATUS_SKIP_DEL,
+            'del': Config.TARGET_STATUS_SKIP_DEL,
+            'skip/del': Config.TARGET_STATUS_SKIP_DEL
         }
         normalized_status = status_map.get((status or "").lower().strip(), status)
-        self._perform_write_operation(self.target_ws.update, f"B{row_num}:C{row_num}", [[normalized_status, remarks]])
+        if self._perform_write_operation(self.target_ws.update, f"B{row_num}:C{row_num}", [[normalized_status, remarks]]):
+            self._apply_row_format(self.target_ws, row_num)
 
     # ==================== ONLINE LOG OPERATIONS ====================
 
     def log_online_user(self, nickname, timestamp=None):
         """Appends a new row to the 'OnlineLog' sheet."""
         ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        self._perform_write_operation(self.online_log_ws.append_row, [ts, nickname, ts])
+        if self._perform_write_operation(self.online_log_ws.append_row, [ts, nickname, ts]):
+            try:
+                last_row = len(self.online_log_ws.get_all_values())
+                self._apply_row_format(self.online_log_ws, last_row)
+            except Exception:
+                pass
 
     def batch_log_online_users(self, nicknames, timestamp=None, batch_no=None):
         """
@@ -404,7 +432,15 @@ class SheetsManager:
         
         rows_to_add = [[ts, nickname, ts, batch_no] for nickname in nicknames]
         log_msg(f"Logging {len(rows_to_add)} online users to the sheet with batch {batch_no}...", "INFO")
-        self._perform_write_operation(self.online_log_ws.append_rows, rows_to_add)
+        try:
+            start_row = len(self.online_log_ws.get_all_values()) + 1
+        except Exception:
+            start_row = None
+        if self._perform_write_operation(self.online_log_ws.append_rows, rows_to_add):
+            if start_row is not None:
+                end_row = start_row + len(rows_to_add) - 1
+                for r in range(start_row, end_row + 1):
+                    self._apply_row_format(self.online_log_ws, r)
 
     # ==================== DASHBOARD OPERATIONS ====================
 
@@ -427,6 +463,11 @@ class SheetsManager:
             metrics.get("End", "")
         ]
         if self._perform_write_operation(self.dashboard_ws.append_row, row):
+            try:
+                last_row = len(self.dashboard_ws.get_all_values())
+                self._apply_row_format(self.dashboard_ws, last_row)
+            except Exception:
+                pass
             log_msg("Dashboard updated successfully.", "OK")
 
     # ==================== HELPERS ====================
@@ -450,7 +491,23 @@ class SheetsManager:
 
             rows.sort(key=parse_date, reverse=True)
             
-            if self._perform_write_operation(self.profiles_ws.clear) and self._perform_write_operation(self.profiles_ws.update, [header] + rows):
+            # Update values without clearing formatting.
+            new_values = [header] + rows
+            if self._perform_write_operation(self.profiles_ws.update, "A1", new_values):
+                # If old sheet had more rows, clear leftover values (keep formatting).
+                old_total = len(all_rows)
+                new_total = len(new_values)
+                if old_total > new_total:
+                    try:
+                        end_col_a1 = gspread.utils.rowcol_to_a1(1, self.profiles_ws.col_count)
+                        end_col = end_col_a1.rstrip('1')
+                        self._perform_write_operation(
+                            self.profiles_ws.batch_clear,
+                            [f"A{new_total + 1}:{end_col}{old_total}"]
+                        )
+                    except Exception:
+                        pass
+                self._apply_header_format(self.profiles_ws)
                 self._load_existing_profiles()
                 log_msg("Profiles sorted by date.", "OK")
         except (ValueError, APIError) as e:

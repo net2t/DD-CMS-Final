@@ -76,7 +76,7 @@ class Config:
         "FOLLOWERS",          # 8
         "STATUS",             # 9
         "POSTS",              # 10
-        "SOURCE",             # 11
+        "SKIP/DEL",           # 11
         "DATETIME SCRAP",     # 12
         "LAST POST",          # 13
         "LAST POST TIME",     # 14
@@ -87,8 +87,7 @@ class Config:
         "MEH NAME",           # 19
         "MEH TYPE",           # 20
         "MEH LINK",           # 21
-        "MEH DATE",           # 22
-        "PROFILE_STATE"       # 23
+        "MEH DATE"            # 22
     ]
     
     ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen"]
@@ -97,6 +96,7 @@ class Config:
     TARGET_STATUS_PENDING = "⚡ Pending"
     TARGET_STATUS_DONE = "Done 💀"
     TARGET_STATUS_ERROR = "Error 💥"
+    TARGET_STATUS_SKIP_DEL = "Skip/Del 🚫"
     
     # ==================== PROFILE STATES ====================
     PROFILE_STATE_ACTIVE = "ACTIVE"
@@ -126,7 +126,7 @@ class Config:
         "FOLLOWERS": "",
         "STATUS": "Normal",
         "POSTS": "",
-        "SOURCE": "",
+        "SKIP/DEL": "",
         "DATETIME SCRAP": "",
         "LAST POST": "",
         "LAST POST TIME": "",
@@ -137,8 +137,7 @@ class Config:
         "MEH NAME": "",
         "MEH TYPE": "",
         "MEH LINK": "",
-        "MEH DATE": "",
-        "PROFILE_STATE": "ACTIVE"
+        "MEH DATE": ""
     }
     
     @classmethod

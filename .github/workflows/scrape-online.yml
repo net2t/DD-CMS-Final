@@ -36,6 +36,22 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: 🔐 Prepare Google Credentials
+        shell: bash
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          python - <<'PY'
+          import json, os
+          raw = os.environ.get('GOOGLE_CREDENTIALS_JSON', '')
+          data = json.loads(raw)
+          pk = data.get('private_key')
+          if isinstance(pk, str):
+            data['private_key'] = pk.replace('\\n', '\n')
+          with open('credentials.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+          PY
       
       - name: 🌐 Run Online Mode Scraper
         env:
@@ -50,6 +66,7 @@ jobs:
           # Google Sheets Configuration
           GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          GOOGLE_APPLICATION_CREDENTIALS: credentials.json
           
           # Run Configuration
           # For scheduled runs: limit to 30 profiles to avoid timeouts
