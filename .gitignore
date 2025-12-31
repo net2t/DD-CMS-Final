@@ -3,6 +3,7 @@
 .env.local
 credentials.json
 *.key
+.env.sample
 
 # ============ PYTHON ============
 __pycache__/
@@ -62,3 +63,4 @@ screenshots/
 
 # ============ PICKLE FILES ============
 *.pkl
+.env.sample
