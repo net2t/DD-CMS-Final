@@ -1,4 +1,4 @@
-name: Online Mode Scraper (Auto-Scheduled)
+name: Online Mode ⭕ (AUTO)
 
 on:
   # Run every 15 minutes automatically
@@ -11,7 +11,7 @@ on:
       max_profiles:
         description: 'Max profiles to scrape (0 = All online users, recommended: 20-50)'
         required: false
-        default: '30'
+        default: '0'
         type: string
       batch_size:
         description: 'Batch size for processing'

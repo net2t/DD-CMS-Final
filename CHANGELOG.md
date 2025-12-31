@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.100.0.17] - 2025-12-30
+
+### ✅ Fixed
+
+- **Profile Phase**: Last post text/time now scraped from the public profile page when private profile has no preview.
+- **Profile Phase**: Improved POSTS count extraction with additional selector fallbacks.
+- **Sheets**: Removed inline "Before/Now" diff text being written into cells (keeps sheet data clean).
+- **Sheets**: Preserve existing values for POSTS/LAST POST/LAST POST TIME when a scrape returns blanks (prevents wiping good data).
+
+### 🔧 Changed
+
+- **Mode Logging**: Online runs no longer show "TARGET MODE" banners; runner logs are now mode-aware.
+- **GitHub Actions**: Online schedule set to every 15 minutes; Target schedule set to every 55 minutes.
+
 ## [2.100.0.16] - 2025-12-28
 
 ### 🚀 Improvements

@@ -1,4 +1,4 @@
-# DamaDam Scraper v2.100.0.15 - Production Ready
+# DamaDam Scraper v2.100.0.17 - Production Ready
 
 ![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)
 [![Contact](https://img.shields.io/badge/contact-net2outlawzz@gmail.com-brightgreen)](mailto:net2outlawzz@gmail.com)
@@ -7,6 +7,51 @@
 🚀 **Complete automation bot for scraping DamaDam.pk user profiles** with enhanced UI, dual login system, and multi-mode operation.
 
 ---
+
+## 🎯 What's New in v2.100.0.17 (Profile Phase ~99% Fixed)
+
+### ✅ Fixes
+
+- **LAST POST + TIME** now fetched from public profile page when private profile has no preview.
+- **POSTS count** improved with additional selector fallbacks.
+- **Sheets** no longer writes inline "Before/Now" text into cells.
+- **Mode Logs**: Online runs no longer show Target-mode banners.
+
+## ✅ Project Rule (Must Follow)
+
+- **Testing Rule:** Jab bhi koi change ho (bug fix / improvement), pehle local pe **max 3–4 profiles** run karke test karo.
+  - Example:
+    - `python main.py online --max-profiles 3`
+    - `python main.py target --max-profiles 3`
+
+---
+
+## 🧾 Issue Workflow (Easy Way)
+
+- **Step 1:** GitHub pe pehle **Issue create** karo (1 issue = 1 problem).
+- **Step 2:** Issue mein clearly likho:
+  - What is wrong (kya problem hai)
+  - Expected output (kya hona chahiye)
+  - Screenshot/logs (agar available)
+- **Step 3:** Issues ko priority do:
+  - High: scraping broken / data blank
+  - Medium: UI/log improvements
+  - Low: refactor/cleanup
+- **Step 4:** Hum **1 issue at a time** fix karenge: implement → test (3–4 profiles) → push.
+
+---
+
+## 🧑‍💻 Single Person Maintenance (Best Practice)
+
+- **Branch workflow:**
+  - New fixes hamesha **temp branch** mein karo.
+  - Test successful ho jaye, phir merge to `main`.
+- **Daily routine (simple):**
+  - Create/Update issue
+  - Fix in branch
+  - Test (max 3–4 profiles)
+  - `git add .` → `git commit -m "<message>"` → `git push origin <branch>`
+  - Merge after verified run
 
 ## 🎯 What's New in v2.100.0.16
 
@@ -113,7 +158,7 @@ python main.py target --max-profiles 0
 ### 🎯 **Multi-Mode Scraping**
 
 - **Online Mode**: Scrapes currently online users (auto-scheduled every 15 min)
-- **Target Mode**: Scrapes from 'RunList' sheet (manual trigger)
+- **Target Mode**: Scrapes from 'RunList' sheet (auto-scheduled every 55 min + manual trigger)
 - **Test Mode**: Quick testing with predefined profiles
 
 ### 🔐 **Robust Authentication**
@@ -126,7 +171,7 @@ python main.py target --max-profiles 0
 ### 📊 **Smart Data Handling**
 
 - Nickname-based duplicate detection
-- Inline diffs for changed data
+- Clean sheet updates (no inline "Before/Now" text in cells)
 - Profile state tracking (ACTIVE, UNVERIFIED, BANNED, DEAD)
 - Automatic sorting by scrape date
 
@@ -151,7 +196,7 @@ python main.py target --max-profiles 0
 ### Environment Variables
 
 | Variable | Required | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `DAMADAM_USERNAME` | ✅ Yes | - | Primary DamaDam login username |
 | `DAMADAM_PASSWORD` | ✅ Yes | - | Primary DamaDam login password |
 | `DAMADAM_USERNAME_2` | ⚠️ Recommended | - | Backup account username (prevents blocking) |
@@ -174,7 +219,7 @@ python main.py target --max-profiles 0
 **RunList Sheet Format:**
 
 | Nickname | Status | Remarks | Source |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | user123 | ⚡ Pending | | Target |
 | user456 | Done 💀 | Profile updated | Target |
 
@@ -211,9 +256,19 @@ Go to **Settings → Secrets and variables → Actions** and add:
 
 ---
 
+## 🧠 Note (Documentation)
+
+- Har bug/feature ke liye **Issue create** karna best hai.
+- Fix complete hone ke baad:
+  - README + CHANGELOG update
+  - Test run (3–4 profiles)
+  - Push + merge
+
+---
+
 ## 🏗️ Project Architecture
 
-```
+```text
 DD-CMS-Final/
 ├── .github/workflows/          # GitHub Actions
 │   ├── scrape-target.yml      # Manual target mode
@@ -248,7 +303,7 @@ DD-CMS-Final/
 **Fixed Column Order (INTRO removed):**
 
 | # | Column | Description |
-|---|--------|-------------|
+| --- | --- | --- |
 | 0 | ID | User ID |
 | 1 | NICK NAME | Nickname |
 | 2 | TAGS | Tags from Tags sheet |
@@ -262,7 +317,7 @@ DD-CMS-Final/
 | 10 | POSTS | Post count (FIXED) |
 | 11 | SOURCE | Online/Target |
 | 12 | DATETIME SCRAP | Scrape timestamp |
-| 13 | LAST POST | Last post URL (FIXED) |
+| 13 | LAST POST | Last post text (FIXED) |
 | 14 | LAST POST TIME | Last post time (FIXED) |
 | 15 | IMAGE | Profile image URL (FIXED) |
 | 16 | PROFILE LINK | Profile URL |
@@ -277,17 +332,17 @@ DD-CMS-Final/
 
 ### Header
 
-```
+```text
 ================================================================================
 🚀 DamaDam Scraper - TARGET MODE 🚀
-Version: v2.100.0.15
+Version: v2.100.0.17
 Powered by Selenium + Google Sheets
 ================================================================================
 ```
 
 ### During Run
 
-```
+```text
 12:34:56 🔐 [LOGIN] Attempting cookie-based login...
 12:34:58 ✅ [OK] Cookie login successful
 12:35:00 🔍 [SCRAPING] Scraping: user123
@@ -296,7 +351,7 @@ Powered by Selenium + Google Sheets
 
 ### Summary Report
 
-```
+```text
 📊 Scraping Run Summary
 ┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
 ┃ Metric                 ┃         Value ┃   Status ┃
@@ -327,21 +382,18 @@ The scraper is designed for easy extension:
 
 ### Missing Data in Sheets
 
-**Issue**: FOLLOWERS, POSTS, IMAGE, etc. showing blank
-
-**Solution**: ✅ **FIXED in v2.100.0.15** - All selectors restored
+- **Issue:** FOLLOWERS, POSTS, IMAGE, etc. showing blank
+- **Solution:** ✅ **FIXED in v2.100.0.17** - Selectors + public-page last post fallback restored
 
 ### Cookie Login Fails
 
-**Issue**: "Cookie login failed" message
-
-**Solution**: Delete `damadam_cookies.pkl` and run again. Fresh login will create new cookies.
+- **Issue:** "Cookie login failed" message
+- **Solution:** Delete `damadam_cookies.pkl` and run again. Fresh login will create new cookies.
 
 ### GitHub Actions Rate Limits
 
-**Issue**: API quota exceeded errors
-
-**Solution**: Reduce `max_profiles` or increase delay in config:
+- **Issue:** API quota exceeded errors
+- **Solution:** Reduce `max_profiles` or increase delay in config:
 
 ```python
 SHEET_WRITE_DELAY = 2.0  # Increase from 1.0

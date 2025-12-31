@@ -185,9 +185,9 @@ def sanitize_nickname_for_url(nickname):
     if len(nickname) > 50:
         return None
     
-    # Allow most printable non-whitespace unicode characters (including emoji, symbols, etc.), but block whitespace
-    # Block only if contains any whitespace or is too long
-    if not re.match(r'^[^\s]{1,50}$', nickname):
+    # Allow most special characters but still prevent potential security issues
+    # Disallowed: < > " ' & | ; ` \ ( ) [ ] { } \t \n \r
+    if re.search(r'[<>"\'&|;`\\()\[\]{}[\t\n\r]]', nickname):
         return None
     
     return nickname
@@ -345,6 +345,26 @@ class ProfileScraper:
         except Exception:
             pass  # Keep default value if not found
 
+        if not stats['POSTS']:
+            try:
+                posts_elem = self.driver.find_element(
+                    By.XPATH,
+                    "//button[contains(., 'POSTS') or contains(., 'Posts')]//div[1]"
+                )
+                stats['POSTS'] = clean_text(posts_elem.text)
+            except Exception:
+                pass
+
+        if not stats['POSTS']:
+            try:
+                posts_elem = self.driver.find_element(
+                    By.XPATH,
+                    "//a[contains(@href, '/profile/public/') and (contains(., 'POSTS') or contains(., 'Posts'))]//div[1]"
+                )
+                stats['POSTS'] = clean_text(posts_elem.text)
+            except Exception:
+                pass
+
         if not stats['FOLLOWERS']:
             follower_patterns = [
                 r'([\d,\.]+)\s+verified\s+followers',
@@ -360,7 +380,7 @@ class ProfileScraper:
 
         return stats
 
-    def _extract_last_post(self, page_source):
+    def _extract_last_post(self, nickname, page_source):
         """Extracts the last post text and time."""
         last_post = {'LAST POST': '', 'LAST POST TIME': ''}
         try:
@@ -392,6 +412,79 @@ class ProfileScraper:
             match = self._match_stat(page_source, time_patterns)
             if match:
                 last_post['LAST POST TIME'] = normalize_post_datetime(match)
+
+        if (not last_post['LAST POST'] or not last_post['LAST POST TIME']) and nickname:
+            private_url = self.driver.current_url
+            public_url = get_public_profile_url(nickname)
+            try:
+                log_msg(f"Fetching last post from public page: {public_url}", "INFO")
+                self.driver.get(public_url)
+                WebDriverWait(self.driver, 12).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "article"))
+                )
+
+                try:
+                    first_post = self.driver.find_element(By.CSS_SELECTOR, "article.mbl.bas-sh")
+                except Exception:
+                    try:
+                        first_post = self.driver.find_element(By.CSS_SELECTOR, "article")
+                    except Exception:
+                        first_post = None
+
+                if not first_post:
+                    return last_post
+
+                try:
+                    text_elem = first_post.find_element(By.CSS_SELECTOR, "h2.main_txt")
+                    last_post['LAST POST'] = clean_text(text_elem.text)
+                except Exception:
+                    try:
+                        last_post['LAST POST'] = clean_text(first_post.text)
+                    except Exception:
+                        last_post['LAST POST'] = ""
+
+                raw_time = ""
+                try:
+                    time_elem = first_post.find_element(By.CSS_SELECTOR, "time.sp.cxs.cgy")
+                    raw_time = clean_text(time_elem.text)
+                except Exception:
+                    pass
+
+                if not raw_time:
+                    try:
+                        time_elem = first_post.find_element(By.CSS_SELECTOR, "time")
+                        raw_time = clean_text(time_elem.text)
+                    except Exception:
+                        pass
+
+                if not raw_time:
+                    try:
+                        time_elem = first_post.find_element(By.CSS_SELECTOR, ".gry, .sp")
+                        raw_time = clean_text(time_elem.text)
+                    except Exception:
+                        pass
+
+                if raw_time:
+                    last_post['LAST POST TIME'] = normalize_post_datetime(raw_time)
+
+                if last_post.get('LAST POST') or last_post.get('LAST POST TIME'):
+                    log_msg(
+                        f"Public last post extracted for {nickname}: "
+                        f"text_len={len(last_post.get('LAST POST') or '')}, time='{last_post.get('LAST POST TIME')}'",
+                        "OK"
+                    )
+
+            except Exception:
+                log_msg(f"Public last post scrape failed for {nickname}", "WARNING")
+                pass
+            finally:
+                try:
+                    self.driver.get(private_url)
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.XPATH, ProfileSelectors.NICKNAME_HEADER))
+                    )
+                except Exception:
+                    pass
 
         return last_post
 
@@ -470,7 +563,7 @@ class ProfileScraper:
             _, rank_image = self._extract_rank(page_source)
             user_id = self._extract_user_id(page_source)
             stats_data = self._extract_stats(page_source)
-            last_post_data = self._extract_last_post(page_source)
+            last_post_data = self._extract_last_post(clean_nickname, page_source)
             image_url = self._extract_profile_image(page_source)
 
             # Update data with all fields
@@ -573,7 +666,7 @@ class ProfileScraper:
 
 # ==================== TARGET MODE RUNNER ====================
 
-def run_target_mode(driver, sheets, max_profiles=0, targets=None):
+def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TARGET"):
     """
     Orchestrates the scraping process for the 'target' mode.
 
@@ -590,7 +683,10 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
     Returns:
         dict: A dictionary of statistics from the scraping run.
     """
-    log_msg("=== TARGET MODE STARTED ===")
+    # Shared runner used by both Target mode (RunList) and Online mode (online users).
+    # `run_label` ensures logs clearly show which mode triggered the same scraping pipeline.
+    label = (run_label or "TARGET").strip().upper()
+    log_msg(f"=== {label} MODE STARTED ===")
     
     stats = {
         "success": 0,
@@ -606,6 +702,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
 
     # Get pending targets if not provided
     if targets is None:
+        # Target mode path: fetch pending nicknames from the RunList sheet.
         try:
             targets = sheets.get_pending_targets()
         except Exception as e:
@@ -621,7 +718,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
         targets = targets[:max_profiles]
 
     stats["total_found"] = len(targets)
-    log_msg(f"Processing {len(targets)} target(s)...")
+    log_msg(f"Processing {len(targets)} profile(s)...")
 
     scraper = ProfileScraper(driver)
 
@@ -640,7 +737,9 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
             log_msg(f"Processing {i}/{len(targets)}: {nickname}")
             
             # Scrape profile
-            profile_data = scraper.scrape_profile(nickname, source="Target")
+            # Keep SOURCE consistent (Online/Target) based on the caller.
+            scrape_source = (target.get('source') or label.title())
+            profile_data = scraper.scrape_profile(nickname, source=scrape_source)
             stats["processed"] += 1
             
             if not profile_data:
@@ -696,7 +795,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None):
         if i < len(targets):
             time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
     
-    log_msg("=== TARGET MODE COMPLETED ===")
+    log_msg(f"=== {label} MODE COMPLETED ===")
     log_msg(
         f"Results: {stats['success']} success, {stats['failed']} failed, "
         f"{stats['skipped']} skipped"
