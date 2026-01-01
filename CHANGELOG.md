@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### ✅ Fixed
 
 - **Profiles sheet**: Column L header display updated to **RUN MODE**.
+- **Profiles sheet**: Removed column **U** (`MEH TYPE`) to prevent formatting issues; mehfil data now stored without the type column.
 - **IMAGE**: Profile photo URL extraction now prefers real avatar image (cloudfront/avatar-imgs) and ignores placeholder `og_image.png`.
 - **Sheets**: Header formatting now uses the same 429 retry/backoff wrapper as other write operations.
 

@@ -261,7 +261,6 @@ class ProfileScraper:
         """Extract mehfil details from profile page"""
         mehfil_data = {
             'MEH NAME': [],
-            'MEH TYPE': [],
             'MEH LINK': [],
             'MEH DATE': []
         }
@@ -278,14 +277,6 @@ class ProfileScraper:
                     # Extract mehfil name
                     name_elem = entry.find_element(By.CSS_SELECTOR, ProfileSelectors.MEHFIL_NAME)
                     mehfil_data['MEH NAME'].append(clean_text(name_elem.text))
-                    
-                    # Extract mehfil types
-                    type_elems = entry.find_elements(
-                        By.CSS_SELECTOR, 
-                        ProfileSelectors.MEHFIL_TYPE
-                    )
-                    types = [clean_text(t.text) for t in type_elems]
-                    mehfil_data['MEH TYPE'].append(", ".join(types))
                     
                     # Extract mehfil link
                     link = entry.get_attribute('href')
@@ -658,7 +649,6 @@ class ProfileScraper:
                 "LAST POST TIME": last_post_data['LAST POST TIME'],
                 "IMAGE": image_url,
                 "MEH NAME": "\n".join(mehfil_data['MEH NAME']) if mehfil_data['MEH NAME'] else "",
-                "MEH TYPE": "\n".join(mehfil_data['MEH TYPE']) if mehfil_data['MEH TYPE'] else "",
                 "MEH LINK": "\n".join(mehfil_data['MEH LINK']) if mehfil_data['MEH LINK'] else "",
                 "MEH DATE": "\n".join(mehfil_data['MEH DATE']) if mehfil_data['MEH DATE'] else ""
             })

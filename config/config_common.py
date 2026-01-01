@@ -85,9 +85,8 @@ class Config:
         "POST URL",           # 17
         "RURL",               # 18
         "MEH NAME",           # 19
-        "MEH TYPE",           # 20
-        "MEH LINK",           # 21
-        "MEH DATE"            # 22
+        "MEH LINK",           # 20
+        "MEH DATE"            # 21
     ]
     
     ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen", "Batch #"]
@@ -135,7 +134,6 @@ class Config:
         "POST URL": "",
         "RURL": "",
         "MEH NAME": "",
-        "MEH TYPE": "",
         "MEH LINK": "",
         "MEH DATE": ""
     }

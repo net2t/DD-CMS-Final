@@ -202,6 +202,18 @@ class SheetsManager:
                 continue
             try:
                 current_headers = ws.row_values(1)
+
+                if ws == self.profiles_ws and current_headers:
+                    meh_type_header = self._format_header_cell("MEH TYPE")
+                    if meh_type_header in current_headers:
+                        col_index = current_headers.index(meh_type_header) + 1
+                        log_msg(
+                            f"Removing obsolete Profiles column: {meh_type_header} (col {col_index})...",
+                            "WARNING"
+                        )
+                        self._perform_write_operation(ws.delete_columns, col_index)
+                        current_headers = ws.row_values(1)
+
                 formatted_headers = [self._format_header_cell(h) for h in headers]
                 if not current_headers:
                     log_msg(f"Initializing headers for '{ws.title}' sheet...")
@@ -403,11 +415,10 @@ class SheetsManager:
             "DATETIME SCRAP",
             "LAST POST TIME",
             "MEH NAME",
-            "MEH TYPE",
             "MEH DATE",
         }
 
-        mehfil_multiline_cols = {"MEH NAME", "MEH TYPE", "MEH LINK", "MEH DATE"}
+        mehfil_multiline_cols = {"MEH NAME", "MEH LINK", "MEH DATE"}
         row_data = []
         for col in Config.COLUMN_ORDER:
             if col in mehfil_multiline_cols:
