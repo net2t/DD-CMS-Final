@@ -150,6 +150,9 @@ def main():
             }
             sheets.update_dashboard(dashboard_data)
 
+            # Apply font formatting once at the end (faster than per-row formatting)
+            sheets.finalize_formatting()
+
         # Print beautiful summary
         print_summary(stats, args.mode, duration)
         

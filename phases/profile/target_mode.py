@@ -33,6 +33,30 @@ def clean_text(text):
     text = str(text).strip().replace('\xa0', ' ').replace('\n', ' ')
     return re.sub(r"\s+", " ", text).strip()
 
+def normalize_post_url(url):
+    if not url:
+        return ""
+    url = clean_text(url)
+    if not url.startswith("http"):
+        return url
+
+    m = re.match(r"^(https?://[^/]+)(/.*)$", url)
+    if not m:
+        return url
+
+    base, path = m.group(1), m.group(2)
+    path = path.split('#', 1)[0].split('?', 1)[0]
+
+    m2 = re.match(r"^(/comments/(?:text|image)/\d+)", path)
+    if m2:
+        return f"{base}{m2.group(1)}"
+
+    m3 = re.match(r"^/content/(\d+)", path)
+    if m3:
+        return f"{base}/comments/image/{m3.group(1)}"
+
+    return f"{base}{path.rstrip('/')}"
+
 def normalize_post_datetime(raw_date):
     """Normalize any date string to standardized format: dd-mmm-yy hh:mm a
     
@@ -68,13 +92,31 @@ def normalize_post_datetime(raw_date):
     
     # Clean and standardize the input text
     t = text.replace('\n', ' ').replace('\t', ' ').replace('\r', '').strip()
+    if t.startswith('-'):
+        t = t.lstrip('-').strip()
     t = re.sub(r'\s+', ' ', t)  # Normalize multiple spaces
     
     # Handle "X ago" format
-    ago_match = re.search(r"(\d+)\s*(second|minute|hour|day|week|month|year)s?\s*ago", t)
+    ago_match = re.search(r"(\d+)?\s*(sec|secs|second|seconds|min|mins|minute|minutes|hour|hours|day|days|week|weeks|month|months|year|years)\s*ago", t)
     if ago_match:
-        amount = int(ago_match.group(1))
+        amount_raw = ago_match.group(1)
+        amount = int(amount_raw) if amount_raw else 1
         unit = ago_match.group(2)
+
+        unit_map = {
+            "sec": "second",
+            "secs": "second",
+            "seconds": "second",
+            "min": "minute",
+            "mins": "minute",
+            "minutes": "minute",
+            "hours": "hour",
+            "days": "day",
+            "weeks": "week",
+            "months": "month",
+            "years": "year",
+        }
+        unit = unit_map.get(unit, unit)
         
         # Map units to seconds
         seconds_map = {
@@ -385,7 +427,9 @@ class ProfileScraper:
         last_post = {'LAST POST': '', 'LAST POST TIME': ''}
         try:
             post_text_elem = self.driver.find_element(By.XPATH, ProfileSelectors.LAST_POST_TEXT)
-            last_post['LAST POST'] = clean_text(post_text_elem.text)
+            href = post_text_elem.get_attribute('href')
+            if href:
+                last_post['LAST POST'] = normalize_post_url(href)
         except Exception:
             pass
 
@@ -435,13 +479,22 @@ class ProfileScraper:
                     return last_post
 
                 try:
-                    text_elem = first_post.find_element(By.CSS_SELECTOR, "h2.main_txt")
-                    last_post['LAST POST'] = clean_text(text_elem.text)
+                    url_selectors = [
+                        "a[href*='/content/']",
+                        "a[href*='/comments/text/']",
+                        "a[href*='/comments/image/']"
+                    ]
+                    for selector in url_selectors:
+                        try:
+                            link = first_post.find_element(By.CSS_SELECTOR, selector)
+                            href = link.get_attribute('href')
+                            if href:
+                                last_post['LAST POST'] = normalize_post_url(href)
+                                break
+                        except Exception:
+                            continue
                 except Exception:
-                    try:
-                        last_post['LAST POST'] = clean_text(first_post.text)
-                    except Exception:
-                        last_post['LAST POST'] = ""
+                    pass
 
                 raw_time = ""
                 try:

@@ -73,30 +73,31 @@
 - **Label:** bug
 - **Assignee:** @OutLawZ
 - **Description:** Ensure columns K, N, O (Posts, Last Post, Last Post Time) are always populated if data is available.
-- [ ] Audit and fix extraction logic
-- [ ] Test for blanks
-- [ ] Mark as done
-
-## 9. Profile Status Logic (Col J)
-
-- **Label:** bug
-- **Assignee:** @OutLawZ
-- **Description:** Improve logic for Col J (Status):
-  - Verified = Normal
-  - Unverified: Detect via visible “UNVERIFIED USER” or 0 posts/followers
-  - Suspended/Banned: Detect via “Account suspended” or “BANNED!” text, no profile image
-- [ ] Refine status extraction
-- [ ] Test all profile types
-- [ ] Mark as done
+- [x] Audit and fix extraction logic
+- [x] Fix relative time parsing for all variants (sec/min/hour/day etc.) including leading '-' and missing number (e.g. 'min ago')
+- [x] Verify on 3-4 profiles (online + target)
+- [x] Mark as done
 
 ## 10. Fix Last Post Date/Time Logic
 
 - **Label:** bug
 - **Assignee:** @OutLawZ
 - **Description:** Use dedicated method to extract last post link and date/time from public profile page, as described in provided help. Ensure correct assignment to sheet columns.
-- [ ] Implement dedicated extraction method
-- [ ] Assign values to correct columns
-- [ ] Mark as done
+- [x] Implement dedicated extraction method
+- [x] Assign values to correct columns
+- [x] Normalize last-post URLs (clean reply/fragments; convert /content/<id>/.. to /comments/image/<id>)
+- [x] Verify on 3-4 profiles
+- [x] Mark as done
+
+---
+
+## Notes / Checkpoints
+
+- [x] Checkpoint created on `main`: `checkpoint-2026-01-01_0310`
+- [x] POSTS cleanup: remove '+' and ensure digits only (e.g. +999 / 999+)
+- [x] Uppercase enforcement for columns H, L, M, O, T, U, W at write-time
+- [x] Sheets formatting optimization: apply Quantico font once at end of run (avoid per-row formatting)
+- [ ] Rename Profiles column header `SOURCE` to `Mode` (Target/Online) after verifying current main sheet headers
 
 ---
 

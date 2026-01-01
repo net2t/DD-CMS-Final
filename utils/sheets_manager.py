@@ -9,6 +9,7 @@ FIXED:
 """
 
 import json
+import re
 import time
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
@@ -35,7 +36,6 @@ def clean_data(value):
     if v in bad_values or not v:
         return ""
     
-    import re
     return re.sub(r"\s+", " ", v)
 
 # ==================== GOOGLE SHEETS CLIENT ====================
@@ -190,6 +190,26 @@ class SheetsManager:
         except Exception as e:
             log_msg(f"Failed to apply row format for '{ws.title}' at row {row_index}: {e}", "WARNING")
 
+    def _apply_sheet_font(self, ws, max_rows=None):
+        """Apply Quantico font to a whole sheet range (fast, one call)."""
+        try:
+            if max_rows is None:
+                max_rows = ws.row_count
+            end_a1 = gspread.utils.rowcol_to_a1(max_rows, ws.col_count)
+            self._perform_write_operation(
+                ws.format,
+                f"A1:{end_a1}",
+                {"textFormat": {"fontFamily": "Quantico"}}
+            )
+        except Exception as e:
+            log_msg(f"Failed to apply sheet font for '{ws.title}': {e}", "WARNING")
+
+    def finalize_formatting(self):
+        """Apply final formatting in one shot at end of run."""
+        for ws in [self.profiles_ws, self.target_ws, self.dashboard_ws, self.online_log_ws]:
+            if ws:
+                self._apply_sheet_font(ws)
+
     def _apply_header_format(self, ws):
         """Apply 'Quantico' font to the header row (font-only)."""
         try:
@@ -308,10 +328,24 @@ class SheetsManager:
         if nickname.lower() in self.tags_mapping:
             profile_data["TAGS"] = self.tags_mapping[nickname.lower()]
 
-        uppercase_cols = {"CITY", "GENDER", "MARRIED", "STATUS"}
+        uppercase_cols = {
+            "CITY",
+            "GENDER",
+            "MARRIED",
+            "STATUS",
+            "JOINED",
+            "SKIP/DEL",
+            "DATETIME SCRAP",
+            "LAST POST TIME",
+            "MEH NAME",
+            "MEH TYPE",
+            "MEH DATE",
+        }
         row_data = []
         for col in Config.COLUMN_ORDER:
             val = clean_data(profile_data.get(col, ""))
+            if col == "POSTS" and val:
+                val = re.sub(r"\D+", "", str(val))
             if col in uppercase_cols and val:
                 val = val.upper()
             row_data.append(val)
@@ -340,16 +374,12 @@ class SheetsManager:
 
             if self._perform_write_operation(self.profiles_ws.delete_rows, old_row_num):
                 if self._perform_write_operation(self.profiles_ws.insert_row, updated_row, index=2):
-                    # FIXED: Apply Quantico font to the new row
-                    self._apply_row_format(self.profiles_ws, 2)
                     log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
                     self._load_existing_profiles()
                     return {"status": "updated", "changed_fields": changed_fields}
             return {"status": "error", "error": "Failed to update sheet"}
         else:
             if self._perform_write_operation(self.profiles_ws.insert_row, row_data, index=2):
-                # FIXED: Apply Quantico font to the new row
-                self._apply_row_format(self.profiles_ws, 2)
                 log_msg(f"New profile {nickname} added at Row 2.", "OK")
                 self._load_existing_profiles()
                 return {"status": "new"}
@@ -399,20 +429,14 @@ class SheetsManager:
             'skip/del': Config.TARGET_STATUS_SKIP_DEL
         }
         normalized_status = status_map.get((status or "").lower().strip(), status)
-        if self._perform_write_operation(self.target_ws.update, f"B{row_num}:C{row_num}", [[normalized_status, remarks]]):
-            self._apply_row_format(self.target_ws, row_num)
+        self._perform_write_operation(self.target_ws.update, f"B{row_num}:C{row_num}", [[normalized_status, remarks]])
 
     # ==================== ONLINE LOG OPERATIONS ====================
 
     def log_online_user(self, nickname, timestamp=None):
         """Appends a new row to the 'OnlineLog' sheet."""
         ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        if self._perform_write_operation(self.online_log_ws.append_row, [ts, nickname, ts]):
-            try:
-                last_row = len(self.online_log_ws.get_all_values())
-                self._apply_row_format(self.online_log_ws, last_row)
-            except Exception:
-                pass
+        self._perform_write_operation(self.online_log_ws.append_row, [ts, nickname, ts])
 
     def batch_log_online_users(self, nicknames, timestamp=None, batch_no=None):
         """
@@ -432,15 +456,7 @@ class SheetsManager:
         
         rows_to_add = [[ts, nickname, ts, batch_no] for nickname in nicknames]
         log_msg(f"Logging {len(rows_to_add)} online users to the sheet with batch {batch_no}...", "INFO")
-        try:
-            start_row = len(self.online_log_ws.get_all_values()) + 1
-        except Exception:
-            start_row = None
-        if self._perform_write_operation(self.online_log_ws.append_rows, rows_to_add):
-            if start_row is not None:
-                end_row = start_row + len(rows_to_add) - 1
-                for r in range(start_row, end_row + 1):
-                    self._apply_row_format(self.online_log_ws, r)
+        self._perform_write_operation(self.online_log_ws.append_rows, rows_to_add)
 
     # ==================== DASHBOARD OPERATIONS ====================
 
@@ -463,11 +479,6 @@ class SheetsManager:
             metrics.get("End", "")
         ]
         if self._perform_write_operation(self.dashboard_ws.append_row, row):
-            try:
-                last_row = len(self.dashboard_ws.get_all_values())
-                self._apply_row_format(self.dashboard_ws, last_row)
-            except Exception:
-                pass
             log_msg("Dashboard updated successfully.", "OK")
 
     # ==================== HELPERS ====================
