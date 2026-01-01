@@ -97,7 +97,7 @@
 - [x] POSTS cleanup: remove '+' and ensure digits only (e.g. +999 / 999+)
 - [x] Uppercase enforcement for columns H, L, M, O, T, U, W at write-time
 - [x] Sheets formatting optimization: apply Quantico font once at end of run (avoid per-row formatting)
-- [ ] Rename Profiles column header `SOURCE` to `Mode` (Target/Online) after verifying current main sheet headers
+- [x] Keep Profiles column as `SKIP/DEL` (no `SOURCE` -> `Mode` rename needed)
 
 ---
 
