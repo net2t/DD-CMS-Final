@@ -762,6 +762,8 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
         "new": 0,
         "updated": 0,
         "unchanged": 0,
+        "phase2_ready": 0,
+        "phase2_not_eligible": 0,
         "skipped": 0,
         "processed": 0,
         "invalid_nicknames": 0,
@@ -844,6 +846,18 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
                 continue
             
             # Write successful profile
+            try:
+                posts_raw = str(profile_data.get('POSTS', '') or '')
+                posts_digits = re.sub(r"\D+", "", posts_raw)
+                posts_count = int(posts_digits) if posts_digits else None
+            except Exception:
+                posts_count = None
+
+            if posts_count is not None and posts_count < 100:
+                stats["phase2_ready"] += 1
+            else:
+                stats["phase2_not_eligible"] += 1
+
             result = sheets.write_profile(profile_data)
             write_status = result.get("status", "error")
 
@@ -890,6 +904,11 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
     log_msg(
         f"Results: {stats['success']} success, {stats['failed']} failed, "
         f"{stats['skipped']} skipped"
+    )
+
+    log_msg(
+        f"PHASE 2 Eligibility: READY={stats.get('phase2_ready', 0)} | NOT ELIGIBLE={stats.get('phase2_not_eligible', 0)}",
+        "SUCCESS"
     )
             
     return stats

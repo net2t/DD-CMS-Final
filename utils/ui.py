@@ -26,6 +26,65 @@ if sys.platform == "win32":
 # Initialize a global Rich Console instance
 console = Console()
 
+_RUN_LOG_PATH = None
+_RUN_LOG_FH = None
+_IMPORTANT_EVENTS = []
+
+
+def init_run_logger(mode=None):
+    global _RUN_LOG_PATH, _RUN_LOG_FH
+    try:
+        os.makedirs("logs", exist_ok=True)
+        ts = get_pkt_time().strftime("%Y%m%d_%H%M%S")
+        suffix = (mode or "run").lower()
+        _RUN_LOG_PATH = os.path.join("logs", f"{suffix}_{ts}.log")
+        _RUN_LOG_FH = open(_RUN_LOG_PATH, "a", encoding="utf-8")
+    except Exception:
+        _RUN_LOG_PATH = None
+        _RUN_LOG_FH = None
+
+
+def close_run_logger():
+    global _RUN_LOG_FH
+    try:
+        if _RUN_LOG_FH:
+            _RUN_LOG_FH.flush()
+            _RUN_LOG_FH.close()
+    except Exception:
+        pass
+    finally:
+        _RUN_LOG_FH = None
+
+
+def _append_important_event(ts, level, msg):
+    if level in {"WARNING", "ERROR", "TIMEOUT"}:
+        _IMPORTANT_EVENTS.append((ts, level, msg))
+        return
+    if level in {"SUCCESS"}:
+        _IMPORTANT_EVENTS.append((ts, level, msg))
+
+
+def print_important_events(max_items=12):
+    if not _IMPORTANT_EVENTS:
+        return
+
+    table = Table(show_header=True, header_style="bold magenta", box=box.SIMPLE)
+    table.add_column("Time", style="dim", width=10)
+    table.add_column("Level", style="cyan", width=10)
+    table.add_column("Message", style="white")
+
+    for ts, level, msg in _IMPORTANT_EVENTS[-max_items:]:
+        table.add_row(ts, level, str(msg))
+
+    console.print(
+        Panel(
+            table,
+            title="IMPORTANT EVENTS",
+            border_style="yellow",
+            expand=False,
+        )
+    )
+
 
 def get_pkt_time():
     """Get current Pakistan time (UTC+5)"""
@@ -70,6 +129,18 @@ def log_msg(msg, level="INFO"):
     icon = icon_map.get(level, "➡️")
     
     console.print(f"[dim]{ts}[/dim] {icon} [{style}]{msg}[/{style}]")
+
+    try:
+        if _RUN_LOG_FH:
+            _RUN_LOG_FH.write(f"{ts} {level}: {msg}\n")
+            _RUN_LOG_FH.flush()
+    except Exception:
+        pass
+
+    try:
+        _append_important_event(ts, level, msg)
+    except Exception:
+        pass
 
 
 def print_header(title, version):
@@ -154,6 +225,13 @@ def print_summary(stats, mode, duration):
     table.add_row("🆕 New Profiles", str(stats.get('new', 0)), "")
     table.add_row("🔄 Updated Profiles", str(stats.get('updated', 0)), "")
     table.add_row("💤 Unchanged Profiles", str(stats.get('unchanged', 0)), "")
+
+    phase2_ready = stats.get('phase2_ready')
+    phase2_not_eligible = stats.get('phase2_not_eligible')
+    if phase2_ready is not None or phase2_not_eligible is not None:
+        table.add_row("", "", "")  # Spacer
+        table.add_row("🚩 Phase 2 READY", str(phase2_ready or 0), "")
+        table.add_row("⛔ Phase 2 NOT ELIGIBLE", str(phase2_not_eligible or 0), "")
     
     # Online mode specific
     if mode == 'online':

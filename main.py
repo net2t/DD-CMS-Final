@@ -22,7 +22,10 @@ from utils.ui import (
     get_pkt_time, 
     print_phase_start,
     print_mode_config,
-    print_online_users_found
+    print_online_users_found,
+    init_run_logger,
+    close_run_logger,
+    print_important_events
 )
 
 ## Phase router imports
@@ -81,6 +84,8 @@ def main():
     args.mode = args.mode_opt or args.mode_pos
     if not args.mode:
         parser.error("❌ No mode specified. Choose 'target', 'online', or 'test'.")
+
+    init_run_logger(args.mode)
     
     # --- Header --- 
     print_header(f"DamaDam Scraper - {args.mode.upper()} MODE", Config.SCRIPT_VERSION)
@@ -156,6 +161,8 @@ def main():
 
         # Print beautiful summary
         print_summary(stats, args.mode, duration)
+
+        print_important_events()
         
         # Success message
         if stats.get('success', 0) > 0:
@@ -184,6 +191,7 @@ def main():
         log_msg("🧹 Cleaning up...", "INFO")
         context.close()
         log_msg("👋 Goodbye!", "INFO")
+        close_run_logger()
 
 # ==================== SCRIPT ENTRY POINT ====================
 
