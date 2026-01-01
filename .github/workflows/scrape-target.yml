@@ -1,5 +1,9 @@
 name: Target Mode 🔰 (Manual)
 
+concurrency:
+  group: dd-scraper-target
+  cancel-in-progress: true
+
 on:
   # Run every 55 minutes automatically
   schedule:

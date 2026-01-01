@@ -38,6 +38,24 @@ def clean_data(value):
     
     return re.sub(r"\s+", " ", v)
 
+def clean_data_preserve_newlines(value):
+    """Clean cell data but preserve newline characters for multiline cells."""
+    if not value:
+        return ""
+
+    v = str(value).replace('\xa0', ' ').strip()
+    bad_values = {
+        "No city", "Not set", "[No Posts]", "N/A",
+        "no city", "not set", "[no posts]", "n/a",
+        "[No Post URL]", "[Error]", "no set", "none", "null", "no age"
+    }
+    if v in bad_values or not v:
+        return ""
+
+    lines = [re.sub(r"\s+", " ", line).strip() for line in v.splitlines()]
+    lines = [line for line in lines if line]
+    return "\n".join(lines)
+
 # ==================== GOOGLE SHEETS CLIENT ====================
 
 def create_gsheets_client(credentials_json=None, credentials_path=None):
@@ -106,8 +124,12 @@ class SheetsManager:
         # Initialize worksheets
         self.profiles_ws = self._get_or_create(Config.SHEET_PROFILES, cols=len(Config.COLUMN_ORDER))
         self.target_ws = self._get_or_create(Config.SHEET_TARGET, cols=4)
-        self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD, cols=11)  # FIXED: Reduced columns
-        self.online_log_ws = self._get_or_create(Config.SHEET_ONLINE_LOG, cols=3)
+        self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD, cols=12)
+        self.online_log_ws = self._get_or_create(Config.SHEET_ONLINE_LOG, cols=4)
+
+        # Ensure existing sheets have expected column counts
+        self._ensure_min_cols(self.dashboard_ws, 12)
+        self._ensure_min_cols(self.online_log_ws, 4)
         
         # Optional sheets
         self.tags_ws = self._get_sheet_if_exists(Config.SHEET_TAGS)
@@ -129,6 +151,28 @@ class SheetsManager:
         except WorksheetNotFound:
             log_msg(f"Creating worksheet: {name}")
             return self.spreadsheet.add_worksheet(title=name, rows=rows, cols=cols)
+
+    def _ensure_min_cols(self, ws, min_cols):
+        if not ws:
+            return
+        try:
+            if ws.col_count < min_cols:
+                self._perform_write_operation(ws.add_cols, min_cols - ws.col_count)
+        except Exception:
+            pass
+
+    def _format_header_cell(self, text):
+        if not text:
+            return ""
+        t = str(text).strip().upper()
+        # Split on '/' and whitespace into separate lines
+        parts = []
+        for chunk in t.split('/'):
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+            parts.extend([p for p in chunk.split() if p])
+        return "\n".join(parts) if parts else t
     
     def _get_sheet_if_exists(self, name):
         """Safely gets a worksheet by name, returning None if it doesn't exist."""
@@ -142,11 +186,10 @@ class SheetsManager:
         """Initialize headers and apply formatting for all sheets."""
         sheets_to_format = {
             self.profiles_ws: Config.COLUMN_ORDER,
-            self.target_ws: ["Nickname", "Status", "Remarks", "Source"],
-            # FIXED: Simplified dashboard headers (removed L, M, N, O)
+            self.target_ws: ["NICKNAME", "STATUS", "REMARKS", "SKIP"],
             self.dashboard_ws: [
-                "Run#", "Timestamp", "Profiles", "Success", "Failed", 
-                "New", "Updated", "Unchanged", "Trigger", "Start", "End"
+                "RUN#", "TIMESTAMP", "PROFILES", "SUCCESS", "FAILED",
+                "NEW", "UPDATED", "DIFF", "UNCHANGED", "TRIGGER", "START", "END"
             ],
             self.online_log_ws: Config.ONLINE_LOG_COLUMNS
         }
@@ -156,20 +199,21 @@ class SheetsManager:
                 continue
             try:
                 current_headers = ws.row_values(1)
+                formatted_headers = [self._format_header_cell(h) for h in headers]
                 if not current_headers:
                     log_msg(f"Initializing headers for '{ws.title}' sheet...")
-                    ws.append_row(headers)
+                    ws.append_row(formatted_headers)
                     self._apply_header_format(ws)
 
                 # If headers differ, update only the header row (do NOT clear the sheet).
-                elif current_headers != headers:
+                elif current_headers != formatted_headers:
                     log_msg(
                         f"Updating header row for '{ws.title}' sheet (preserving existing data)...",
                         "WARNING"
                     )
                     end_a1 = gspread.utils.rowcol_to_a1(1, len(headers))
                     header_range = f"A1:{end_a1}"
-                    ws.update(header_range, [headers])
+                    ws.update(header_range, [formatted_headers])
                     self._apply_header_format(ws)
             except Exception as e:
                 log_msg(f"Header initialization for '{ws.title}' failed: {e}", "ERROR")
@@ -204,11 +248,25 @@ class SheetsManager:
         except Exception as e:
             log_msg(f"Failed to apply sheet font for '{ws.title}': {e}", "WARNING")
 
+    def _apply_sheet_wrap(self, ws, wrap_strategy, max_rows=None):
+        try:
+            if max_rows is None:
+                max_rows = ws.row_count
+            end_a1 = gspread.utils.rowcol_to_a1(max_rows, ws.col_count)
+            self._perform_write_operation(
+                ws.format,
+                f"A1:{end_a1}",
+                {"wrapStrategy": wrap_strategy}
+            )
+        except Exception as e:
+            log_msg(f"Failed to apply wrap for '{ws.title}': {e}", "WARNING")
+
     def finalize_formatting(self):
         """Apply final formatting in one shot at end of run."""
         for ws in [self.profiles_ws, self.target_ws, self.dashboard_ws, self.online_log_ws]:
             if ws:
                 self._apply_sheet_font(ws)
+                self._apply_sheet_wrap(ws, "CLIP")
 
     def _apply_header_format(self, ws):
         """Apply 'Quantico' font to the header row (font-only)."""
@@ -342,10 +400,13 @@ class SheetsManager:
             "MEH DATE",
         }
 
-        mehfil_multiline_cols = {"MEH TYPE", "MEH LINK", "MEH DATE"}
+        mehfil_multiline_cols = {"MEH NAME", "MEH TYPE", "MEH LINK", "MEH DATE"}
         row_data = []
         for col in Config.COLUMN_ORDER:
-            val = clean_data(profile_data.get(col, ""))
+            if col in mehfil_multiline_cols:
+                val = clean_data_preserve_newlines(profile_data.get(col, ""))
+            else:
+                val = clean_data(profile_data.get(col, ""))
             if col == "POSTS" and val:
                 val = re.sub(r"\D+", "", str(val))
             if col in mehfil_multiline_cols and val and ',' in val:
@@ -412,12 +473,32 @@ class SheetsManager:
                 pending_targets.append({
                     'nickname': row[0].strip(),
                     'row': idx,
-                    'source': (row[3] if len(row) > 3 else 'Target').strip() or 'Target'
+                    'source': 'Target'
                 })
             return pending_targets
         except Exception as e:
             log_msg(f"Failed to get pending targets: {e}", "ERROR")
             return []
+
+    def get_skip_nicknames(self):
+        """Returns a set of nicknames to skip based on RunList SKIP column values."""
+        skips = set()
+        try:
+            rows = self.target_ws.get_all_values()[1:]
+            for row in rows:
+                if len(row) < 4:
+                    continue
+                cell = (row[3] or "").strip()
+                if not cell:
+                    continue
+                parts = re.split(r"[\n,]+", cell)
+                for p in parts:
+                    nick = p.strip()
+                    if nick:
+                        skips.add(nick.lower())
+        except Exception:
+            pass
+        return skips
 
     def update_target_status(self, row_num, status, remarks):
         """Updates the status and remarks for a specific target."""
@@ -440,7 +521,7 @@ class SheetsManager:
     def log_online_user(self, nickname, timestamp=None):
         """Inserts a new row at Row 2 in the 'OnlineLog' sheet."""
         ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        self._perform_write_operation(self.online_log_ws.insert_row, [ts, nickname, ts], index=2)
+        self._perform_write_operation(self.online_log_ws.insert_row, [ts, nickname, ts, ""], index=2)
 
     def batch_log_online_users(self, nicknames, timestamp=None, batch_no=None):
         """
@@ -469,6 +550,17 @@ class SheetsManager:
         Inserts a summary at Row 2 in the 'Dashboard' sheet.
         FIXED: Simplified columns (removed state counts L, M, N, O).
         """
+        start_val = metrics.get("Start", "")
+        end_val = metrics.get("End", "")
+        diff_min = ""
+        try:
+            if start_val and end_val:
+                start_dt = datetime.strptime(start_val, "%d-%b-%y %I:%M %p")
+                end_dt = datetime.strptime(end_val, "%d-%b-%y %I:%M %p")
+                diff_min = str(int(round((end_dt - start_dt).total_seconds() / 60.0)))
+        except Exception:
+            diff_min = ""
+
         row = [
             metrics.get("Run Number", 1),
             metrics.get("Last Run", get_pkt_time().strftime("%d-%b-%y %I:%M %p")),
@@ -477,10 +569,11 @@ class SheetsManager:
             metrics.get("Failed", 0),
             metrics.get("New Profiles", 0),
             metrics.get("Updated Profiles", 0),
+            diff_min,
             metrics.get("Unchanged Profiles", 0),
             metrics.get("Trigger", "manual"),
-            metrics.get("Start", ""),
-            metrics.get("End", "")
+            start_val,
+            end_val,
         ]
         if self._perform_write_operation(self.dashboard_ws.insert_row, row, index=2):
             log_msg("Dashboard updated successfully.", "OK")
@@ -496,7 +589,7 @@ class SheetsManager:
                 return
 
             header, rows = all_rows[0], all_rows[1:]
-            date_idx = header.index("DATETIME SCRAP")
+            date_idx = Config.COLUMN_ORDER.index("DATETIME SCRAP")
 
             def parse_date(row):
                 try:

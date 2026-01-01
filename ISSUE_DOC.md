@@ -98,6 +98,7 @@
 - [x] Uppercase enforcement for columns H, L, M, O, T, U, W at write-time
 - [x] Sheets formatting optimization: apply Quantico font once at end of run (avoid per-row formatting)
 - [x] Keep Profiles column as `SKIP/DEL` (no `SOURCE` -> `Mode` rename needed)
+- [ ] Sheet output changes approved: multi-line headers, RunList SKIP filtering, Dashboard DIFF, OnlineLog Batch #
 
 ---
 

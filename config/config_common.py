@@ -90,7 +90,7 @@ class Config:
         "MEH DATE"            # 22
     ]
     
-    ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen"]
+    ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen", "Batch #"]
     
     # ==================== TARGET STATUS ====================
     TARGET_STATUS_PENDING = "⚡ Pending"

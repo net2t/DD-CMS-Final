@@ -143,6 +143,14 @@ def run_online_mode(driver, sheets, max_profiles=0):
             "updated": 0, "unchanged": 0, "logged": 0
         }
 
+    # Remove SKIP nicknames before logging/scraping
+    try:
+        skip_set = sheets.get_skip_nicknames() if sheets else set()
+    except Exception:
+        skip_set = set()
+    if skip_set:
+        nicknames = [n for n in nicknames if (n or '').strip().lower() not in skip_set]
+
     # Log all users to the OnlineLog sheet in a single batch operation
     timestamp = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
     batch_no = get_pkt_time().strftime("%Y%m%d_%H%M")
