@@ -463,6 +463,7 @@ class SheetsManager:
                 "LAST POST TIME",  # Col O
                 "PROFILE LINK",    # Col Q
                 "POST URL",        # Col R
+                "PHASE 2",          # Col V
             }
 
             for i, col in enumerate(Config.COLUMN_ORDER):
