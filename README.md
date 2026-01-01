@@ -8,7 +8,11 @@
 
 ---
 
-## 🎯 What's New in v2.100.0.17 (Profile Phase ~99% Fixed)
+## 🎯 Phase 1 Status (Profile)
+
+✅ **DONE (Verified locally: online + target runs working)**
+
+## 🎯 What's New in v2.100.0.17 (Profile Phase DONE)
 
 ### ✅ Fixes
 
@@ -16,6 +20,9 @@
 - **POSTS count** improved with additional selector fallbacks.
 - **Sheets** no longer writes inline "Before/Now" text into cells.
 - **Mode Logs**: Online runs no longer show Target-mode banners.
+- **Profiles header**: Column L shows **RUN MODE** (header display).
+- **IMAGE**: Stores real profile photo URL when available (cloudfront/avatar image), not placeholder.
+- **Sheets stability**: Header formatting now retries on API 429 (quota) like other writes.
 
 ## ✅ Project Rule (Must Follow)
 
@@ -218,10 +225,10 @@ python main.py target --max-profiles 0
 
 **RunList Sheet Format:**
 
-| Nickname | Status | Remarks | Source |
+| Nickname | Status | Remarks | SKIP |
 | --- | --- | --- | --- |
-| user123 | ⚡ Pending | | Target |
-| user456 | Done 💀 | Profile updated | Target |
+| user123 | ⚡ Pending | | |
+| user456 | Done 💀 | Profile updated | YES |
 
 ---
 

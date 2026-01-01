@@ -185,7 +185,10 @@ class SheetsManager:
     def _init_headers(self):
         """Initialize headers and apply formatting for all sheets."""
         sheets_to_format = {
-            self.profiles_ws: Config.COLUMN_ORDER,
+            self.profiles_ws: [
+                ("RUN MODE" if h == "SKIP/DEL" else h)
+                for h in Config.COLUMN_ORDER
+            ],
             self.target_ws: ["NICKNAME", "STATUS", "REMARKS", "SKIP"],
             self.dashboard_ws: [
                 "RUN#", "TIMESTAMP", "PROFILES", "SUCCESS", "FAILED",
@@ -213,7 +216,7 @@ class SheetsManager:
                     )
                     end_a1 = gspread.utils.rowcol_to_a1(1, len(headers))
                     header_range = f"A1:{end_a1}"
-                    ws.update(header_range, [formatted_headers])
+                    self._perform_write_operation(ws.update, header_range, [formatted_headers])
                     self._apply_header_format(ws)
             except Exception as e:
                 log_msg(f"Header initialization for '{ws.title}' failed: {e}", "ERROR")
@@ -272,11 +275,15 @@ class SheetsManager:
         """Apply 'Quantico' font to the header row (font-only)."""
         try:
             header_range = f'A1:{gspread.utils.rowcol_to_a1(1, ws.col_count)}'
-            ws.format(header_range, {
-                "textFormat": {
-                    "fontFamily": "Quantico"
+            self._perform_write_operation(
+                ws.format,
+                header_range,
+                {
+                    "textFormat": {
+                        "fontFamily": "Quantico"
+                    }
                 }
-            })
+            )
         except Exception as e:
             log_msg(f"Failed to apply header format for '{ws.title}': {e}", "WARNING")
     

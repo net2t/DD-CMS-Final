@@ -7,35 +7,35 @@ concurrency:
 on:
   # Run every 55 minutes automatically
   schedule:
-    - cron: '*/55 * * * *'
+    - cron: "*/55 * * * *"
 
   # Manual trigger - Run on demand
   workflow_dispatch:
     inputs:
       max_profiles:
-        description: 'Max profiles to scrape (0 = All pending targets)'
+        description: "Max profiles to scrape (0 = All pending targets)"
         required: false
-        default: '0'
+        default: "0"
         type: string
       batch_size:
-        description: 'Batch size for processing'
+        description: "Batch size for processing"
         required: false
-        default: '20'
+        default: "20"
         type: string
 
 jobs:
   scrape-target:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
-      
+
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-      
+          python-version: "3.10"
+
       - name: 📦 Install Dependencies
         run: |
           pip install --upgrade pip
@@ -56,22 +56,18 @@ jobs:
           with open('credentials.json', 'w', encoding='utf-8') as f:
             json.dump(data, f)
           PY
-      
+
       - name: 🎯 Run Target Mode Scraper
         env:
           # Primary Account
           DAMADAM_USERNAME: ${{ secrets.DAMADAM_USERNAME }}
           DAMADAM_PASSWORD: ${{ secrets.DAMADAM_PASSWORD }}
-          
-          # Backup Account (optional but recommended)
-          DAMADAM_USERNAME_2: ${{ secrets.DAMADAM_USERNAME_2 }}
-          DAMADAM_PASSWORD_2: ${{ secrets.DAMADAM_PASSWORD_2 }}
-          
+
           # Google Sheets Configuration
           GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           GOOGLE_APPLICATION_CREDENTIALS: credentials.json
-          
+
           # Run Configuration
           MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '0' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
@@ -79,7 +75,7 @@ jobs:
           python main.py target \
             --max-profiles ${{ github.event.inputs.max_profiles || '0' }} \
             --batch-size ${{ github.event.inputs.batch_size || '20' }}
-      
+
       - name: 📊 Upload Logs (if available)
         if: always()
         uses: actions/upload-artifact@v4

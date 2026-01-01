@@ -546,14 +546,39 @@ class ProfileScraper:
         try:
             image_elem = self.driver.find_element(By.XPATH, ProfileSelectors.PROFILE_IMAGE)
             image_url = image_elem.get_attribute('src')
-            return image_url if image_url and image_url.startswith('http') else f"https://damadam.pk{image_url}"
+            if image_url and image_url.startswith('http'):
+                return image_url
+            if image_url:
+                return f"https://damadam.pk{image_url}"
         except Exception:
             pass
+
+        # Prefer actual avatar images if present in HTML (cloudfront avatar-imgs)
+        if page_source:
+            m = re.search(
+                r"<img[^>]+src=['\"](https?://[^'\"]+avatar-imgs/[^'\"]+)['\"]",
+                page_source,
+                re.IGNORECASE
+            )
+            if m:
+                return m.group(1)
 
         match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', page_source, re.IGNORECASE)
         if match:
             url = match.group(1)
+            # Ignore placeholder og image
+            if 'og_image.png' in url:
+                return ""
             return url if url.startswith('http') else f"https://damadam.pk{url}"
+
+        # Last-resort: any non-placeholder image
+        if page_source:
+            m = re.search(r"<img[^>]+src=['\"]([^'\"]+)['\"]", page_source, re.IGNORECASE)
+            if m:
+                url = m.group(1)
+                if url and 'og_image.png' not in url:
+                    return url if url.startswith('http') else f"https://damadam.pk{url}"
+
         return ""
 
     def _match_stat(self, text, patterns):

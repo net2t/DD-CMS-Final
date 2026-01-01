@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.100.0.18] - 2026-01-02
+
+### ✅ Fixed
+
+- **Profiles sheet**: Column L header display updated to **RUN MODE**.
+- **IMAGE**: Profile photo URL extraction now prefers real avatar image (cloudfront/avatar-imgs) and ignores placeholder `og_image.png`.
+- **Sheets**: Header formatting now uses the same 429 retry/backoff wrapper as other write operations.
+
+### 🔧 Changed
+
+- **GitHub Actions**: Removed optional backup secret references from workflows to eliminate invalid-context warnings.
+
 ## [2.100.0.17] - 2025-12-30
 
 ### ✅ Fixed

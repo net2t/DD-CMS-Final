@@ -55,9 +55,9 @@
 - **Label:** enhancement
 - **Assignee:** @OutLawZ
 - **Description:** Add a 4th column in RunList for skip logic. If a nickname is present in this row, script skips processing and moves to the next.
-- [ ] Implement skip column logic
-- [ ] Test skip behavior
-- [ ] Mark as done
+- [x] Implement skip column logic
+- [x] Test skip behavior
+- [x] Mark as done
 
 ## 7. Dashboard/OnlineLog Row Order
 
@@ -98,7 +98,10 @@
 - [x] Uppercase enforcement for columns H, L, M, O, T, U, W at write-time
 - [x] Sheets formatting optimization: apply Quantico font once at end of run (avoid per-row formatting)
 - [x] Keep Profiles column as `SKIP/DEL` (no `SOURCE` -> `Mode` rename needed)
-- [ ] Sheet output changes approved: multi-line headers, RunList SKIP filtering, Dashboard DIFF, OnlineLog Batch #
+- [x] Sheet output changes approved: multi-line headers, RunList SKIP filtering, Dashboard DIFF, OnlineLog Batch #
+- [x] Profiles header display: Column L shows `RUN MODE`
+- [x] IMAGE extraction: stores real profile photo URL (cloudfront/avatar image)
+- [x] Phase 1 (Profile) verified done (online + target runs)
 
 ---
 
