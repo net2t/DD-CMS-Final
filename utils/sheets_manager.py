@@ -341,11 +341,15 @@ class SheetsManager:
             "MEH TYPE",
             "MEH DATE",
         }
+
+        mehfil_multiline_cols = {"MEH TYPE", "MEH LINK", "MEH DATE"}
         row_data = []
         for col in Config.COLUMN_ORDER:
             val = clean_data(profile_data.get(col, ""))
             if col == "POSTS" and val:
                 val = re.sub(r"\D+", "", str(val))
+            if col in mehfil_multiline_cols and val and ',' in val:
+                val = re.sub(r",\s*", "\n", str(val))
             if col in uppercase_cols and val:
                 val = val.upper()
             row_data.append(val)
@@ -434,9 +438,9 @@ class SheetsManager:
     # ==================== ONLINE LOG OPERATIONS ====================
 
     def log_online_user(self, nickname, timestamp=None):
-        """Appends a new row to the 'OnlineLog' sheet."""
+        """Inserts a new row at Row 2 in the 'OnlineLog' sheet."""
         ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        self._perform_write_operation(self.online_log_ws.append_row, [ts, nickname, ts])
+        self._perform_write_operation(self.online_log_ws.insert_row, [ts, nickname, ts], index=2)
 
     def batch_log_online_users(self, nicknames, timestamp=None, batch_no=None):
         """
@@ -456,13 +460,13 @@ class SheetsManager:
         
         rows_to_add = [[ts, nickname, ts, batch_no] for nickname in nicknames]
         log_msg(f"Logging {len(rows_to_add)} online users to the sheet with batch {batch_no}...", "INFO")
-        self._perform_write_operation(self.online_log_ws.append_rows, rows_to_add)
+        self._perform_write_operation(self.online_log_ws.insert_rows, rows_to_add, row=2)
 
     # ==================== DASHBOARD OPERATIONS ====================
 
     def update_dashboard(self, metrics):
         """
-        Appends a summary to the 'Dashboard' sheet.
+        Inserts a summary at Row 2 in the 'Dashboard' sheet.
         FIXED: Simplified columns (removed state counts L, M, N, O).
         """
         row = [
@@ -478,7 +482,7 @@ class SheetsManager:
             metrics.get("Start", ""),
             metrics.get("End", "")
         ]
-        if self._perform_write_operation(self.dashboard_ws.append_row, row):
+        if self._perform_write_operation(self.dashboard_ws.insert_row, row, index=2):
             log_msg("Dashboard updated successfully.", "OK")
 
     # ==================== HELPERS ====================

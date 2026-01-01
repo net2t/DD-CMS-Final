@@ -64,9 +64,9 @@
 - **Label:** enhancement
 - **Assignee:** @OutLawZ
 - **Description:** New data should always be inserted at Row 2 in Dashboard and OnlineLog, pushing older data down (consistent with Profiles sheet).
-- [ ] Refactor row insertion logic
-- [ ] Test Dashboard/OnlineLog order
-- [ ] Mark as done
+- [x] Refactor row insertion logic
+- [x] Test Dashboard/OnlineLog order
+- [x] Mark as done
 
 ## 8. Fix Blank Columns K, N, O
 
