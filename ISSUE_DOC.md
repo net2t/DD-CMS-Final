@@ -37,18 +37,18 @@
 - **Label:** documentation
 - **Assignee:** @OutLawZ
 - **Description:** Confirm stub files (e.g., `phase_mehfil.py`, `phase_posts.py`) are empty and clearly documented as placeholders for future phases.
-- [ ] Check stub files
-- [ ] Add placeholder comments
-- [ ] Mark as done
+- [x] Check stub files
+- [x] Add placeholder comments
+- [x] Mark as done
 
 ## 5. README/Changelog: Track Fixes
 
 - **Label:** documentation
 - **Assignee:** @OutLawZ
 - **Description:** Update README and CHANGELOG for each fix. Keep a running log of changes and improvements.
-- [ ] Update docs for each fix
-- [ ] Add “What’s New”/fix log
-- [ ] Mark as done
+- [x] Update docs for each fix
+- [x] Add “What’s New”/fix log
+- [x] Mark as done
 
 ## 6. RunList Skip Column
 
