@@ -482,13 +482,14 @@ class SheetsManager:
                     log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
                     try:
                         dt_col = Config.COLUMN_ORDER.index("DATETIME SCRAP") + 1
+                        dt_a1 = gspread.utils.rowcol_to_a1(2, dt_col)
                         note_fields = ", ".join(changed_fields[:20])
                         more = "" if len(changed_fields) <= 20 else f" (+{len(changed_fields) - 20} more)"
                         if note_fields:
                             note_text = f"DUPLICATE UPDATED\nChanged: {note_fields}{more}"
                         else:
                             note_text = "DUPLICATE UPDATED\nChanged: (diff ignored)"
-                        self._perform_write_operation(self.profiles_ws.update_note, 2, dt_col, note_text)
+                        self._perform_write_operation(self.profiles_ws.update_note, dt_a1, note_text)
                     except Exception:
                         pass
                     self._load_existing_profiles()
