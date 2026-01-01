@@ -86,7 +86,8 @@ class Config:
         "RURL",               # 18
         "MEH NAME",           # 19
         "MEH LINK",           # 20
-        "MEH DATE"            # 21
+        "MEH DATE",           # 21
+        "PHASE 2"             # 22
     ]
     
     ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen", "Batch #"]
@@ -135,7 +136,8 @@ class Config:
         "RURL": "",
         "MEH NAME": "",
         "MEH LINK": "",
-        "MEH DATE": ""
+        "MEH DATE": "",
+        "PHASE 2": ""
     }
     
     @classmethod

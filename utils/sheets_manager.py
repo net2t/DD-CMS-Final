@@ -405,6 +405,18 @@ class SheetsManager:
         if nickname.lower() in self.tags_mapping:
             profile_data["TAGS"] = self.tags_mapping[nickname.lower()]
 
+        posts_raw = str(profile_data.get("POSTS", "") or "")
+        posts_digits = re.sub(r"\D+", "", posts_raw)
+        try:
+            posts_count = int(posts_digits) if posts_digits else None
+        except Exception:
+            posts_count = None
+
+        if posts_count is not None and posts_count < 100:
+            profile_data["PHASE 2"] = "READY"
+        else:
+            profile_data["PHASE 2"] = "NOT ELIGIBLE"
+
         uppercase_cols = {
             "CITY",
             "GENDER",
@@ -442,13 +454,23 @@ class SheetsManager:
             changed_fields = []
             updated_row = []
             preserve_if_blank = {"POSTS", "LAST POST", "LAST POST TIME"}
+            ignore_for_diff_only = {
+                "ID",              # Col A
+                "NICK NAME",       # Col B
+                "JOINED",          # Col H
+                "DATETIME SCRAP",  # Col M
+                "LAST POST",       # Col N
+                "LAST POST TIME",  # Col O
+                "PROFILE LINK",    # Col Q
+                "POST URL",        # Col R
+            }
 
             for i, col in enumerate(Config.COLUMN_ORDER):
                 old_val = old_data[i] if i < len(old_data) else ""
                 new_val = row_data[i]
                 if col in preserve_if_blank and (not new_val) and old_val:
                     new_val = old_val
-                if col not in {"DATETIME SCRAP", "SKIP/DEL"} and old_val != new_val:
+                if col not in {"SKIP/DEL"} and col not in ignore_for_diff_only and old_val != new_val:
                     changed_fields.append(col)
                 updated_row.append(new_val)
 
