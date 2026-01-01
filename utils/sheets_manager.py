@@ -480,6 +480,17 @@ class SheetsManager:
             if self._perform_write_operation(self.profiles_ws.delete_rows, old_row_num):
                 if self._perform_write_operation(self.profiles_ws.insert_row, updated_row, index=2):
                     log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
+                    try:
+                        dt_col = Config.COLUMN_ORDER.index("DATETIME SCRAP") + 1
+                        note_fields = ", ".join(changed_fields[:20])
+                        more = "" if len(changed_fields) <= 20 else f" (+{len(changed_fields) - 20} more)"
+                        if note_fields:
+                            note_text = f"DUPLICATE UPDATED\nChanged: {note_fields}{more}"
+                        else:
+                            note_text = "DUPLICATE UPDATED\nChanged: (diff ignored)"
+                        self._perform_write_operation(self.profiles_ws.update_note, 2, dt_col, note_text)
+                    except Exception:
+                        pass
                     self._load_existing_profiles()
                     return {"status": "updated", "changed_fields": changed_fields}
             return {"status": "error", "error": "Failed to update sheet"}

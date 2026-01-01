@@ -31,6 +31,11 @@ _RUN_LOG_FH = None
 _IMPORTANT_EVENTS = []
 
 
+def get_pkt_time():
+    """Get current Pakistan time (UTC+5)"""
+    return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=5)
+
+
 def init_run_logger(mode=None):
     global _RUN_LOG_PATH, _RUN_LOG_FH
     try:
@@ -84,13 +89,6 @@ def print_important_events(max_items=12):
             expand=False,
         )
     )
-
-
-def get_pkt_time():
-    """Get current Pakistan time (UTC+5)"""
-    return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=5)
-
-
 def log_msg(msg, level="INFO"):
     """
     Enhanced styled logger with emojis and colors.
