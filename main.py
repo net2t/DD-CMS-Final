@@ -16,7 +16,6 @@ Version:
 
 import sys
 import argparse
-from datetime import datetime
 
 from config.config_common import Config
 from core.run_context import RunContext

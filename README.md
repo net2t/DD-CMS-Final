@@ -37,6 +37,32 @@
 
 > Lock milestone target: **v2.100.1.00** (when Phase 1 is fully locked and frozen).
 
+## 🔒 Phase 1 Lock Checklist (Target: v2.100.1.00)
+
+Before we declare Phase 1 “LOCKED”, verify:
+
+- **Run tests (local)**
+  - `python main.py online --max-profiles 3`
+  - `python main.py target --max-profiles 3`
+
+- **Output freeze (must match)**
+  - Google Sheet **Profiles** columns and order unchanged
+  - Values formatting unchanged (dates, URLs, status values)
+  - Summary stats consistent
+
+- **Duplicate handling**
+  - Duplicate updates move profile to Row 2
+  - Duplicate note appears on **DATETIME SCRAP** cell (Row 2)
+
+- **Stability**
+  - No crashes in browser/login
+  - Sheets writes succeed (retries handle 429)
+
+After lock:
+
+- Bump version to **v2.100.1.00**
+- Freeze Phase 1 behavior (no output changes)
+
 ### ✅ Fixes
 
 - **LAST POST + TIME** now fetched from public profile page when private profile has no preview.
