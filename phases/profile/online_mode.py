@@ -1,10 +1,11 @@
 """
-Online Mode scraping logic.
+Phase 1 (Profiles) - Online Mode
 
-This module handles the 'online' scraping mode. It first fetches a list of
-currently online users and then scrapes the profile of each user, similar to
-the target mode. It reuses the `ProfileScraper` for the individual profile
-scraping logic.
+What this mode does:
+- Opens the "online users" page
+- Collects online nicknames using multiple fallback strategies
+- Logs the online nicknames to the OnlineLog sheet
+- Reuses the same profile scraping pipeline as Target mode
 """
 
 import time

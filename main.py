@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
-DamaDam Scraper v2.100.0.15 - Main Entry Point
+DamaDam Scraper - Main Entry Point (Phase 1: Profiles)
 
-Enhanced with:
-- Beautiful terminal UI with emojis and colors
-- Comprehensive summary reports
-- Cookie-based login with backup account
-- GitHub Actions ready
+This script is the main entry point of the project.
+
+What it does (high level):
+- Starts the browser and logs into DamaDam
+- Runs Phase 1: scrapes profile data (Target/Online modes)
+- Writes results to Google Sheets
+- Prints a clean terminal summary at the end
+
+Version:
+- Displayed in terminal header from Config.SCRIPT_VERSION
 """
 
 import sys
@@ -35,7 +40,15 @@ from phases import phase_profile, phase_mehfil, phase_posts
 # ==================== MAIN FUNCTION ====================
 
 def main():
-    """Main entry point for the DamaDam Scraper."""
+    """Runs one scraper session.
+
+    Steps:
+    - Read command line arguments (mode, max profiles, batch size)
+    - Start Selenium browser and login
+    - Run Phase 1 (Profiles) for the selected mode
+    - Update Google Sheets (Profiles, OnlineLog, Dashboard)
+    - Print summary and exit with a proper code
+    """
     
     # --- Argument Parsing ---
     parser = argparse.ArgumentParser(

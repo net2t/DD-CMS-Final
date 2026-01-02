@@ -1,6 +1,13 @@
 """
-Configuration Manager for DamaDam Scraper v2.1
-Handles all environment variables and settings
+Configuration (Phase 1: Profiles)
+
+This file stores:
+- Environment variables (.env) for logins and Google Sheets
+- Sheet column order for Profiles
+- Run settings (delays, batch size)
+- Status constants used across the project
+
+NOTE: This file should only contain configuration/constants.
 """
 
 import os

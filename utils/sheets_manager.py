@@ -1,11 +1,15 @@
 """
-Google Sheets Manager - All sheet operations
+Google Sheets Manager (Phase 1)
 
-FIXED:
-- Quantico font applied to ALL rows (not just headers)
-- Dashboard columns simplified (removed L, M, N, O state counts)
-- Better error handling
-- API rate limit handling
+This module is responsible for:
+- Connecting to your Google Sheet
+- Ensuring required sheets + headers exist
+- Writing profile rows to the Profiles sheet
+- Logging online users to OnlineLog
+- Updating run stats to Dashboard
+
+Important rule:
+- Keep sheet output the same (schema + values). Refactors must not change output.
 """
 
 import json

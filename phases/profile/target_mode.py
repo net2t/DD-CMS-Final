@@ -1,11 +1,12 @@
 """
-Target Mode scraping logic.
+Phase 1 (Profiles) - Target Mode + Core Profile Scraper
 
-This module contains the core components for the 'target' scraping mode. It defines
-the ProfileScraper class, which is responsible for extracting detailed information
-from an individual user's profile page. It also includes the `run_target_mode`
-function, which orchestrates the process of fetching a list of target users from
-the 'RunList' sheet and scraping each one.
+This module contains:
+- ProfileScraper: scrapes ONE profile page and returns a full profile dictionary
+- run_target_mode: loops profiles (from RunList sheet or Online mode) and writes to Sheets
+
+Important contract:
+- scrape_profile() returns a full dict (even if banned/unverified) or None only on hard failure
 """
 
 import time

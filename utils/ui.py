@@ -1,7 +1,11 @@
 """
-UI Module for the DamaDam Scraper.
+Terminal UI + Logging (Phase 1)
 
-Enhanced with emojis, colors, animations, and beautiful terminal output.
+This module provides:
+- Pretty terminal output (header, summary, progress)
+- A simple log function (log_msg) used by all modules
+- Optional run log file writing (logs/*.log)
+- A small "important events" list shown at the end
 """
 
 import os
