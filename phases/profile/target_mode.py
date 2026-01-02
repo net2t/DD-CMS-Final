@@ -459,7 +459,7 @@ class ProfileScraper:
 
         return stats
 
-    def _extract_last_post(self, nickname, page_source):
+    def _extract_last_post(self, nickname, page_source, posts_count=None):
         """Extracts the last post text and time."""
         last_post = {'LAST POST': '', 'LAST POST TIME': ''}
         try:
@@ -493,6 +493,10 @@ class ProfileScraper:
             match = self._match_stat(page_source, time_patterns)
             if match:
                 last_post['LAST POST TIME'] = normalize_post_datetime(match)
+
+        # If posts are confirmed zero, do not waste time opening public profile page.
+        if posts_count == 0:
+            return last_post
 
         if (not last_post['LAST POST'] or not last_post['LAST POST TIME']) and nickname:
             private_url = self.driver.current_url
@@ -697,7 +701,19 @@ class ProfileScraper:
             _, rank_image = self._extract_rank(page_source)
             user_id = self._extract_user_id(page_source)
             stats_data = self._extract_stats(page_source)
-            last_post_data = self._extract_last_post(clean_nickname, page_source)
+
+            posts_count = None
+            try:
+                posts_raw = str(stats_data.get('POSTS', '') or '')
+                posts_digits = re.sub(r"\D+", "", posts_raw)
+                if posts_digits == "0":
+                    posts_count = 0
+                elif posts_digits:
+                    posts_count = int(posts_digits)
+            except Exception:
+                posts_count = None
+
+            last_post_data = self._extract_last_post(clean_nickname, page_source, posts_count=posts_count)
             image_url = self._extract_profile_image(page_source)
 
             # Update data with all fields
