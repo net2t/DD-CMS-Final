@@ -35,6 +35,7 @@ class ProfileSelectors:
 
     # Profile Image
     PROFILE_IMAGE = "//img[contains(@class, 'dp') and contains(@class, 's') and contains(@class, 'cov')]"
+    PROFILE_IMAGE_CLOUDFRONT = "img[src*='cloudfront.net/avatar-imgs']"
 
     # Mehfil section
     MEHFIL_ENTRIES = "div.mbl.mtl a[href*='/mehfil/public/']"

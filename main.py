@@ -35,7 +35,7 @@ from utils.ui import (
 
 ## Phase router imports
 ## Phase 1 (PROFILE) stabilization commits: acaa901, d6721fb, 4f05112
-from phases import phase_profile, phase_mehfil, phase_posts
+from phases import phase_profile
 
 # ==================== MAIN FUNCTION ====================
 

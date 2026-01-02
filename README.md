@@ -25,7 +25,17 @@
 
 ✅ **DONE (Verified locally: online + target runs working)**
 
-## 🎯 What's New in v2.100.0.17 (Profile Phase DONE)
+## 🎯 What's New in v2.100.0.18 (Profile Phase DONE)
+
+### ✅ Recent Phase 1 Improvements
+
+- **Terminal header** now shows the correct version from `Config.SCRIPT_VERSION`.
+- **Run summary** now includes Phase 2 eligibility counts: `READY` / `NOT ELIGIBLE`.
+- **IMPORTANT EVENTS** section added at the end of a run to highlight key warnings/errors.
+- **Duplicate visibility**: when a duplicate is updated, a note is added on the `DATETIME SCRAP` cell describing changed fields.
+- **Duplicate diff ignore** updated to ignore `PHASE 2` changes (does not count as updated).
+
+> Lock milestone target: **v2.100.1.00** (when Phase 1 is fully locked and frozen).
 
 ### ✅ Fixes
 

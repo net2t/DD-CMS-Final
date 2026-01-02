@@ -536,6 +536,14 @@ class ProfileScraper:
     def _extract_profile_image(self, page_source):
         """Extracts the profile image URL."""
         try:
+            try:
+                image_elem = self.driver.find_element(By.CSS_SELECTOR, ProfileSelectors.PROFILE_IMAGE_CLOUDFRONT)
+                image_url = image_elem.get_attribute('src')
+                if image_url and image_url.startswith('http'):
+                    return image_url
+            except Exception:
+                pass
+
             image_elem = self.driver.find_element(By.XPATH, ProfileSelectors.PROFILE_IMAGE)
             image_url = image_elem.get_attribute('src')
             if image_url and image_url.startswith('http'):
