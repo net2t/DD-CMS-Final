@@ -16,7 +16,7 @@ import json
 import re
 import time
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import gspread
 from google.oauth2.service_account import Credentials
@@ -418,9 +418,9 @@ class SheetsManager:
             posts_count = None
 
         if posts_count is not None and posts_count < 100:
-            profile_data["PHASE 2"] = "READY"
+            profile_data["PHASE 2"] = "Ready"
         else:
-            profile_data["PHASE 2"] = "NOT ELIGIBLE"
+            profile_data["PHASE 2"] = "Not Eligible"
 
         uppercase_cols = {
             "CITY",

@@ -10,7 +10,6 @@ login sessions across multiple runs.
 import time
 import pickle
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
