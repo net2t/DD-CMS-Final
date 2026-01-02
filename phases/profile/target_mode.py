@@ -198,17 +198,32 @@ def detect_suspension(page_source):
     return None
 
 
-def detect_unverified(page_source):
-    """Detect unverified profiles using known page tattoos."""
-    if not page_source:
+def detect_unverified(driver, page_source):
+    """Detect unverified profiles using a strict banner check.
+
+    NOTE: We intentionally avoid checking only page_source text because the phrase
+    "unverified user" can appear in unrelated places and cause false positives.
+    """
+    if not driver:
         return False
-    lower = page_source.lower()
-    if re.search(r">\s*unverified\s*user\s*<", page_source, re.IGNORECASE):
-        return True
-    if "unverified user" in lower:
-        return True
-    if 'background:tomato' in lower or 'style="background:tomato"' in lower:
-        return True
+
+    try:
+        # Known banner (tomato background) with visible text "UNVERIFIED USER".
+        # Example (from user notes):
+        # <div class="cs sp" style="...background:tomato...">UNVERIFIED USER</div>
+        elems = driver.find_elements(
+            By.XPATH,
+            "//div[contains(translate(normalize-space(.), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'UNVERIFIED USER') and contains(translate(@style, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'background:tomato')]"
+        )
+        for el in elems:
+            try:
+                if el.is_displayed():
+                    return True
+            except Exception:
+                continue
+    except Exception:
+        pass
+
     return False
 
 
@@ -671,7 +686,7 @@ class ProfileScraper:
                 data['__skip_reason'] = 'Account Suspended'
                 return data
 
-            if detect_unverified(page_source):
+            if detect_unverified(self.driver, page_source):
                 data['STATUS'] = 'Unverified'
                 data['__skip_reason'] = 'Unverified user'
                 return data
