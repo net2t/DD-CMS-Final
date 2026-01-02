@@ -197,6 +197,36 @@ def detect_suspension(page_source):
             return indicator
     return None
 
+
+def detect_unverified(page_source):
+    """Detect unverified profiles using known page tattoos."""
+    if not page_source:
+        return False
+    lower = page_source.lower()
+    if re.search(r">\s*unverified\s*user\s*<", page_source, re.IGNORECASE):
+        return True
+    if "unverified user" in lower:
+        return True
+    if 'background:tomato' in lower or 'style="background:tomato"' in lower:
+        return True
+    return False
+
+
+def detect_banned(page_source):
+    """Detect banned/suspended profiles using known page tattoos."""
+    if not page_source:
+        return False
+    lower = page_source.lower()
+    if "account suspended" in lower:
+        return True
+    if "banned!" in lower:
+        return True
+    if "forever banned" in lower:
+        return True
+    if "/website-rules/" in lower:
+        return True
+    return False
+
 def sanitize_nickname_for_url(nickname):
     """Sanitize and validate nickname for URL usage
     
@@ -634,6 +664,17 @@ class ProfileScraper:
             data["NICK NAME"] = clean_nickname
             data["SKIP/DEL"] = source
             data["DATETIME SCRAP"] = now.strftime("%d-%b-%y %I:%M %p")
+
+            suspend_reason = detect_suspension(page_source)
+            if suspend_reason or detect_banned(page_source):
+                data['STATUS'] = 'Banned'
+                data['__skip_reason'] = 'Account Suspended'
+                return data
+
+            if detect_unverified(page_source):
+                data['STATUS'] = 'Unverified'
+                data['__skip_reason'] = 'Unverified user'
+                return data
             
             # Extract additional data
             mehfil_data = self._extract_mehfil_details(page_source)
@@ -663,27 +704,7 @@ class ProfileScraper:
             })
             
             # Check suspension
-            suspend_reason = detect_suspension(page_source)
-            if suspend_reason:
-                data['STATUS'] = 'Banned'
-                data['__skip_reason'] = 'Account Suspended'
-                return data
-            
-            if 'account suspended' in page_source.lower():
-                data['STATUS'] = 'Banned'
-                data['__skip_reason'] = 'Account Suspended'
-                return data
-            
-            # Check unverified
-            if (
-                re.search(r">\s*unverified\s*user\s*<", page_source, re.IGNORECASE) or
-                'background:tomato' in page_source or
-                'style="background:tomato"' in page_source.lower()
-            ):
-                data['STATUS'] = 'Unverified'
-                data['__skip_reason'] = 'Unverified user'
-            else:
-                data['STATUS'] = 'Verified'
+            data['STATUS'] = 'Verified'
 
             # Extract profile fields using multiple selector patterns
             field_selectors = [

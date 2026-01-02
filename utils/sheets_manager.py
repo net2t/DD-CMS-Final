@@ -141,6 +141,7 @@ class SheetsManager:
         # Load data
         self.tags_mapping = {}
         self.existing_profiles = {}
+        self._sorted_profiles_this_run = False
         
         self._init_headers()
         self._load_tags()
@@ -639,6 +640,8 @@ class SheetsManager:
 
     def sort_profiles_by_date(self):
         """Sorts the 'Profiles' sheet by 'DATETIME SCRAP' descending."""
+        if self._sorted_profiles_this_run:
+            return
         log_msg("Sorting profiles by date...")
         try:
             all_rows = self.profiles_ws.get_all_values()
@@ -675,5 +678,6 @@ class SheetsManager:
                 self._apply_header_format(self.profiles_ws)
                 self._load_existing_profiles()
                 log_msg("Profiles sorted by date.", "OK")
+                self._sorted_profiles_this_run = True
         except (ValueError, APIError) as e:
             log_msg(f"Failed to sort profiles by date: {e}", "ERROR")

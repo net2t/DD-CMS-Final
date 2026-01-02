@@ -130,7 +130,6 @@ def _run_phase1_profiles(context, args):
 def _finalize_and_report(stats, sheets, args, start_time):
     """Finalize sheets (sort/dashboard/format) and print summary."""
     if sheets:
-        log_msg("📊 Sorting profiles by date...", "INFO")
         sheets.sort_profiles_by_date()
 
     end_time = get_pkt_time()
