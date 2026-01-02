@@ -1,4 +1,4 @@
-# DamaDam Scraper v2.100.0.17 - Production Ready
+# DamaDam Scraper v2.100.0.18 - Production Ready
 
 ![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)
 [![Contact](https://img.shields.io/badge/contact-net2outlawzz@gmail.com-brightgreen)](mailto:net2outlawzz@gmail.com)
@@ -7,6 +7,19 @@
 🚀 **Complete automation bot for scraping DamaDam.pk user profiles** with enhanced UI, dual login system, and multi-mode operation.
 
 ---
+
+## 🎯 Phase Scope
+
+### Phase 1 (Profiles) - Current Work
+
+- ✅ This repo is currently focused on **Phase 1: Profiles scraping**.
+- ✅ Both **Target** and **Online** modes are part of Phase 1.
+- ✅ Output (sheet columns + values) must remain stable.
+
+### Phase 2 (Posts) - Planned (Not Started)
+
+- 🚫 Phase 2 implementation is **not started yet**.
+- 🚫 We will only move to Phase 2 after Phase 1 is fully approved and locked.
 
 ## 🎯 Phase 1 Status (Profile)
 
