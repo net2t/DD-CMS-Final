@@ -22,7 +22,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from config.config_common import Config
 from config.selectors import ProfileSelectors
-from utils.ui import get_pkt_time, log_msg
+from utils.ui import get_pkt_time, log_msg, log_progress
 from utils.url_builder import get_profile_url, get_public_profile_url
 
 # ==================== HELPER FUNCTIONS ====================
@@ -57,6 +57,25 @@ def normalize_post_url(url):
         return f"{base}/comments/image/{m3.group(1)}"
 
     return f"{base}{path.rstrip('/')}"
+
+def normalize_date_only(raw_date):
+    """Normalize any date string to standardized format: dd-mmm-yy"""
+    if not raw_date:
+        return ""
+    dt_string = normalize_post_datetime(raw_date)
+    if not dt_string:
+        return ""
+    try:
+        # normalize_post_datetime returns 'dd-mon-yy hh:mm am/pm'
+        # We just need the date part.
+        date_part = dt_string.split(' ')[0]
+        # Validate it's a date
+        datetime.strptime(date_part, "%d-%b-%y")
+        return date_part
+    except (ValueError, IndexError):
+        # Fallback if the format from normalize_post_datetime is unexpected
+        log_msg(f"Could not extract date part from '{dt_string}'.", "WARNING")
+        return ""
 
 def normalize_post_datetime(raw_date):
     """Normalize any date string to standardized format: dd-mmm-yy hh:mm a
@@ -98,40 +117,32 @@ def normalize_post_datetime(raw_date):
     t = re.sub(r'\s+', ' ', t)  # Normalize multiple spaces
     
     # Handle "X ago" format
-    ago_match = re.search(r"(\d+)?\s*(sec|secs|second|seconds|min|mins|minute|minutes|hour|hours|day|days|week|weeks|month|months|year|years)\s*ago", t)
-    if ago_match:
-        amount_raw = ago_match.group(1)
-        amount = int(amount_raw) if amount_raw else 1
-        unit = ago_match.group(2)
-
-        unit_map = {
-            "sec": "second",
-            "secs": "second",
-            "seconds": "second",
-            "min": "minute",
-            "mins": "minute",
-            "minutes": "minute",
-            "hours": "hour",
-            "days": "day",
-            "weeks": "week",
-            "months": "month",
-            "years": "year",
-        }
-        unit = unit_map.get(unit, unit)
+    if "ago" in t:
+        delta = timedelta()
+        # Regex to find all number-unit pairs
+        parts = re.findall(r'(\d+)\s*(year|yr|month|mon|week|wk|day|hour|hr|minute|min|second|sec)s?', t)
         
-        # Map units to seconds
-        seconds_map = {
-            "second": 1,
-            "minute": 60,
-            "hour": 3600,
-            "day": 86400,
-            "week": 604800,
-            "month": 2592000,
-            "year": 31536000
-        }
-        
-        if unit in seconds_map:
-            dt = now - timedelta(seconds=amount * seconds_map[unit])
+        if parts:
+            for amount, unit in parts:
+                amount = int(amount)
+                if unit.startswith('year') or unit.startswith('yr'):
+                    # Approximate days for year, better than fixed seconds
+                    delta += timedelta(days=amount * 365)
+                elif unit.startswith('month') or unit.startswith('mon'):
+                    # Approximate days for month
+                    delta += timedelta(days=amount * 30)
+                elif unit.startswith('week') or unit.startswith('wk'):
+                    delta += timedelta(weeks=amount)
+                elif unit.startswith('day'):
+                    delta += timedelta(days=amount)
+                elif unit.startswith('hour') or unit.startswith('hr'):
+                    delta += timedelta(hours=amount)
+                elif unit.startswith('minute') or unit.startswith('min'):
+                    delta += timedelta(minutes=amount)
+                elif unit.startswith('second') or unit.startswith('sec'):
+                    delta += timedelta(seconds=amount)
+            
+            dt = now - delta
             return dt.strftime("%d-%b-%y %I:%M %p").lower()
     
     # Try parsing as absolute date
@@ -336,7 +347,7 @@ class ProfileScraper:
                     date_text = clean_text(date_elem.text)
                     if 'since' in date_text.lower():
                         date_text = date_text.split('since')[-1].strip()
-                    mehfil_data['MEH DATE'].append(normalize_post_datetime(date_text))
+                    mehfil_data['MEH DATE'].append(normalize_date_only(date_text))
                     
                 except Exception as e:
                     log_msg(f"Error extracting mehfil entry: {e}", "WARNING")
@@ -502,7 +513,6 @@ class ProfileScraper:
             private_url = self.driver.current_url
             public_url = get_public_profile_url(nickname)
             try:
-                log_msg(f"Fetching last post from public page: {public_url}", "INFO")
                 self.driver.get(public_url)
                 WebDriverWait(self.driver, 12).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "article"))
@@ -763,7 +773,7 @@ class ProfileScraper:
                               else 'No' if x and x.lower() in {'no', 'single', 'unmarried'}
                               else ''),
                 ('Age', 'AGE', lambda x: clean_text(x) if x else ''),
-                ('Joined', 'JOINED', lambda x: normalize_post_datetime(x) if x else '')
+                ('Joined', 'JOINED', normalize_date_only)
             ]
             
             # Try each field with all selector patterns
@@ -877,75 +887,50 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
                 
             row = target.get('row')
                 
-            log_msg(f"Processing {i}/{len(targets)}: {nickname}")
+            # Use the new progress logger
+            log_progress(i, len(targets), nickname, "scraping...")
             
             # Scrape profile
-            # Keep SOURCE consistent (Online/Target) based on the caller.
-            scrape_source = (target.get('source') or label.title())
-            profile_data = scraper.scrape_profile(nickname, source=scrape_source)
-            stats["processed"] += 1
-            
-            if not profile_data:
-                log_msg(f"Failed to scrape {nickname}")
-                stats["failed"] += 1
-                if row:
-                    sheets.update_target_status(row, "Error", "Failed to scrape profile")
-                time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
-                continue
-            
-            # Check for skip reason
-            skip_reason = profile_data.get('__skip_reason')
-            if skip_reason:
-                log_msg(f"Skipping {nickname}: {skip_reason}")
-                stats["skipped"] += 1
-                
-                # Still write to sheet for record keeping
-                sheets.write_profile(profile_data)
-                if row:
-                    sheets.update_target_status(row, "Error", skip_reason)
-                time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
-                continue
-            
-            # Write successful profile
-            try:
-                posts_raw = str(profile_data.get('POSTS', '') or '')
+            profile_data = scraper.scrape_profile(nickname, source=target.get('source', 'Target'))
+
+            if profile_data:
+                # Determine Phase 2 eligibility
+                posts_raw = str(profile_data.get("POSTS", "") or "")
                 posts_digits = re.sub(r"\D+", "", posts_raw)
-                posts_count = int(posts_digits) if posts_digits else None
-            except Exception:
                 posts_count = None
+                try:
+                    posts_count = int(posts_digits) if posts_digits else None
+                except (ValueError, TypeError):
+                    posts_count = None
 
-            if posts_count is not None and posts_count < 100:
-                stats["phase2_ready"] += 1
-            else:
-                stats["phase2_not_eligible"] += 1
+                if posts_count is not None and posts_count < 100:
+                    stats["phase2_ready"] += 1
+                    profile_data["PHASE 2"] = "Ready"
+                else:
+                    stats["phase2_not_eligible"] += 1
+                    profile_data["PHASE 2"] = "Not Eligible"
 
-            result = sheets.write_profile(profile_data)
-            write_status = result.get("status", "error")
+                # Write to sheet
+                result = sheets.write_profile(profile_data)
+                status = result.get('status', 'error')
 
-            # If profile is unverified, mark target as Skip/Del so it won't be re-processed.
-            profile_state = (profile_data.get("_PROFILE_STATE") or profile_data.get("PROFILE_STATE") or "").strip().upper()
-            profile_status = (profile_data.get("STATUS") or "").strip().lower()
-            if profile_state == Config.PROFILE_STATE_UNVERIFIED or profile_status == "unverified":
-                stats["success"] += 1
-                remarks = "UNVERIFIED - auto skipped"
-                if row:
-                    sheets.update_target_status(row, "unverified", remarks)
-                log_msg(f"{nickname}: unverified -> Skip/Del", "WARNING")
-                continue
-            
-            if write_status in {"new", "updated", "unchanged"}:
-                stats["success"] += 1
-                stats[write_status] += 1
+                if status in {"new", "updated", "unchanged"}:
+                    stats[status] += 1
+                    stats['success'] += 1
+                    if row:
+                        sheets.update_target_status(row, 'Done', f'Scraped: {status}')
+                else:
+                    stats['failed'] += 1
+                    if row:
+                        sheets.update_target_status(row, 'Error', 'Sheet write failed')
                 
-                remarks = f"New profile" if write_status == "new" else f"Profile {write_status}"
+                log_progress(i, len(targets), nickname, status)
+
+            else: # Scrape failed
+                stats['failed'] += 1
                 if row:
-                    sheets.update_target_status(row, "Done", remarks)
-                log_msg(f"{nickname}: {write_status}", "OK")
-            else:
-                log_msg(f"{nickname}: write failed")
-                stats["failed"] += 1
-                if row:
-                    sheets.update_target_status(row, "Error", "Failed to write profile")
+                    sheets.update_target_status(row, 'Error', 'Scraping failed')
+                log_progress(i, len(targets), nickname, "failed")
             
         except Exception as e:
             log_msg(f"Error processing {nickname}: {str(e)}", "ERROR")

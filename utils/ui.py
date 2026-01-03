@@ -93,6 +93,23 @@ def print_important_events(max_items=12):
             expand=False,
         )
     )
+def log_progress(processed, total, nickname="", status=""):
+    """
+    Displays a single-line progress indicator.
+    """
+    ts = get_pkt_time().strftime('%H:%M:%S')
+    progress_percent = (processed / total) * 100 if total > 0 else 0
+    
+    status_style = "green" if status == "new" else "yellow" if status == "updated" else "dim"
+    
+    progress_bar = f"[on green]{' ' * int(progress_percent / 2)}[/on green]"
+    
+    console.print(
+        f"[dim]{ts}[/dim] [bold cyan]Progress: {processed}/{total}[/bold cyan] {progress_bar} "
+        f"[magenta]{nickname}[/magenta] ([{status_style}]{status}[/{status_style}])",
+        end="\r"
+    )
+
 def log_msg(msg, level="INFO"):
     """
     Enhanced styled logger with emojis and colors.
@@ -101,36 +118,30 @@ def log_msg(msg, level="INFO"):
         msg (str): The message to log.
         level (str): The log level (INFO, OK, WARNING, ERROR, SCRAPING, LOGIN, TIMEOUT).
     """
+    # In CI, don't print timestamp for every message to keep logs clean
     ts = get_pkt_time().strftime('%H:%M:%S')
+    is_ci = os.getenv('GITHUB_ACTIONS') == 'true'
     
     style_map = {
-        "INFO": "cyan",
-        "OK": "green",
-        "SUCCESS": "bold green",
-        "WARNING": "yellow",
-        "ERROR": "bold red",
-        "SCRAPING": "magenta",
-        "LOGIN": "blue",
-        "TIMEOUT": "dim yellow",
-        "SKIP": "dim"
+        "INFO": "cyan", "OK": "green", "SUCCESS": "bold green",
+        "WARNING": "yellow", "ERROR": "bold red", "SCRAPING": "magenta",
+        "LOGIN": "blue", "TIMEOUT": "dim yellow", "SKIP": "dim"
     }
     
     icon_map = {
-        "INFO": "ℹ️",
-        "OK": "✅",
-        "SUCCESS": "🎉",
-        "WARNING": "⚠️",
-        "ERROR": "❌",
-        "SCRAPING": "🔍",
-        "LOGIN": "🔑",
-        "TIMEOUT": "⏳",
+        "INFO": "ℹ️", "OK": "✅", "SUCCESS": "🎉", "WARNING": "⚠️",
+        "ERROR": "❌", "SCRAPING": "🔍", "LOGIN": "🔑", "TIMEOUT": "⏳",
         "SKIP": "⏭️"
     }
     
     style = style_map.get(level, "white")
     icon = icon_map.get(level, "➡️")
     
-    console.print(f"[dim]{ts}[/dim] {icon} [{style}]{msg}[/{style}]")
+    # For CI, keep it simple. For local, keep it rich.
+    if is_ci:
+        console.print(f"{icon} [{style}]{msg}[/{style}]")
+    else:
+        console.print(f"[dim]{ts}[/dim] {icon} [{style}]{msg}[/{style}]")
 
     try:
         if _RUN_LOG_FH:
