@@ -93,22 +93,41 @@ def print_important_events(max_items=12):
             expand=False,
         )
     )
+def get_numeric_emoji(number):
+    """Converts a number into a string of number emojis."""
+    s = str(number)
+    emojis = {
+        '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
+        '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
+    }
+    return "".join(emojis.get(char, char) for char in s)
+
 def log_progress(processed, total, nickname="", status=""):
     """
-    Displays a single-line progress indicator.
+    Displays a single-line progress indicator with number emojis.
     """
     ts = get_pkt_time().strftime('%H:%M:%S')
-    progress_percent = (processed / total) * 100 if total > 0 else 0
+    is_ci = os.getenv('GITHUB_ACTIONS') == 'true'
     
     status_style = "green" if status == "new" else "yellow" if status == "updated" else "dim"
+    numeric_emoji = get_numeric_emoji(processed)
     
-    progress_bar = f"[on green]{' ' * int(progress_percent / 2)}[/on green]"
-    
-    console.print(
-        f"[dim]{ts}[/dim] [bold cyan]Progress: {processed}/{total}[/bold cyan] {progress_bar} "
-        f"[magenta]{nickname}[/magenta] ([{status_style}]{status}[/{status_style}])",
-        end="\r"
-    )
+    # Use a simple line for CI, and a richer one for local runs
+    if is_ci:
+        message = f"{numeric_emoji} {processed}/{total} - {nickname} ({status})"
+        console.print(message)
+    else:
+        progress_percent = (processed / total) * 100 if total > 0 else 0
+        bar_width = 20
+        filled_len = int(bar_width * processed // total)
+        bar = '█' * filled_len + '-' * (bar_width - filled_len)
+        
+        console.print(
+            f"[dim]{ts}[/dim] {numeric_emoji} [cyan][{bar}][/cyan] "
+            f"[bold magenta]{nickname}[/bold magenta] "
+            f"([{status_style}]{status}[/{status_style}])",
+            end="\r"
+        )
 
 def log_msg(msg, level="INFO"):
     """
