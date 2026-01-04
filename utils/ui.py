@@ -114,24 +114,28 @@ def get_numeric_emoji(number, total=None):
 
 def get_spinning_emoji():
     """Returns a random spinning emoji for loading states."""
-    spinners = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"]
+    spinners = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘", "⭐", "✨", "💫", "🌟", "⚡", "🔥", "💎", "🚀", "🌈", "🎆", "🎇", "🎊", "🎉", "🎈", "🎀", "🎁", "🎯", "🎪", "🎭", "🎨", "🎬", "🎤", "🎧", "🎮", "🎰", "🎲", "🎳", "🎯", "🎪", "🎭", "🎨", "🎬", "🎤", "🎧", "🎮", "🎰", "🎲", "🎳"]
     return random.choice(spinners)
 
 
 def get_progress_bar(progress, total, width=20):
-    """Returns a formatted progress bar with emojis."""
+    """Returns a formatted progress bar with rich emojis and animations."""
     filled = int(width * progress / total) if total > 0 else 0
     empty = width - filled
     
-    # Use different emojis based on completion percentage
+    # Dynamic emoji selection based on progress
     if progress == total:
-        return "✅" + "★" * (width - 1)
+        return "🎉" + "✨" * (width - 1)
     elif progress / total > 0.9:
-        return "★" * (filled - 1) + "✨" + "☆" * empty
+        return "🌟" * (filled - 1) + "💎" + "⭐" * empty
+    elif progress / total > 0.7:
+        return "🔥" * filled + "⚡" * empty
     elif progress / total > 0.5:
-        return "★" * filled + "☆" * empty
+        return "💫" * filled + "🌈" * empty
+    elif progress / total > 0.3:
+        return "🎯" * filled + "🎪" * empty
     else:
-        return "⬜" * filled + "⬛" * empty
+        return "🎨" * filled + "🎭" * empty
 
 def log_progress(processed, total, nickname="", status=""):
     """
@@ -157,12 +161,18 @@ def log_progress(processed, total, nickname="", status=""):
     # Progress bar with emojis
     progress_bar = get_progress_bar(processed, total)
     
-    # Status indicator with emoji
+    # Enhanced status indicator with rich emojis
     status_icon = {
         "new": "🆕",
         "updated": "🔄",
         "skipped": "⏩",
-        "error": "❌"
+        "error": "❌",
+        "scraping": "🔍",
+        "processing": "⚙️",
+        "loading": "🔄",
+        "complete": "🎉",
+        "success": "✨",
+        "failed": "💥"
     }.get(status.lower(), "➡️")
     
     # For CI, keep it simple
@@ -171,20 +181,35 @@ def log_progress(processed, total, nickname="", status=""):
         console.print(message)
         return
     
-    # Build the progress line
+    # Build the enhanced progress line
     parts = [
-        f"[dim]{ts.ljust(9)}[/] ",  # Fixed width timestamp
+        f"[bold white on black]{ts.ljust(9)}[/] ",  # Bold timestamp with background
         f"{progress_emoji} ",
         f"[bold cyan][{progress_counter}][/] ",
         f"{progress_bar} ",
         f"[bold magenta]{nickname.ljust(20)}[/]" if nickname else ""
     ]
     
-    # Add status if provided
+    # Add enhanced status with animations
     if status:
-        parts.append(f" ({status_icon} [{status_style}]{status}[/])")
+        if status.lower() == "scraping":
+            parts.append(f" ({status_icon} [{status_style}]{status}...[/]) 🔄")
+        elif status.lower() == "new":
+            parts.append(f" ({status_icon} [{status_style}]{status}[/]) ✨")
+        elif status.lower() == "updated":
+            parts.append(f" ({status_icon} [{status_style}]{status}[/]) 🔄")
+        elif status.lower() == "error":
+            parts.append(f" ({status_icon} [{status_style}]{status}[/]) 💥")
+        else:
+            parts.append(f" ({status_icon} [{status_style}]{status}[/])")
     
-    # Print with carriage return to update the line
+    # Add decorative elements for special states
+    if processed == total:
+        parts.append(" 🎉✨🎉")
+    elif processed > total * 0.9:
+        parts.append(" 🔥⚡")
+    
+    # Print with enhanced formatting
     console.print("".join(parts), end="\r", overflow="ignore", highlight=False)
 
 def log_msg(msg, level="INFO", progress=None, total=None):
@@ -194,33 +219,41 @@ def log_msg(msg, level="INFO", progress=None, total=None):
     ts = get_pkt_time().strftime('%H:%M:%S')
     is_ci = os.getenv('GITHUB_ACTIONS') == 'true'
     
-    # Style and icon mappings
+    # Enhanced style and icon mappings with rich colors
     style_map = {
-        "INFO": "cyan", 
+        "INFO": "bold cyan", 
         "OK": "bold green", 
-        "SUCCESS": "bold green",
-        "WARNING": "bold yellow", 
-        "ERROR": "bold red", 
-        "SCRAPING": "magenta",
-        "LOGIN": "blue", 
+        "SUCCESS": "bold green on black",
+        "WARNING": "bold yellow on black", 
+        "ERROR": "bold red on black", 
+        "SCRAPING": "bold magenta",
+        "LOGIN": "bold blue", 
         "TIMEOUT": "dim yellow", 
         "SKIP": "dim",
-        "PROGRESS": "cyan",
-        "COMPLETE": "bold green"
+        "PROGRESS": "bold cyan",
+        "COMPLETE": "bold green on black",
+        "START": "bold yellow on blue",
+        "STOP": "bold red on white",
+        "PAUSE": "bold yellow on black",
+        "RESUME": "bold green on black"
     }
     
     icon_map = {
-        "INFO": "ℹ️", 
-        "OK": "✅", 
-        "SUCCESS": "✨", 
+        "INFO": "💠", 
+        "OK": "✨", 
+        "SUCCESS": "🎉", 
         "WARNING": "⚠️",
         "ERROR": "❌", 
         "SCRAPING": "🔍", 
-        "LOGIN": "🔑", 
+        "LOGIN": "🔐", 
         "TIMEOUT": "⏳",
         "SKIP": "⏭️",
         "PROGRESS": "🔄",
-        "COMPLETE": "✅"
+        "COMPLETE": "🎊",
+        "START": "🚀",
+        "STOP": "🛑",
+        "PAUSE": "⏸️",
+        "RESUME": "▶️"
     }
     
     # Get style and icon, with fallbacks
@@ -232,29 +265,42 @@ def log_msg(msg, level="INFO", progress=None, total=None):
         console.print(f"{icon} {msg}")
         return
     
-    # Build the message parts
+    # Build the message parts with enhanced formatting
     parts = [
-        f"[dim]{ts.ljust(9)}[/]",  # Fixed width timestamp
+        f"[bold white on black]{ts.ljust(9)}[/]",  # Bold timestamp with background
         f" {icon} "  # Icon with consistent spacing
     ]
     
-    # Add progress prefix if needed
+    # Add animated progress prefix if needed
     if progress is not None and total is not None:
-        progress_emoji = "🔄" if progress < total else "✅"
-        parts.append(f"[{progress}/{total}] {progress_emoji} ")
+        progress_emoji = get_spinning_emoji() if progress < total else "🎉"
+        parts.append(f"[bold cyan][{progress}/{total}][/] {progress_emoji} ")
     
-    # Add the main message
-    parts.append(f"[{style}]{msg}[/]")
+    # Add the main message with enhanced styling
+    if level == "SUCCESS":
+        parts.append(f"[{style}] {msg} [/]")
+    elif level == "ERROR":
+        parts.append(f"[{style}] ⚠️ {msg} ⚠️ [/]")
+    elif level == "WARNING":
+        parts.append(f"[{style}] 🔸 {msg} 🔸 [/]")
+    else:
+        parts.append(f"[{style}] {msg}[/]")
     
-    # Add progress bar for progress messages
+    # Add animated progress bar for progress messages
     if level == "PROGRESS" and total and total > 0:
         progress_percent = min(100, int((progress / total) * 100))
         bar_width = 20
         filled = int(bar_width * progress / total)
-        bar = '█' * filled + '░' * (bar_width - filled)
-        parts.append(f" [cyan]{bar} {progress_percent:3}%[/]")
+        bar = get_progress_bar(progress, total)
+        parts.append(f" [bold cyan]{bar} {progress_percent:3}%[/]")
     
-    # Print with left alignment and no extra newlines
+    # Add decorative elements for special messages
+    if level in ["SUCCESS", "COMPLETE"]:
+        parts.append(" ✨🎉✨")
+    elif level == "ERROR":
+        parts.append(" ❌💔❌")
+    
+    # Print with enhanced formatting
     console.print("".join(parts), end="\n", highlight=False, overflow="ignore")
 
     try:
@@ -272,7 +318,7 @@ def log_msg(msg, level="INFO", progress=None, total=None):
 
 def print_header(title, version):
     """
-    Displays a prominent, animated header at the start of the script.
+    Displays a prominent, animated header with rich emojis and colors.
 
     Args:
         title (str): The main title to display.
@@ -280,38 +326,50 @@ def print_header(title, version):
     """
     console.print()
     
-    # Animated border
-    for _ in range(3):
-        console.print("=" * 80, style="bold cyan")
+    # Animated rainbow border
+    border_styles = ["bold red", "bold yellow", "bold green", "bold cyan", "bold blue", "bold magenta"]
+    for i in range(3):
+        console.print("=" * 80, style=border_styles[i % len(border_styles)])
         time.sleep(0.1)
     
+    # Create rich header text with animations
     header_text = Text()
-    header_text.append("🚀 ", style="bold yellow")
-    header_text.append(title, style="bold cyan")
-    header_text.append(" 🚀", style="bold yellow")
+    header_text.append("🚀✨🚀", style="bold yellow")
+    header_text.append(f"\n{title}", style="bold cyan on black")
+    header_text.append("\n🚀✨🚀", style="bold yellow")
     header_text.append("\n")
-    header_text.append(f"Version: {version}", style="dim italic")
+    header_text.append(f"Version: {version}", style="bold magenta")
     header_text.append("\n")
-    header_text.append("Powered by Selenium + Google Sheets", style="dim")
+    header_text.append("⚡ Powered by Selenium + Google Sheets ⚡", style="bold green")
+    header_text.append("\n")
+    header_text.append("🌟 Enhanced Terminal UI with Rich Emojis 🌟", style="bold yellow")
     
+    # Create animated panel
     console.print(
         Panel(
             header_text,
             expand=False,
-            border_style="cyan",
+            border_style="bold magenta",
             box=box.DOUBLE,
-            padding=(1, 4)
+            padding=(2, 6)
         ),
         justify="center"
     )
     
-    console.print("=" * 80, style="bold cyan")
+    # Animated closing border
+    for i in range(3):
+        console.print("=" * 80, style=border_styles[(i + 3) % len(border_styles)])
+        time.sleep(0.1)
+    
+    console.print()
+    # Add sparkle effect
+    console.print("✨🌟💫⭐🎆🎇🎊🎉✨", justify="center")
     console.print()
 
 
 def print_summary(stats, mode, duration):
     """
-    Displays a comprehensive summary table at the end of the run.
+    Displays a comprehensive summary table with rich visual effects.
 
     Args:
         stats (dict): Run statistics.
@@ -319,79 +377,149 @@ def print_summary(stats, mode, duration):
         duration (float): Total duration in seconds.
     """
     console.print()
-    console.print("=" * 80, style="bold green")
+    
+    # Animated celebration border
+    celebration_emojis = ["🎉", "🎊", "✨", "🌟", "💫", "⭐", "🎆", "🎇"]
+    for _ in range(3):
+        console.print("".join(random.choices(celebration_emojis, k=40)), style="bold magenta")
+        time.sleep(0.1)
+    
     console.print()
     
-    # Create summary table
+    # Create enhanced summary table
     table = Table(
-        title="📊 Scraping Run Summary",
+        title="🎊 MISSION COMPLETE - SCRAPING SUMMARY 🎊",
         show_header=True,
-        header_style="bold magenta",
-        border_style="green",
+        header_style="bold magenta on black",
+        border_style="bold magenta",
         box=box.DOUBLE_EDGE
     )
     
-    table.add_column("Metric", style="cyan", width=25)
-    table.add_column("Value", justify="right", style="bold yellow", width=15)
-    table.add_column("Status", justify="center", width=10)
+    table.add_column("📊 Metric", style="bold cyan", width=25)
+    table.add_column("💎 Value", justify="right", style="bold yellow on black", width=15)
+    table.add_column("⭐ Status", justify="center", width=10)
     
-    # Mode
-    table.add_row("🎯 Mode", mode.upper(), "")
+    # Mode with special styling
+    table.add_row("🎯 Mode", mode.upper(), "🚀")
     table.add_row("", "", "")  # Spacer
     
-    # Results
-    success_icon = "✅" if stats.get('success', 0) > 0 else "⚠️"
-    table.add_row("✅ Successful", str(stats.get('success', 0)), success_icon)
+    # Results with enhanced icons
+    success_count = stats.get('success', 0)
+    success_icon = "🎉" if success_count > 0 else "⚠️"
+    table.add_row("✅ Successful", str(success_count), success_icon)
     
-    failed_icon = "❌" if stats.get('failed', 0) > 0 else "✅"
-    table.add_row("❌ Failed", str(stats.get('failed', 0)), failed_icon)
+    failed_count = stats.get('failed', 0)
+    failed_icon = "💥" if failed_count > 0 else "✅"
+    table.add_row("❌ Failed", str(failed_count), failed_icon)
     
     table.add_row("", "", "")  # Spacer
     
-    # Profile breakdown
-    table.add_row("🆕 New Profiles", str(stats.get('new', 0)), "")
-    table.add_row("🔄 Updated Profiles", str(stats.get('updated', 0)), "")
-    table.add_row("💤 Unchanged Profiles", str(stats.get('unchanged', 0)), "")
+    # Profile breakdown with rich emojis
+    new_count = stats.get('new', 0)
+    table.add_row("🆕 New Profiles", str(new_count), "✨" if new_count > 0 else "")
+    
+    updated_count = stats.get('updated', 0)
+    table.add_row("🔄 Updated Profiles", str(updated_count), "🔄" if updated_count > 0 else "")
+    
+    unchanged_count = stats.get('unchanged', 0)
+    table.add_row("💤 Unchanged Profiles", str(unchanged_count), "😴" if unchanged_count > 0 else "")
 
     phase2_ready = stats.get('phase2_ready')
     phase2_not_eligible = stats.get('phase2_not_eligible')
     if phase2_ready is not None or phase2_not_eligible is not None:
         table.add_row("", "", "")  # Spacer
-        table.add_row("🚩 Phase 2 READY", str(phase2_ready or 0), "")
-        table.add_row("⛔ Phase 2 NOT ELIGIBLE", str(phase2_not_eligible or 0), "")
+        table.add_row("🚩 Phase 2 READY", str(phase2_ready or 0), "🎯" if (phase2_ready or 0) > 0 else "")
+        table.add_row("⛔ Phase 2 NOT ELIGIBLE", str(phase2_not_eligible or 0), "🚫")
     
     # Online mode specific
     if mode == 'online':
         table.add_row("", "", "")  # Spacer
-        table.add_row("📝 Logged Online Users", str(stats.get('logged', 0)), "")
+        logged_count = stats.get('logged', 0)
+        table.add_row("📝 Logged Online Users", str(logged_count), "📡" if logged_count > 0 else "")
     
-    # Duration
+    # Duration with performance indicator
     table.add_row("", "", "")  # Spacer
     duration_str = f"{int(duration // 60)}m {int(duration % 60)}s"
-    duration_icon = "⚡" if duration < 300 else "🐌"
+    duration_icon = "⚡" if duration < 300 else "🐌" if duration < 600 else "🦕"
     table.add_row("⏱️ Duration", duration_str, duration_icon)
     
     console.print(table, justify="center")
     console.print()
-    console.print("=" * 80, style="bold green")
+    
+    # Add performance rating
+    total_profiles = success_count + failed_count
+    if total_profiles > 0:
+        success_rate = (success_count / total_profiles) * 100
+        if success_rate >= 95:
+            rating = "🏆 EXCELLENT PERFORMANCE! 🏆"
+            rating_style = "bold green on black"
+        elif success_rate >= 85:
+            rating = "⭐ GREAT JOB! ⭐"
+            rating_style = "bold yellow on black"
+        elif success_rate >= 70:
+            rating = "👍 GOOD WORK! 👍"
+            rating_style = "bold cyan on black"
+        else:
+            rating = "💪 ROOM FOR IMPROVEMENT 💪"
+            rating_style = "bold magenta on black"
+        
+        console.print(rating, style=rating_style, justify="center")
+        console.print()
+    
+    # Animated closing border
+    for _ in range(3):
+        console.print("".join(random.choices(celebration_emojis, k=40)), style="bold magenta")
+        time.sleep(0.1)
+    
+    console.print()
+    console.print("🎊✨🌟💫⭐ MISSION ACCOMPLISHED! ⭐💫🌟✨🎊", style="bold magenta", justify="center")
     console.print()
 
 
 def print_phase_start(phase_name):
     """
-    Announces the start of a scraping phase.
+    Announces the start of a scraping phase with dramatic effects.
 
     Args:
         phase_name (str): Name of the phase (e.g., 'PROFILE', 'POSTS').
     """
     console.print()
+    
+    # Animated countdown effect
+    for i in range(3, 0, -1):
+        console.print(f"[bold red on black]GETTING READY... {i}[/]", justify="center")
+        time.sleep(0.3)
+    
+    # Create dramatic phase announcement
+    phase_text = Text()
+    phase_text.append("🚀 ", style="bold yellow")
+    phase_text.append(f"STARTING {phase_name.upper()} PHASE", style="bold cyan on black")
+    phase_text.append(" 🚀", style="bold yellow")
+    
+    # Add decorative elements
+    console.print("✨" * 30, style="bold yellow", justify="center")
+    console.print()
     console.print(
         Panel(
-            f"[bold cyan]Starting {phase_name} Phase[/bold cyan]",
-            border_style="yellow",
-            expand=False
-        )
+            phase_text,
+            border_style="bold magenta",
+            expand=False,
+            padding=(1, 4)
+        ),
+        justify="center"
     )
+    console.print()
+    console.print("✨" * 30, style="bold yellow", justify="center")
+    console.print()
+    
+    # Add motivational message
+    messages = [
+        "🔥 Let's get this done! 🔥",
+        "⚡ Full speed ahead! ⚡",
+        "🌟 Excellence in progress! 🌟",
+        "💪 Power mode activated! 💪"
+    ]
+    console.print(random.choice(messages), style="bold green", justify="center")
     console.print()
 
 
@@ -426,20 +554,96 @@ def create_progress_bar():
 
 def print_mode_config(mode, max_profiles, batch_size):
     """
-    Displays the configuration for the current run.
+    Displays the configuration for the current run with enhanced styling.
 
     Args:
         mode (str): The scraping mode.
         max_profiles (int): Maximum profiles to scrape (0 = unlimited).
         batch_size (int): Batch size for processing.
     """
-    config_table = Table(show_header=False, border_style="dim", box=None)
-    config_table.add_column("Key", style="cyan")
-    config_table.add_column("Value", style="yellow")
+    config_table = Table(
+        title="⚙️ CONFIGURATION SETTINGS ⚙️",
+        show_header=False,
+        border_style="bold cyan",
+        box=box.ROUNDED,
+        padding=(1, 2)
+    )
+    config_table.add_column("🔧 Key", style="bold cyan", width=20)
+    config_table.add_column("💎 Value", style="bold yellow", width=25)
     
     config_table.add_row("🎯 Mode", mode.upper())
     config_table.add_row("🔢 Max Profiles", "Unlimited" if max_profiles == 0 else str(max_profiles))
     config_table.add_row("📦 Batch Size", str(batch_size))
     
-    console.print(config_table)
+    console.print(config_table, justify="center")
     console.print()
+
+
+def create_loading_animation(message="Loading", duration=3):
+    """
+    Creates an animated loading effect with spinning emojis.
+    
+    Args:
+        message (str): The message to display during loading.
+        duration (float): Duration in seconds for the animation.
+    """
+    spinners = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘", "⭐", "✨", "💫", "🌟"]
+    start_time = time.time()
+    
+    with console.status(f"[bold cyan]{message}...", spinner="dots") as status:
+        while time.time() - start_time < duration:
+            current_spinner = random.choice(spinners)
+            status.update(f"[bold cyan]{message}... {current_spinner}[/]")
+            time.sleep(0.1)
+
+
+def print_success_banner(message):
+    """
+    Prints a success banner with celebration effects.
+    
+    Args:
+        message (str): The success message to display.
+    """
+    console.print()
+    console.print("🎉" * 20, style="bold green", justify="center")
+    console.print()
+    console.print(f"[bold green on black]✨ {message} ✨[/]", justify="center")
+    console.print()
+    console.print("🎉" * 20, style="bold green", justify="center")
+    console.print()
+
+
+def print_error_banner(message):
+    """
+    Prints an error banner with warning effects.
+    
+    Args:
+        message (str): The error message to display.
+    """
+    console.print()
+    console.print("⚠️" * 20, style="bold red", justify="center")
+    console.print()
+    console.print(f"[bold red on white]❌ {message} ❌[/]", justify="center")
+    console.print()
+    console.print("⚠️" * 20, style="bold red", justify="center")
+    console.print()
+
+
+def create_rainbow_text(text):
+    """
+    Creates rainbow-colored text effect.
+    
+    Args:
+        text (str): The text to colorize.
+    
+    Returns:
+        str: The rainbow-colored text.
+    """
+    colors = ["red", "yellow", "green", "cyan", "blue", "magenta"]
+    rainbow_text = Text()
+    
+    for i, char in enumerate(text):
+        color = colors[i % len(colors)]
+        rainbow_text.append(char, style=f"bold {color}")
+    
+    return rainbow_text
