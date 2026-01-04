@@ -95,21 +95,13 @@ def print_important_events(max_items=12):
             expand=False,
         )
     )
-def get_numeric_emoji(number, total=None):
-    """Converts a number into a string of number emojis with optional total."""
-    s = str(number)
-    emojis = {
-        '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
-        '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣',
-        '/': '➗', '.': '🔘', ',': '🔸'
-    }
-    
-    result = "".join(emojis.get(char, char) for char in s)
-    if total is not None:
-        total_str = str(total)
-        total_emoji = "".join(emojis.get(char, char) for char in total_str)
-        result = f"{result} / {total_emoji}"
-    return result
+def get_progress_text(processed, total):
+    """Returns clear progress text with percentage."""
+    if total > 0:
+        percentage = (processed / total) * 100
+        return f"[{processed}/{total}] {percentage:.0f}%"
+    else:
+        return f"[{processed}/?]"
 
 
 def get_spinning_emoji():
@@ -147,8 +139,8 @@ def log_progress(processed, total, nickname="", status=""):
     # Progress emoji based on percentage
     progress_emoji = get_spinning_emoji() if processed < total else "✅"
     
-    # Format progress counter with emojis
-    progress_counter = f"{get_numeric_emoji(processed, total)}"
+    # Format progress counter with clear text and percentage
+    progress_counter = get_progress_text(processed, total)
     
     # Progress bar with emojis
     progress_bar = get_progress_bar(processed, total)
@@ -173,10 +165,10 @@ def log_progress(processed, total, nickname="", status=""):
         console.print(message)
         return
     
-    # Build clean progress line
+    # Build enhanced progress line with clear numbering
     parts = [
         f"[dim]{ts.ljust(8)}[/]",  # Clean timestamp
-        f" [{progress_counter}] ",  # Progress counter
+        f"[bold yellow]{progress_counter.ljust(12)}[/] ",  # Progress counter with percentage
         f"[cyan]{progress_bar}[/] ",  # Clean progress bar
         f"[bold]{nickname.ljust(25)}[/]" if nickname else ""  # Nickname
     ]
