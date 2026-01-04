@@ -1,0 +1,275 @@
+# 🔒 Security Guidelines
+
+## Table of Contents
+- [Critical Security Rules](#critical-security-rules)
+- [Git History Audit](#git-history-audit)
+- [Credential Management](#credential-management)
+- [Pre-commit Hooks](#pre-commit-hooks)
+- [Security Checklist](#security-checklist)
+- [Incident Response](#incident-response)
+
+---
+
+## 🚨 Critical Security Rules
+
+### NEVER Commit These Files
+```
+❌ credentials.json
+❌ .env
+❌ .env.local
+❌ *.key
+❌ *.pkl (cookie files)
+❌ Any file containing passwords/tokens
+```
+
+### ✅ Always Use
+```
+✅ .env.example (template only, no real values)
+✅ Environment variables in GitHub Secrets
+✅ .gitignore (properly configured)
+✅ Pre-commit hooks (automatic checks)
+```
+
+---
+
+## 🔍 Git History Audit
+
+### Step 1: Check if Credentials Were Ever Committed
+
+Run these commands in your terminal:
+
+```bash
+# Check for credentials.json in history
+git log --all --full-history -- credentials.json
+
+# Check for .env files in history
+git log --all --full-history -- .env
+
+# Search for potential secrets in all commits
+git log -S "DAMADAM_PASSWORD" --all
+git log -S "private_key" --all
+```
+
+### Step 2: If Secrets Found in History
+
+**🚨 IMMEDIATE ACTION REQUIRED:**
+
+1. **Rotate ALL compromised credentials immediately**
+   - Change DamaDam account passwords
+   - Create new Google Service Account
+   - Update GitHub Secrets
+
+2. **Remove from Git History** (⚠️ This rewrites history - coordinate with team):
+
+```bash
+# Install git-filter-repo (recommended method)
+pip install git-filter-repo
+
+# Remove credentials.json from entire history
+git filter-repo --path credentials.json --invert-paths
+
+# Remove .env from entire history
+git filter-repo --path .env --invert-paths
+
+# Force push (⚠️ WARNING: This rewrites history)
+git push origin --force --all
+git push origin --force --tags
+```
+
+3. **Notify collaborators** to re-clone the repository
+
+---
+
+## 🔐 Credential Management
+
+### Local Development Setup
+
+1. **Never store credentials in code:**
+```python
+# ❌ BAD
+username = "myuser123"
+password = "mypassword"
+
+# ✅ GOOD
+username = os.getenv("DAMADAM_USERNAME")
+password = os.getenv("DAMADAM_PASSWORD")
+```
+
+2. **Use .env for local development:**
+```bash
+# Copy template
+cp .env.example .env
+
+# Edit with your real credentials
+nano .env  # or use your editor
+```
+
+3. **Verify .env is gitignored:**
+```bash
+# This should return nothing
+git check-ignore .env
+
+# If not ignored, add to .gitignore
+echo ".env" >> .gitignore
+```
+
+### GitHub Actions Setup
+
+**Store credentials in GitHub Secrets (Settings → Secrets and variables → Actions):**
+
+Required Secrets:
+- `DAMADAM_USERNAME` - Primary account username
+- `DAMADAM_PASSWORD` - Primary account password
+- `DAMADAM_USERNAME_2` - Backup account username (fallback)
+- `DAMADAM_PASSWORD_2` - Backup account password (fallback)
+- `GOOGLE_SHEET_URL` - Google Sheets URL
+- `GOOGLE_CREDENTIALS_JSON` - Full JSON content of credentials.json
+
+---
+
+## 🪝 Pre-commit Hooks
+
+### Installation
+
+1. **Create hooks directory:**
+```bash
+mkdir -p .githooks
+```
+
+2. **Create pre-commit hook:** (see file `.githooks/pre-commit`)
+
+3. **Make executable:**
+```bash
+chmod +x .githooks/pre-commit
+```
+
+4. **Configure git to use custom hooks:**
+```bash
+git config core.hooksPath .githooks
+```
+
+5. **Test it:**
+```bash
+# Try to stage a forbidden file
+touch credentials.json
+git add credentials.json
+
+# Should see error message and prevent commit
+```
+
+### What the Hook Does
+
+✅ Prevents committing:
+- `credentials.json`
+- `.env` files
+- Any files containing "private_key"
+- Cookie files (`*.pkl`)
+
+✅ Shows helpful error messages
+✅ Allows bypass for emergencies (with warning)
+
+---
+
+## ✅ Security Checklist
+
+### Before First Commit
+- [ ] Run git history audit
+- [ ] Ensure `.gitignore` is properly configured
+- [ ] Install pre-commit hooks
+- [ ] Verify no secrets in staged files: `git diff --cached`
+- [ ] Create `.env.example` with template values only
+
+### Before Each Commit
+- [ ] Pre-commit hook runs automatically
+- [ ] Review staged files: `git status`
+- [ ] Check for hardcoded secrets in code
+- [ ] Verify `.env` is not staged
+
+### Weekly Security Audit
+- [ ] Review `.gitignore` for new sensitive files
+- [ ] Check GitHub Actions logs for exposed secrets
+- [ ] Rotate credentials if any team member leaves
+- [ ] Review repository access permissions
+
+### Monthly Security Review
+- [ ] Audit all environment variables
+- [ ] Review Google Service Account permissions
+- [ ] Check for unused/expired credentials
+- [ ] Update dependencies for security patches
+
+---
+
+## 🚨 Incident Response
+
+### If Credentials Leaked to GitHub
+
+**Act within 1 hour:**
+
+1. **Rotate immediately:**
+   - Change all DamaDam passwords
+   - Create new Google Service Account
+   - Delete old service account
+   - Update all deployment environments
+
+2. **Remove from history:**
+   - Follow "Git History Audit" section above
+   - Force push cleaned history
+
+3. **Monitor for abuse:**
+   - Check DamaDam account activity
+   - Review Google Sheets audit logs
+   - Monitor GitHub repository access
+
+4. **Document incident:**
+   - Record what was exposed
+   - When it was discovered
+   - Actions taken
+   - Lessons learned
+
+### If Suspicious Activity Detected
+
+1. **Immediately revoke credentials:**
+```bash
+# Change passwords on DamaDam website
+# In Google Cloud Console → Service Accounts → Delete old account
+```
+
+2. **Review logs:**
+```bash
+# Check scraper logs
+tail -n 100 logs/*.log
+
+# Check GitHub Actions runs
+# Go to Actions tab in GitHub
+```
+
+3. **Enable 2FA:**
+   - Enable on DamaDam account (if available)
+   - Enable on Google account
+   - Enable on GitHub account
+
+---
+
+## 📞 Security Contacts
+
+**Project Maintainer:**
+- Email: net2outlawzz@gmail.com
+- Instagram: @net2nadeem
+
+**Report Security Issues:**
+- **DO NOT** create public GitHub issues
+- Email maintainer directly with "SECURITY:" prefix
+- Include: what, when, potential impact
+
+---
+
+## 📚 Additional Resources
+
+- [GitHub Secret Scanning](https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning)
+- [Git Filter Repo Documentation](https://github.com/newren/git-filter-repo)
+- [OWASP Secrets Management](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
+
+---
+
+**Last Updated:** January 2026  
+**Version:** 1.0.0

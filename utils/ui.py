@@ -12,13 +12,15 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
-from rich.console import Console
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, ProgressColumn
 from rich.live import Live
 from rich import box
+from itertools import cycle
+import random
 
 if sys.platform == "win32":
     try:
@@ -93,74 +95,167 @@ def print_important_events(max_items=12):
             expand=False,
         )
     )
-def get_numeric_emoji(number):
-    """Converts a number into a string of number emojis."""
+def get_numeric_emoji(number, total=None):
+    """Converts a number into a string of number emojis with optional total."""
     s = str(number)
     emojis = {
         '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
-        '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
+        '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣',
+        '/': '➗', '.': '🔘', ',': '🔸'
     }
-    return "".join(emojis.get(char, char) for char in s)
+    
+    result = "".join(emojis.get(char, char) for char in s)
+    if total is not None:
+        total_str = str(total)
+        total_emoji = "".join(emojis.get(char, char) for char in total_str)
+        result = f"{result} / {total_emoji}"
+    return result
+
+
+def get_spinning_emoji():
+    """Returns a random spinning emoji for loading states."""
+    spinners = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"]
+    return random.choice(spinners)
+
+
+def get_progress_bar(progress, total, width=20):
+    """Returns a formatted progress bar with emojis."""
+    filled = int(width * progress / total) if total > 0 else 0
+    empty = width - filled
+    
+    # Use different emojis based on completion percentage
+    if progress == total:
+        return "✅" + "★" * (width - 1)
+    elif progress / total > 0.9:
+        return "★" * (filled - 1) + "✨" + "☆" * empty
+    elif progress / total > 0.5:
+        return "★" * filled + "☆" * empty
+    else:
+        return "⬜" * filled + "⬛" * empty
 
 def log_progress(processed, total, nickname="", status=""):
     """
-    Displays a single-line progress indicator with number emojis.
+    Displays a rich progress indicator with emojis and a progress bar.
     """
     ts = get_pkt_time().strftime('%H:%M:%S')
     is_ci = os.getenv('GITHUB_ACTIONS') == 'true'
     
-    status_style = "green" if status == "new" else "yellow" if status == "updated" else "dim"
-    numeric_emoji = get_numeric_emoji(processed)
+    # Status styling
+    status_style = {
+        "new": "bold green",
+        "updated": "bold yellow",
+        "skipped": "dim",
+        "error": "bold red"
+    }.get(status.lower(), "dim")
     
-    # Use a simple line for CI, and a richer one for local runs
+    # Progress emoji based on percentage
+    progress_emoji = get_spinning_emoji() if processed < total else "✅"
+    
+    # Format progress counter with emojis
+    progress_counter = f"{get_numeric_emoji(processed, total)}"
+    
+    # Progress bar with emojis
+    progress_bar = get_progress_bar(processed, total)
+    
+    # Status indicator with emoji
+    status_icon = {
+        "new": "🆕",
+        "updated": "🔄",
+        "skipped": "⏩",
+        "error": "❌"
+    }.get(status.lower(), "➡️")
+    
+    # For CI, keep it simple
     if is_ci:
-        message = f"{numeric_emoji} {processed}/{total} - {nickname} ({status})"
+        message = f"{progress_counter} {processed}/{total} - {nickname} ({status})"
         console.print(message)
-    else:
-        progress_percent = (processed / total) * 100 if total > 0 else 0
-        bar_width = 20
-        filled_len = int(bar_width * processed // total)
-        bar = '█' * filled_len + '-' * (bar_width - filled_len)
-        
-        console.print(
-            f"[dim]{ts}[/dim] {numeric_emoji} [cyan][{bar}][/cyan] "
-            f"[bold magenta]{nickname}[/bold magenta] "
-            f"([{status_style}]{status}[/{status_style}])",
-            end="\r"
-        )
+        return
+    
+    # Build the progress line
+    parts = [
+        f"[dim]{ts.ljust(9)}[/] ",  # Fixed width timestamp
+        f"{progress_emoji} ",
+        f"[bold cyan][{progress_counter}][/] ",
+        f"{progress_bar} ",
+        f"[bold magenta]{nickname.ljust(20)}[/]" if nickname else ""
+    ]
+    
+    # Add status if provided
+    if status:
+        parts.append(f" ({status_icon} [{status_style}]{status}[/])")
+    
+    # Print with carriage return to update the line
+    console.print("".join(parts), end="\r", overflow="ignore", highlight=False)
 
-def log_msg(msg, level="INFO"):
+def log_msg(msg, level="INFO", progress=None, total=None):
     """
-    Enhanced styled logger with emojis and colors.
-
-    Args:
-        msg (str): The message to log.
-        level (str): The log level (INFO, OK, WARNING, ERROR, SCRAPING, LOGIN, TIMEOUT).
+    Enhanced styled logger with emojis, colors, and progress tracking.
     """
-    # In CI, don't print timestamp for every message to keep logs clean
     ts = get_pkt_time().strftime('%H:%M:%S')
     is_ci = os.getenv('GITHUB_ACTIONS') == 'true'
     
+    # Style and icon mappings
     style_map = {
-        "INFO": "cyan", "OK": "green", "SUCCESS": "bold green",
-        "WARNING": "yellow", "ERROR": "bold red", "SCRAPING": "magenta",
-        "LOGIN": "blue", "TIMEOUT": "dim yellow", "SKIP": "dim"
+        "INFO": "cyan", 
+        "OK": "bold green", 
+        "SUCCESS": "bold green",
+        "WARNING": "bold yellow", 
+        "ERROR": "bold red", 
+        "SCRAPING": "magenta",
+        "LOGIN": "blue", 
+        "TIMEOUT": "dim yellow", 
+        "SKIP": "dim",
+        "PROGRESS": "cyan",
+        "COMPLETE": "bold green"
     }
     
     icon_map = {
-        "INFO": "ℹ️", "OK": "✅", "SUCCESS": "🎉", "WARNING": "⚠️",
-        "ERROR": "❌", "SCRAPING": "🔍", "LOGIN": "🔑", "TIMEOUT": "⏳",
-        "SKIP": "⏭️"
+        "INFO": "ℹ️", 
+        "OK": "✅", 
+        "SUCCESS": "✨", 
+        "WARNING": "⚠️",
+        "ERROR": "❌", 
+        "SCRAPING": "🔍", 
+        "LOGIN": "🔑", 
+        "TIMEOUT": "⏳",
+        "SKIP": "⏭️",
+        "PROGRESS": "🔄",
+        "COMPLETE": "✅"
     }
     
+    # Get style and icon, with fallbacks
     style = style_map.get(level, "white")
     icon = icon_map.get(level, "➡️")
     
-    # For CI, keep it simple. For local, keep it rich.
+    # For CI, keep it simple
     if is_ci:
-        console.print(f"{icon} [{style}]{msg}[/{style}]")
-    else:
-        console.print(f"[dim]{ts}[/dim] {icon} [{style}]{msg}[/{style}]")
+        console.print(f"{icon} {msg}")
+        return
+    
+    # Build the message parts
+    parts = [
+        f"[dim]{ts.ljust(9)}[/]",  # Fixed width timestamp
+        f" {icon} "  # Icon with consistent spacing
+    ]
+    
+    # Add progress prefix if needed
+    if progress is not None and total is not None:
+        progress_emoji = "🔄" if progress < total else "✅"
+        parts.append(f"[{progress}/{total}] {progress_emoji} ")
+    
+    # Add the main message
+    parts.append(f"[{style}]{msg}[/]")
+    
+    # Add progress bar for progress messages
+    if level == "PROGRESS" and total and total > 0:
+        progress_percent = min(100, int((progress / total) * 100))
+        bar_width = 20
+        filled = int(bar_width * progress / total)
+        bar = '█' * filled + '░' * (bar_width - filled)
+        parts.append(f" [cyan]{bar} {progress_percent:3}%[/]")
+    
+    # Print with left alignment and no extra newlines
+    console.print("".join(parts), end="\n", highlight=False, overflow="ignore")
 
     try:
         if _RUN_LOG_FH:
