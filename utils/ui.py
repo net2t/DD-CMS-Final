@@ -119,23 +119,15 @@ def get_spinning_emoji():
 
 
 def get_progress_bar(progress, total, width=20):
-    """Returns a formatted progress bar with rich emojis and animations."""
+    """Returns a clean formatted progress bar."""
     filled = int(width * progress / total) if total > 0 else 0
     empty = width - filled
     
-    # Dynamic emoji selection based on progress
+    # Clean progress bar with standard characters
     if progress == total:
-        return "🎉" + "✨" * (width - 1)
-    elif progress / total > 0.9:
-        return "🌟" * (filled - 1) + "💎" + "⭐" * empty
-    elif progress / total > 0.7:
-        return "🔥" * filled + "⚡" * empty
-    elif progress / total > 0.5:
-        return "💫" * filled + "🌈" * empty
-    elif progress / total > 0.3:
-        return "🎯" * filled + "🎪" * empty
+        return "█" * width
     else:
-        return "🎨" * filled + "🎭" * empty
+        return "█" * filled + "░" * empty
 
 def log_progress(processed, total, nickname="", status=""):
     """
@@ -181,35 +173,29 @@ def log_progress(processed, total, nickname="", status=""):
         console.print(message)
         return
     
-    # Build the progress line
+    # Build clean progress line
     parts = [
-        f"[bold white on black]{ts.ljust(9)}[/] ",  # Bold timestamp with background
-        f"{progress_emoji} ",
-        f"[bold cyan][{progress_counter}][/] ",  # Extra space after progress counter
-        f"{progress_bar} ",
-        f"[bold magenta]{nickname.ljust(25)}[/]" if nickname else ""  # Increased width for better alignment
+        f"[dim]{ts.ljust(8)}[/]",  # Clean timestamp
+        f" [{progress_counter}] ",  # Progress counter
+        f"[cyan]{progress_bar}[/] ",  # Clean progress bar
+        f"[bold]{nickname.ljust(25)}[/]" if nickname else ""  # Nickname
     ]
     
-    # Add enhanced status with animations
+    # Add simple status indicator
     if status:
-        if status.lower() == "scraping":
-            parts.append(f" ({status_icon} [{status_style}]{status}...[/]) 🔄")
-        elif status.lower() == "new":
-            parts.append(f" ({status_icon} [{status_style}]{status}[/]) ✨")
-        elif status.lower() == "updated":
-            parts.append(f" ({status_icon} [{status_style}]{status}[/]) 🔄")
-        elif status.lower() == "error":
-            parts.append(f" ({status_icon} [{status_style}]{status}[/]) 💥")
+        status_text = status.lower()
+        if status_text == "scraping":
+            parts.append(f" [dim]({status}...)[/]")
+        elif status_text == "new":
+            parts.append(f" [green]({status})[/]")
+        elif status_text == "updated":
+            parts.append(f" [yellow]({status})[/]")
+        elif status_text == "error":
+            parts.append(f" [red]({status})[/]")
         else:
-            parts.append(f" ({status_icon} [{status_style}]{status}[/])")
+            parts.append(f" [dim]({status})[/]")
     
-    # Add decorative elements for special states
-    if processed == total:
-        parts.append(" 🎉✨🎉")
-    elif processed > total * 0.9:
-        parts.append(" 🔥⚡")
-    
-    # Print with enhanced formatting
+    # Print with clean formatting
     console.print("".join(parts), end="\r", overflow="ignore", highlight=False)
 
 def log_msg(msg, level="INFO", progress=None, total=None):
@@ -265,42 +251,22 @@ def log_msg(msg, level="INFO", progress=None, total=None):
         console.print(f"{icon} {msg}")
         return
     
-    # Build the message parts with enhanced formatting
+    # Build clean message parts
     parts = [
-        f"[bold white on black]{ts.ljust(9)}[/]",  # Bold timestamp with background
-        f" {icon} "  # Icon with consistent spacing
+        f"[dim]{ts.ljust(8)}[/]",  # Clean timestamp
+        f" {icon} ",  # Simple icon
+        f"[{style}]{msg}[/]"  # Clean message
     ]
     
-    # Add animated progress prefix if needed
-    if progress is not None and total is not None:
-        progress_emoji = get_spinning_emoji() if progress < total else "🎉"
-        parts.append(f"[bold cyan][{progress}/{total}][/] {progress_emoji} ")
-    
-    # Add the main message with enhanced styling
-    if level == "SUCCESS":
-        parts.append(f"[{style}] {msg} [/]")
-    elif level == "ERROR":
-        parts.append(f"[{style}] ⚠️ {msg} ⚠️ [/]")
-    elif level == "WARNING":
-        parts.append(f"[{style}] 🔸 {msg} 🔸 [/]")
-    else:
-        parts.append(f"[{style}] {msg}[/]")
-    
-    # Add animated progress bar for progress messages
+    # Add progress bar for progress messages
     if level == "PROGRESS" and total and total > 0:
         progress_percent = min(100, int((progress / total) * 100))
         bar_width = 20
         filled = int(bar_width * progress / total)
         bar = get_progress_bar(progress, total)
-        parts.append(f" [bold cyan]{bar} {progress_percent:3}%[/]")
+        parts.append(f" [cyan]{bar} {progress_percent:3}%[/]")
     
-    # Add decorative elements for special messages
-    if level in ["SUCCESS", "COMPLETE"]:
-        parts.append(" ✨🎉✨")
-    elif level == "ERROR":
-        parts.append(" ❌💔❌")
-    
-    # Print with enhanced formatting
+    # Print with clean formatting
     console.print("".join(parts), end="\n", highlight=False, overflow="ignore")
 
     try:
