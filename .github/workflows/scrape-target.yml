@@ -5,9 +5,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  # Run every 55 minutes automatically
+  # Run every 255 minutes automatically
   schedule:
-    - cron: "*/55 * * * *"
+    - cron: "*/255 * * * *"
 
   # Manual trigger - Run on demand
   workflow_dispatch:
