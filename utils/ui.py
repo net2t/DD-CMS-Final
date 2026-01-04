@@ -181,13 +181,13 @@ def log_progress(processed, total, nickname="", status=""):
         console.print(message)
         return
     
-    # Build the enhanced progress line
+    # Build the progress line
     parts = [
         f"[bold white on black]{ts.ljust(9)}[/] ",  # Bold timestamp with background
         f"{progress_emoji} ",
-        f"[bold cyan][{progress_counter}][/] ",
+        f"[bold cyan][{progress_counter}][/] ",  # Extra space after progress counter
         f"{progress_bar} ",
-        f"[bold magenta]{nickname.ljust(20)}[/]" if nickname else ""
+        f"[bold magenta]{nickname.ljust(25)}[/]" if nickname else ""  # Increased width for better alignment
     ]
     
     # Add enhanced status with animations
