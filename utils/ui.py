@@ -167,7 +167,7 @@ def log_progress(processed, total, nickname="", status=""):
     
     # Build enhanced progress line with clear numbering
     parts = [
-        f"[dim]{ts.ljust(8)}[/]",  # Clean timestamp
+        f"[dim]{ts.ljust(8)}[/] ",  # Clean timestamp with space
         f"[bold yellow]{progress_counter.ljust(12)}[/] ",  # Progress counter with percentage
         f"[cyan]{progress_bar}[/] ",  # Clean progress bar
         f"[bold]{nickname.ljust(25)}[/]" if nickname else ""  # Nickname
