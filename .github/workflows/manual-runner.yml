@@ -1,29 +1,32 @@
-name: Target Mode 🔰 (Manual)
-
-concurrency:
-  group: dd-scraper-target
-  cancel-in-progress: true
+name: Manual Scraper Run 🚀
 
 on:
-
-  # Manual trigger - Run on demand
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Scraper mode'
+        required: true
+        type: choice
+        options:
+        - online
+        - target
+        default: 'online'
       max_profiles:
-        description: "Max profiles to scrape (0 = All pending targets)"
+        description: 'Max profiles to scrape (0 for all)'
         required: false
-        default: "0"
-        type: string
+        default: '20'
       batch_size:
-        description: "Batch size for processing"
+        description: 'Batch size for processing'
         required: false
-        default: "20"
-        type: string
+        default: '10'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  scrape-target:
+  run-scraper:
     runs-on: ubuntu-latest
-
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -31,7 +34,7 @@ jobs:
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: '3.10'
 
       - name: 📦 Install Dependencies
         run: |
@@ -49,35 +52,28 @@ jobs:
           data = json.loads(raw)
           pk = data.get('private_key')
           if isinstance(pk, str):
-            data['private_key'] = pk.replace('\\n', '\n')
+            data['private_key'] = pk.replace('\n', '\n')
           with open('credentials.json', 'w', encoding='utf-8') as f:
             json.dump(data, f)
           PY
 
-      - name: 🎯 Run Target Mode Scraper
+      - name: 🚀 Run Scraper
         env:
-          # Primary Account
           DAMADAM_USERNAME: ${{ secrets.DAMADAM_USERNAME }}
           DAMADAM_PASSWORD: ${{ secrets.DAMADAM_PASSWORD }}
-
-          # Google Sheets Configuration
           GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           GOOGLE_APPLICATION_CREDENTIALS: credentials.json
-
-          # Run Configuration
-          MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '0' }}
-          BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
         run: |
-          python main.py target \
-            --max-profiles ${{ github.event.inputs.max_profiles || '0' }} \
-            --batch-size ${{ github.event.inputs.batch_size || '20' }}
+          python main.py ${{ github.event.inputs.mode }} \
+            --max-profiles ${{ github.event.inputs.max_profiles }} \
+            --batch-size ${{ github.event.inputs.batch_size }}
 
-      - name: 📊 Upload Logs (if available)
+      - name: 📊 Upload Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: target-mode-logs
+          name: manual-run-logs-${{ github.run_number }}
           path: |
             *.log
             logs/
