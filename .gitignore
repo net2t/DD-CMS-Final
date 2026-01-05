@@ -64,3 +64,5 @@ screenshots/
 # ============ PICKLE FILES ============
 *.pkl
 .env.sample
+
+docs/private/

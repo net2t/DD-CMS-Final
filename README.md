@@ -138,9 +138,16 @@ DD-CMS-Final/
 ├── logs/                       # Run logs (auto-generated)
 │
 ├── docs/                       # Documentation
-│   ├── SETUP.md               # Detailed setup guide
-│   ├── TROUBLESHOOTING.md     # Common issues and solutions
-│   └── PHASE_GUIDE.md         # Phase system documentation
+│   ├── guides/
+│   │   ├── SETUP_WINDOWS.md       # Windows setup guide
+│   │   ├── TESTING.md             # Testing guide
+│   │   ├── LIMIT_HANDLING.md      # Rate limit recovery guide
+│   │   ├── GITHUB_ACTIONS_GUIDE.md # GitHub Actions guide
+│   │   └── TROUBLESHOOTING.md     # Common issues and solutions
+│   ├── reference/
+│   │   └── ARCHITECTURE.md        # System architecture overview
+│   ├── notes/                    # Batch notes / internal notes (committed)
+│   └── private/                  # Local-only notes (gitignored)
 │
 ├── .env.example               # Environment variables template
 ├── .gitignore                 # Git ignore rules
@@ -148,14 +155,14 @@ DD-CMS-Final/
 ├── ISSUE_DOC.md              # Issue tracking
 ├── LICENSE                    # License information
 ├── README.md                  # This file
-├── SECURITY.md               # Security guidelines
+├── SECURITY.txt              # Security guidelines
 ├── main.py                    # Application entry point
 └── requirements.txt           # Python dependencies
 ```
 
 ---
 
-## 🚀 Quick Start (5 Minutes)
+## Quick Start (5 Minutes)
 
 ### Prerequisites
 - Python 3.9 or higher
@@ -232,17 +239,17 @@ python main.py online --max-profiles 20
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DAMADAM_USERNAME` | ✅ Yes | - | Primary DamaDam account username |
-| `DAMADAM_PASSWORD` | ✅ Yes | - | Primary account password |
-| `DAMADAM_USERNAME_2` | ⚠️ Recommended | - | Backup account username (prevents blocking) |
-| `DAMADAM_PASSWORD_2` | ⚠️ Recommended | - | Backup account password |
-| `GOOGLE_SHEET_URL` | ✅ Yes | - | Full URL of your Google Sheet |
+| `DAMADAM_USERNAME` | Yes | - | Primary DamaDam account username |
+| `DAMADAM_PASSWORD` | Yes | - | Primary account password |
+| `DAMADAM_USERNAME_2` | Recommended | - | Backup account username (prevents blocking) |
+| `DAMADAM_PASSWORD_2` | Recommended | - | Backup account password |
+| `GOOGLE_SHEET_URL` | Yes | - | Full URL of your Google Sheet |
 | `GOOGLE_APPLICATION_CREDENTIALS` | No | `credentials.json` | Path to service account JSON |
 | `GOOGLE_CREDENTIALS_JSON` | No | - | Raw JSON (for GitHub Actions) |
 | `MAX_PROFILES_PER_RUN` | No | `0` | Max profiles per run (0 = unlimited) |
@@ -312,7 +319,7 @@ Run statistics and metrics:
 
 ---
 
-## 📖 Usage
+## Usage
 
 ### Command Line Interface
 
@@ -389,7 +396,7 @@ Processing 50 profile(s)...
 
 ---
 
-## 🖥️ Dual Environment Support
+## Dual Environment Support
 
 The scraper intelligently adapts to its runtime environment:
 
@@ -447,9 +454,9 @@ python main.py target --max-profiles 10
 
 ---
 
-## 🎯 Phase System
+## Phase System
 
-### Current: Phase 1 (Profiles) ✅
+### Current: Phase 1 (Profiles) 
 
 **Status**: Complete and locked  
 **Target Lock Version**: v2.100.1.00
@@ -469,7 +476,7 @@ python main.py target --max-profiles 10
 - Community: Mehfil memberships
 - Links: Profile URL, public posts URL
 
-### Upcoming: Phase 2 (Posts) 🔜
+### Upcoming: Phase 2 (Posts) 
 
 **Status**: Planned, not started  
 **Prerequisites**: Phase 1 locked and approved
@@ -486,7 +493,7 @@ python main.py target --max-profiles 10
 - Profile must be ACTIVE status
 - Column "PHASE 2" = "Ready"
 
-### Future: Phase 3 (Mehfils) 🔮
+### Future: Phase 3 (Mehfils) 
 
 **Status**: Planned for future release
 
@@ -506,15 +513,15 @@ python main.py target --max-profiles 10
 5. **Evolution**: Easy to extend with new data types
 
 **Phase Principles:**
-- ✅ Each phase has dedicated configuration
-- ✅ Each phase can use separate Google credentials
-- ✅ Phases share core infrastructure (browser, login, sheets)
-- ✅ Locked phases maintain output stability
-- ✅ New phases added without modifying locked ones
+- Each phase has dedicated configuration
+- Each phase can use separate Google credentials
+- Phases share core infrastructure (browser, login, sheets)
+- Locked phases maintain output stability
+- New phases added without modifying locked ones
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -652,34 +659,34 @@ Get-Content logs\target_*.log -Wait  # Windows PowerShell
 
 ---
 
-## 🔒 Security
+## Security
 
 ### Critical Rules
 
 **NEVER commit these files:**
-- ❌ `credentials.json`
-- ❌ `.env`
-- ❌ `*.pkl` (cookie files)
-- ❌ Any file with real passwords/tokens
+- `credentials.json`
+- `.env`
+- `*.pkl` (cookie files)
+- Any file with real passwords/tokens
 
 **ALWAYS use:**
-- ✅ `.env.example` (templates only)
-- ✅ GitHub Secrets (for CI/CD)
-- ✅ `.gitignore` (properly configured)
-- ✅ Pre-commit hooks (automatic checks)
+- `.env.example` (templates only)
+- GitHub Secrets (for CI/CD)
+- `.gitignore` (properly configured)
+- Pre-commit hooks (automatic checks)
 
 ### Security Checklist
 
 Before committing:
-- [ ] Run `git status` and verify no sensitive files staged
-- [ ] Pre-commit hook passed
-- [ ] No hardcoded credentials in code
-- [ ] `.env` file is gitignored
+- Run `git status` and verify no sensitive files staged
+- Pre-commit hook passed
+- No hardcoded credentials in code
+- `.env` file is gitignored
 
 Weekly:
-- [ ] Rotate credentials if team member leaves
-- [ ] Review GitHub Actions logs for exposed secrets
-- [ ] Check repository access permissions
+- Rotate credentials if team member leaves
+- Review GitHub Actions logs for exposed secrets
+- Check repository access permissions
 
 ### Incident Response
 
@@ -689,11 +696,11 @@ If credentials leaked:
 3. **Monitor**: Check for abuse on DamaDam/Google Sheets
 4. **Document**: Record incident and actions taken
 
-See [SECURITY.md](SECURITY.md) for detailed guidelines.
+ See [SECURITY.txt](SECURITY.txt) for detailed guidelines.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 ### Development Workflow
 
@@ -731,9 +738,9 @@ git push origin feature/my-feature
 ### Reporting Issues
 
 **Before reporting:**
-1. Check [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-2. Search existing issues
-3. Test with latest version
+ 1. Check [TROUBLESHOOTING.md](docs/guides/TROUBLESHOOTING.md)
+ 2. Search existing issues
+ 3. Test with latest version
 
 **When reporting:**
 ```markdown
@@ -786,10 +793,13 @@ Please respect DamaDam.pk's Terms of Service and robots.txt.
 
 ### Documentation
 
-- 📖 [Setup Guide](docs/SETUP.md) - Detailed installation instructions
-- 🔧 [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
-- 🎯 [Phase Guide](docs/PHASE_GUIDE.md) - Phase system documentation
-- 🔒 [Security](SECURITY.md) - Security best practices
+- 📖 [Setup Guide](docs/guides/SETUP_WINDOWS.md) - Detailed installation instructions
+- 🧪 [Testing Guide](docs/guides/TESTING.md) - Quick testing checklist
+- 🔧 [Troubleshooting](docs/guides/TROUBLESHOOTING.md) - Common issues and solutions
+- 🚦 [Rate Limit Handling](docs/guides/LIMIT_HANDLING.md) - Recovery steps for 429/limits
+- 🔧 [GitHub Actions Guide](docs/guides/GITHUB_ACTIONS_GUIDE.md) - CI/CD troubleshooting
+- 🏗️ [Architecture](docs/reference/ARCHITECTURE.md) - System design overview
+- 🔒 [Security](SECURITY.txt) - Security best practices
 - 📝 [Changelog](CHANGELOG.md) - Version history
 
 ---
