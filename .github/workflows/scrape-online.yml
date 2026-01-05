@@ -1,7 +1,7 @@
 name: Online Mode ⭕ (AUTO)
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.mode || 'online' }}
+  group: dd-scraper-online
   cancel-in-progress: true
 
 on:
@@ -12,23 +12,15 @@ on:
   # Also allow manual trigger for testing
   workflow_dispatch:
     inputs:
-      mode:
-        description: "Run mode (online or target)"
-        required: true
-        default: "online"
-        type: choice
-        options:
-          - online
-          - target
       max_profiles:
-        description: "Max profiles to scrape (0 = All, recommended: 20-50)"
+        description: "Max profiles to scrape (0 = All online users, recommended: 20-50)"
         required: false
-        default: "20"
+        default: "0"
         type: string
       batch_size:
         description: "Batch size for processing"
         required: false
-        default: "10"
+        default: "20"
         type: string
 
 jobs:
@@ -65,18 +57,24 @@ jobs:
             json.dump(data, f)
           PY
 
-      - name: 🌐 Run Scraper
+      - name: 🌐 Run Online Mode Scraper
         env:
           # Primary Account
           DAMADAM_USERNAME: ${{ secrets.DAMADAM_USERNAME }}
           DAMADAM_PASSWORD: ${{ secrets.DAMADAM_PASSWORD }}
 
           # Google Sheets Configuration
-          GOOGLE_SHEET__URL: ${{ secrets.GOOGLE_SHEET_URL }}
+          GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           GOOGLE_APPLICATION_CREDENTIALS: credentials.json
+
+          # Run Configuration
+          # For scheduled runs: limit to 30 profiles to avoid timeouts
+          # For manual runs: use input value
+          MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '30' }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
         run: |
-          python main.py ${{ github.event.inputs.mode || 'online' }} \
+          python main.py online \
             --max-profiles ${{ github.event.inputs.max_profiles || '30' }} \
             --batch-size ${{ github.event.inputs.batch_size || '20' }}
 
