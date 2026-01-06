@@ -1,3 +1,4 @@
+# Target Mode Workflow - Runs every 55 minutes or manually
 name: Target Mode 🔰 (Manual)
 
 concurrency:
@@ -5,8 +6,11 @@ concurrency:
   cancel-in-progress: true
 
 on:
-
-  # Manual trigger - Run on demand
+  # Scheduled run every 55 minutes
+  # schedule:
+  #  - cron: "*/55 * * * *"
+  #
+  # Manual trigger with options
   workflow_dispatch:
     inputs:
       max_profiles:
@@ -25,19 +29,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ============================================================
+      # STEP 1: Checkout Repository
+      # ============================================================
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
+      # ============================================================
+      # STEP 2: Setup Python
+      # ============================================================
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
+      # ============================================================
+      # STEP 3: Setup Chrome and ChromeDriver
+      # ============================================================
+      - name: 🌐 Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: 🔗 Configure ChromeDriver
+        run: |
+          echo "CHROMEDRIVER_PATH=$(which chromedriver)" >> $GITHUB_ENV
+
+      # ============================================================
+      # STEP 4: Install Python Dependencies
+      # ============================================================
       - name: 📦 Install Dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # ============================================================
+      # STEP 5: Prepare Google Credentials
+      # ============================================================
       - name: 🔐 Prepare Google Credentials
         shell: bash
         env:
@@ -46,19 +74,30 @@ jobs:
           python - <<'PY'
           import json, os
           raw = os.environ.get('GOOGLE_CREDENTIALS_JSON', '')
+          if not raw:
+              print("ERROR: GOOGLE_CREDENTIALS_JSON secret not set!")
+              exit(1)
           data = json.loads(raw)
           pk = data.get('private_key')
           if isinstance(pk, str):
-            data['private_key'] = pk.replace('\\n', '\n')
+              data['private_key'] = pk.replace('\\n', '\n')
           with open('credentials.json', 'w', encoding='utf-8') as f:
-            json.dump(data, f)
+              json.dump(data, f)
+          print("✅ Credentials file created")
           PY
 
+      # ============================================================
+      # STEP 6: Run Target Mode Scraper
+      # ============================================================
       - name: 🎯 Run Target Mode Scraper
         env:
           # Primary Account
           DAMADAM_USERNAME: ${{ secrets.DAMADAM_USERNAME }}
           DAMADAM_PASSWORD: ${{ secrets.DAMADAM_PASSWORD }}
+
+          # Backup Account (optional)
+          DAMADAM_USERNAME_2: ${{ secrets.DAMADAM_USERNAME_2 }}
+          DAMADAM_PASSWORD_2: ${{ secrets.DAMADAM_PASSWORD_2 }}
 
           # Google Sheets Configuration
           GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
@@ -69,16 +108,24 @@ jobs:
           MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '0' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
         run: |
+          echo "🎯 Starting Target Mode..."
+          echo "Max Profiles: ${{ github.event.inputs.max_profiles || '0' }}"
+          echo "Batch Size: ${{ github.event.inputs.batch_size || '20' }}"
+          
           python main.py target \
             --max-profiles ${{ github.event.inputs.max_profiles || '0' }} \
             --batch-size ${{ github.event.inputs.batch_size || '20' }}
 
-      - name: 📊 Upload Logs (if available)
+      # ============================================================
+      # STEP 7: Upload Logs (Always run, even on failure)
+      # ============================================================
+      - name: 📊 Upload Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: target-mode-logs
+          name: target-mode-logs-${{ github.run_number }}
           path: |
-            *.log
             logs/
+            *.log
           if-no-files-found: ignore
+          retention-days: 7
