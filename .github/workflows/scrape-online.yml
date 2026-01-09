@@ -6,17 +6,17 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  # Scheduled run every 15 minutes
+  # Scheduled run every 12 minutes
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/12 * * * *"
 
   # Manual trigger with options
   workflow_dispatch:
     inputs:
       max_profiles:
-        description: "Max profiles to scrape (0 = All online users, recommended: 20-50)"
+        description: "Max profiles to scrape (0 = All Users)"
         required: false
-        default: "30"
+        default: "0"
         type: string
       batch_size:
         description: "Batch size for processing"
