@@ -66,3 +66,20 @@ screenshots/
 .env.sample
 
 docs/private/
+
+# Local development
+.vscode/
+*__pycache__/
+*.py[cod]
+*.class
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+
+# Credentials
+credentials.json
+damadam_cookies.pkl
