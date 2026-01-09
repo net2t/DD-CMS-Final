@@ -96,8 +96,8 @@ jobs:
           DAMADAM_PASSWORD: ${{ secrets.DAMADAM_PASSWORD }}
 
           # Backup Account (optional)
-          DAMADAM_USERNAME_2: ${{ secrets.DAMADAM_USERNAME_2 }}
-          DAMADAM_PASSWORD_2: ${{ secrets.DAMADAM_PASSWORD_2 }}
+          DAMADAM_USERNAME_2: ${{ secrets.DAMADAM_USERNAME_2 || secrets.DAMADAM_USERNAME }}
+          DAMADAM_PASSWORD_2: ${{ secrets.DAMADAM_PASSWORD_2 || secrets.DAMADAM_PASSWORD }}
 
           # Google Sheets Configuration
           GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
