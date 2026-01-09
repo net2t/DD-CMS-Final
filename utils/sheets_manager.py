@@ -487,15 +487,28 @@ class SheetsManager:
                 if self._perform_write_operation(self.profiles_ws.insert_row, updated_row, index=2):
                     log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
                     try:
-                        dt_col = Config.COLUMN_ORDER.index("DATETIME SCRAP") + 1
-                        dt_a1 = gspread.utils.rowcol_to_a1(2, dt_col)
-                        note_fields = ", ".join(changed_fields[:20])
-                        more = "" if len(changed_fields) <= 20 else f" (+{len(changed_fields) - 20} more)"
-                        if note_fields:
-                            note_text = f"DUPLICATE UPDATED\nChanged: {note_fields}{more}"
-                        else:
-                            note_text = "DUPLICATE UPDATED\nChanged: (diff ignored)"
-                        self._perform_write_operation(self.profiles_ws.update_note, dt_a1, note_text)
+                        excluded_note_columns = {"A", "B", "H", "L", "M", "N", "O", "Q", "R", "U", "V"}
+                        note_updates = []
+
+                        for i, col in enumerate(Config.COLUMN_ORDER):
+                            old_val = old_data[i] if i < len(old_data) else ""
+                            new_val = updated_row[i]
+
+                            if old_val == new_val:
+                                continue
+
+                            col_num = i + 1
+                            col_a1 = gspread.utils.rowcol_to_a1(1, col_num)
+                            col_letter = re.sub(r"\d+", "", col_a1)
+                            if col_letter in excluded_note_columns:
+                                continue
+
+                            note_updates.append((col_num, old_val, new_val))
+
+                        for col_num, old_val, new_val in note_updates:
+                            cell_a1 = gspread.utils.rowcol_to_a1(2, col_num)
+                            note_text = f"Before: {old_val}\nAfter: {new_val}"
+                            self._perform_write_operation(self.profiles_ws.update_note, cell_a1, note_text)
                     except Exception:
                         pass
                     self._load_existing_profiles()
