@@ -6,9 +6,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  # Scheduled run every 12 minutes
+  # Scheduled run every 15 minutes
   schedule:
-    - cron: "*/12 * * * *"
+    - cron: "*/15 * * * *"
 
   # Manual trigger with options
   workflow_dispatch:
