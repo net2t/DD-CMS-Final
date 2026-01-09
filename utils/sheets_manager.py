@@ -127,7 +127,7 @@ class SheetsManager:
         
         # Initialize worksheets
         self.profiles_ws = self._get_or_create(Config.SHEET_PROFILES, cols=len(Config.COLUMN_ORDER))
-        self.target_ws = self._get_or_create(Config.SHEET_TARGET, cols=4)
+        self.target_ws = self._get_or_create(Config.SHEET_TARGET, cols=3)
         self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD, cols=12)
         self.online_log_ws = self._get_or_create(Config.SHEET_ONLINE_LOG, cols=4)
 
@@ -194,7 +194,7 @@ class SheetsManager:
                 ("RUN MODE" if h == "SKIP/DEL" else h)
                 for h in Config.COLUMN_ORDER
             ],
-            self.target_ws: ["NICKNAME", "STATUS", "REMARKS", "SKIP"],
+            self.target_ws: ["NICKNAME", "STATUS", "REMARKS"],
             self.dashboard_ws: [
                 "RUN#", "TIMESTAMP", "PROFILES", "SUCCESS", "FAILED",
                 "NEW", "UPDATED", "DIFF", "UNCHANGED", "TRIGGER", "START", "END"
@@ -226,7 +226,7 @@ class SheetsManager:
                     self._apply_header_format(ws)
 
                 # If headers differ, update only the header row (do NOT clear the sheet).
-                elif current_headers != formatted_headers:
+                elif (current_headers[:len(formatted_headers)] if ws == self.target_ws else current_headers) != formatted_headers:
                     log_msg(
                         f"Updating header row for '{ws.title}' sheet (preserving existing data)...",
                         "WARNING"

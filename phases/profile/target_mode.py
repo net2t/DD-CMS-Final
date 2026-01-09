@@ -853,18 +853,6 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
     if not targets:
         log_msg("No pending targets found")
         return stats
-
-    # Apply global skip list from RunList (col D: SKIP)
-    try:
-        skip_set = sheets.get_skip_nicknames() if sheets else set()
-    except Exception:
-        skip_set = set()
-    if skip_set:
-        before = len(targets)
-        targets = [t for t in targets if (t.get('nickname') or '').strip().lower() not in skip_set]
-        removed = before - len(targets)
-        if removed:
-            log_msg(f"Skipped {removed} nickname(s) due to RunList SKIP list.", "INFO")
     
     # Limit targets if specified
     if max_profiles > 0:
