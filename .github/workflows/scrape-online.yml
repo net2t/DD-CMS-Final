@@ -105,7 +105,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: credentials.json
 
           # Run Configuration (limit to 30 for scheduled runs)
-          MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '30' }}
+          MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '0' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
         run: |
           echo "🌐 Starting Online Mode..."
