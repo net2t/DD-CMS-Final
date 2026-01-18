@@ -6,9 +6,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  # Scheduled run every 12 minutes
+  # Scheduled run every 10 minutes
   schedule:
-    - cron: "*/12 * * * *"
+    - cron: "*/10 * * * *"
 
   # Manual trigger with options
   workflow_dispatch:
@@ -105,15 +105,15 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: credentials.json
 
           # Run Configuration (limit to 30 for scheduled runs)
-          MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '30' }}
+          MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '0' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
         run: |
           echo "🌐 Starting Online Mode..."
-          echo "Max Profiles: ${{ github.event.inputs.max_profiles || '30' }}"
+          echo "Max Profiles: ${{ github.event.inputs.max_profiles || '0' }}"
           echo "Batch Size: ${{ github.event.inputs.batch_size || '20' }}"
           
           python main.py online \
-            --max-profiles ${{ github.event.inputs.max_profiles || '30' }} \
+            --max-profiles ${{ github.event.inputs.max_profiles || '0' }} \
             --batch-size ${{ github.event.inputs.batch_size || '20' }}
 
       # ============================================================
