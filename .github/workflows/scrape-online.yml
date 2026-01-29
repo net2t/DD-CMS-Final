@@ -3,7 +3,7 @@ name: Online Mode ⭕ (AUTO)
 
 concurrency:
   group: dd-scraper-online
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 on:
   # Scheduled run every 15 minutes
