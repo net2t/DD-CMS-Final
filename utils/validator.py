@@ -26,6 +26,7 @@ class NicknameValidator:
     """
     
     # Configuration
+    # Allowed: alphanumeric + a small safe set used by DamaDam profiles
     ALLOWED_SPECIAL = set('@.-_')
     MAX_LENGTH = 50
     MIN_LENGTH = 1
@@ -88,6 +89,20 @@ class NicknameValidator:
         dangerous_found = [c for c in nickname if c in cls.DANGEROUS_CHARS]
         if dangerous_found:
             return False, None, f"Contains dangerous characters: {', '.join(dangerous_found)}"
+
+        # Enforce supported character set
+        invalid_chars = [
+            c for c in nickname
+            if not (c.isalnum() or c in cls.ALLOWED_SPECIAL)
+        ]
+        if invalid_chars:
+            unique_chars = ', '.join(sorted(set(invalid_chars)))
+            return (
+                False,
+                None,
+                f"Contains unsupported characters: {unique_chars}. "
+                "Allowed: letters, digits, @ . - _"
+            )
         
         # Check if it's just special characters (must have at least one alphanumeric)
         if not any(c.isalnum() for c in nickname):
