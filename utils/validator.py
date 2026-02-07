@@ -13,6 +13,7 @@ Usage:
 """
 
 import re
+import string
 from typing import Tuple, Optional
 from urllib.parse import urlparse
 
@@ -26,7 +27,9 @@ class NicknameValidator:
     """
     
     # Configuration
+    # Allowed: alphanumeric + a small safe set used by DamaDam profiles
     ALLOWED_SPECIAL = set('@.-_')
+    ALLOWED_ALNUM = set(string.ascii_letters + string.digits)
     MAX_LENGTH = 50
     MIN_LENGTH = 1
     
@@ -88,9 +91,23 @@ class NicknameValidator:
         dangerous_found = [c for c in nickname if c in cls.DANGEROUS_CHARS]
         if dangerous_found:
             return False, None, f"Contains dangerous characters: {', '.join(dangerous_found)}"
+
+        # Enforce supported character set
+        invalid_chars = [
+            c for c in nickname
+            if not (c in cls.ALLOWED_ALNUM or c in cls.ALLOWED_SPECIAL)
+        ]
+        if invalid_chars:
+            unique_chars = ', '.join(sorted(set(invalid_chars)))
+            return (
+                False,
+                None,
+                f"Contains unsupported characters: {unique_chars}. "
+                "Allowed: A-Z, a-z, 0-9, @ . - _"
+            )
         
         # Check if it's just special characters (must have at least one alphanumeric)
-        if not any(c.isalnum() for c in nickname):
+        if not any(c in cls.ALLOWED_ALNUM for c in nickname):
             return False, None, "Must contain at least one alphanumeric character"
         
         # Check for control characters
