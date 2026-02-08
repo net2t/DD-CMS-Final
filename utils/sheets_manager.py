@@ -127,13 +127,14 @@ class SheetsManager:
         
         # Initialize worksheets
         self.profiles_ws = self._get_or_create(Config.SHEET_PROFILES, cols=len(Config.COLUMN_ORDER))
-        self.target_ws = self._get_or_create(Config.SHEET_TARGET, cols=3)
+        self.target_ws = self._get_or_create(Config.SHEET_TARGET, cols=6)
         self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD, cols=12)
         self.online_log_ws = self._get_or_create(Config.SHEET_ONLINE_LOG, cols=4)
 
         # Ensure existing sheets have expected column counts
         self._ensure_min_cols(self.dashboard_ws, 12)
         self._ensure_min_cols(self.online_log_ws, 4)
+        self._ensure_min_cols(self.target_ws, 6)
         
         # Optional sheets
         self.tags_ws = self._get_sheet_if_exists(Config.SHEET_TAGS)
@@ -430,7 +431,7 @@ class SheetsManager:
             return Config.PROFILE_STATE_UNVERIFIED
         return Config.PROFILE_STATE_ACTIVE
 
-    def write_profile(self, profile_data):
+    def write_profile(self, profile_data, target_tag: str | None = None):
         """
         Writes a profile to the 'Profiles' sheet with duplicate handling.
         FIXED: Applies Quantico font to the written row.
@@ -440,7 +441,23 @@ class SheetsManager:
             log_msg("Profile has no nickname, skipping write.", "WARNING")
             return {"status": "error", "error": "Missing nickname"}
 
+        # Only VERIFIED profiles should be written to Profiles (per project requirement).
+        # Keep normalization consistent with existing uppercase behavior.
+        incoming_status = clean_data(profile_data.get("STATUS", ""))
+        if (incoming_status or "").strip().upper() != "VERIFIED":
+            return {"status": "skipped", "reason": "non_verified"}
+
         profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+
+        # Target mode: tag batch/list name into Profiles column J (index 9 in COLUMN_ORDER).
+        # This is optional and does not change schema; it only changes the value written.
+        if target_tag is not None:
+            try:
+                col_j_idx = 9
+                if 0 <= col_j_idx < len(Config.COLUMN_ORDER):
+                    profile_data[Config.COLUMN_ORDER[col_j_idx]] = str(target_tag).strip()
+            except Exception:
+                pass
         # PROFILE_STATE column was removed from the sheet schema; keep internal state only.
         profile_data["_PROFILE_STATE"] = self._compute_profile_state(profile_data)
         
@@ -517,12 +534,14 @@ class SheetsManager:
                     changed_fields.append(col)
                 updated_row.append(new_val)
 
-            if not changed_fields:
-                return {"status": "unchanged"}
-
+            # Always move scraped profile to row 2 (most recent), even if unchanged.
+            # (DATETIME SCRAP is updated above on every scrape.)
             if self._perform_write_operation(self.profiles_ws.delete_rows, old_row_num):
                 if self._perform_write_operation(self.profiles_ws.insert_row, updated_row, index=2):
-                    log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
+                    if changed_fields:
+                        log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
+                    else:
+                        log_msg(f"Refreshed duplicate profile {nickname} and moved to Row 2.", "OK")
                     try:
                         excluded_note_columns = {"A", "B", "H", "L", "M", "N", "O", "Q", "R", "U", "V"}
                         note_updates = []
@@ -550,7 +569,9 @@ class SheetsManager:
                         pass
                     self._update_existing_profiles_cache_after_insert(nickname, updated_row, inserted_row_num=2)
                     self._maybe_reload_existing_profiles()
-                    return {"status": "updated", "changed_fields": changed_fields}
+                    if changed_fields:
+                        return {"status": "updated", "changed_fields": changed_fields}
+                    return {"status": "unchanged"}
             return {"status": "error", "error": "Failed to update sheet"}
         else:
             if self._perform_write_operation(self.profiles_ws.insert_row, row_data, index=2):
@@ -580,10 +601,12 @@ class SheetsManager:
                 status_text = (row[1] if len(row) > 1 else "").strip().lower()
                 if "pending" not in status_text:
                     continue
+                tag_val = (row[5] if len(row) > 5 else "").strip()
                 pending_targets.append({
                     'nickname': row[0].strip(),
                     'row': idx,
-                    'source': 'Target'
+                    'source': 'Target',
+                    'tag': tag_val
                 })
             return pending_targets
         except Exception as e:

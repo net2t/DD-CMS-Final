@@ -894,28 +894,58 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
                     stats["phase2_not_eligible"] += 1
                     profile_data["PHASE 2"] = "Not Eligible"
 
-                # Queue for batch write; actual write occurs on flush.
-                writer.add_profile(profile_data)
-                stats['success'] += 1
-                if row:
-                    sheets.update_target_status(row, 'Done', 'Queued')
+                # Write immediately so we can set correct RunList remarks (NEW/UPDATED/UNCHANGED).
+                write_result = sheets.write_profile(profile_data, target_tag=target.get("tag"))
+                status = write_result.get("status")
+                if status in {"new", "updated", "unchanged"}:
+                    stats['success'] += 1
+                    if status == "new":
+                        stats["new"] += 1
+                    elif status == "updated":
+                        stats["updated"] += 1
+                    elif status == "unchanged":
+                        stats["unchanged"] += 1
 
-                # Flush on batch boundary or final profile, then update stats/statuses.
-                if (i % Config.BATCH_SIZE == 0) or (i == len(targets)):
-                    flush_result = writer.flush()
-                    # We can't map per-profile status from batch flush (uses write_profile internally),
-                    # so we treat flush failures as run-level failures.
-                    if flush_result.get('failed', 0) > 0:
-                        stats['failed'] += flush_result.get('failed', 0)
-                    # Success statuses (new/updated/unchanged) are not available here; keep success count.
-                    log_progress(i, len(targets), nickname, "queued")
+                    ts = profile_data.get("DATETIME SCRAP")
+                    if not ts:
+                        try:
+                            ts = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+                        except Exception:
+                            ts = ""
+
+                    if status == "new":
+                        remark = f"New Added: on {ts}" if ts else "New Added"
+                    elif status == "updated":
+                        remark = f"Updated: on {ts}" if ts else "Updated"
+                    else:
+                        remark = f"Scraped ✅ : on {ts}" if ts else "Scraped ✅"
+
+                    if row:
+                        sheets.update_target_status(row, 'done', remark)
+                    log_progress(i, len(targets), nickname, status)
+                elif status == "skipped" and write_result.get("reason") == "non_verified":
+                    # Non-verified profiles are not written to Profiles sheet, but we still complete the target.
+                    stats['success'] += 1
+                    ts = profile_data.get("DATETIME SCRAP")
+                    if not ts:
+                        try:
+                            ts = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+                        except Exception:
+                            ts = ""
+                    remark = f"Skipped (non-verified): on {ts}" if ts else "Skipped (non-verified)"
+                    if row:
+                        sheets.update_target_status(row, 'done', remark)
+                    log_progress(i, len(targets), nickname, "skipped")
                 else:
-                    log_progress(i, len(targets), nickname, "queued")
+                    stats['failed'] += 1
+                    if row:
+                        sheets.update_target_status(row, 'error', write_result.get("error") or "Sheet write failed")
+                    log_progress(i, len(targets), nickname, "failed")
 
             else: # Scrape failed
                 stats['failed'] += 1
                 if row:
-                    sheets.update_target_status(row, 'Error', 'Scraping failed')
+                    sheets.update_target_status(row, 'error', 'Scraping failed')
                 log_progress(i, len(targets), nickname, "failed")
             
         except Exception as e:
