@@ -852,6 +852,104 @@ body.theme-3 {
     --transition: all 0.3s ease;
 }
 
+body.theme-1::before {
+    opacity: 1;
+    background:
+        radial-gradient(800px 520px at 18% -10%, rgba(124, 58, 237, 0.30), transparent 58%),
+        radial-gradient(820px 560px at 110% 18%, rgba(34, 211, 238, 0.22), transparent 55%),
+        radial-gradient(740px 520px at 45% 110%, rgba(59, 130, 246, 0.18), transparent 60%),
+        linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(241, 245, 249, 1));
+}
+
+body.theme-1::after {
+    opacity: 0.55;
+    background-image:
+        linear-gradient(to right, rgba(15, 23, 42, 0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15, 23, 42, 0.07) 1px, transparent 1px);
+    background-size: 92px 92px;
+}
+
+body.theme-2::before {
+    opacity: 1;
+    background:
+        radial-gradient(820px 560px at 10% 5%, rgba(244, 114, 182, 0.30), transparent 60%),
+        radial-gradient(900px 620px at 98% 18%, rgba(6, 182, 212, 0.20), transparent 55%),
+        radial-gradient(760px 560px at 50% 112%, rgba(52, 211, 153, 0.16), transparent 62%),
+        linear-gradient(180deg, rgba(255, 247, 251, 1), rgba(245, 245, 245, 1));
+}
+
+body.theme-2::after {
+    opacity: 0.60;
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.10) 1px, transparent 1px);
+    background-size: 18px 18px;
+}
+
+body.theme-3::before {
+    opacity: 1;
+    background:
+        radial-gradient(860px 560px at 12% 0%, rgba(37, 99, 235, 0.26), transparent 58%),
+        radial-gradient(860px 580px at 104% 16%, rgba(34, 197, 94, 0.18), transparent 54%),
+        radial-gradient(760px 560px at 52% 112%, rgba(245, 158, 11, 0.18), transparent 62%),
+        linear-gradient(180deg, rgba(250, 250, 250, 1), rgba(229, 231, 235, 1));
+}
+
+body.theme-3::after {
+    opacity: 0.55;
+    background-image:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.08) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+body.theme-1 .topbar,
+body.theme-1 .tabs,
+body.theme-1 .stage,
+body.theme-1 .kpi,
+body.theme-1 .panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72));
+}
+
+body.theme-2 .topbar,
+body.theme-2 .tabs,
+body.theme-2 .stage,
+body.theme-2 .kpi,
+body.theme-2 .panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.70));
+    border-color: rgba(236, 72, 153, 0.12);
+}
+
+body.theme-3 .topbar,
+body.theme-3 .tabs,
+body.theme-3 .stage,
+body.theme-3 .kpi,
+body.theme-3 .panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.68));
+    border-color: rgba(37, 99, 235, 0.12);
+}
+
+body.theme-2 .profile-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.66));
+}
+
+body.theme-3 .profile-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.64));
+}
+
+body.theme-1 .kpi-icon {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 1), rgba(34, 211, 238, 1));
+    color: white;
+}
+
+body.theme-2 .kpi-icon {
+    background: linear-gradient(135deg, rgba(244, 114, 182, 1), rgba(6, 182, 212, 1));
+    color: white;
+}
+
+body.theme-3 .kpi-icon {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 1), rgba(245, 158, 11, 1));
+    color: white;
+}
+
 body.theme-1 .profile-card::before {
     background: conic-gradient(from 180deg,
             rgba(0, 0, 0, 0),
