@@ -7,7 +7,9 @@
     <title>DamaDam Dashboard (Live)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -141,6 +143,10 @@
                 </div>
 
                 <div class="panel-actions">
+                    <div class="view-toggle" role="group" aria-label="View mode">
+                        <button class="view-btn is-active" id="cardViewBtn" type="button">Cards</button>
+                        <button class="view-btn" id="tableViewBtn" type="button">Table</button>
+                    </div>
                     <div class="input">
                         <span class="input-icon">⌕</span>
                         <input id="searchInput" type="search" placeholder="Search nickname, city, tags…"
@@ -161,7 +167,9 @@
                 </div>
             </div>
 
-            <div class="table-wrap glass">
+            <div id="cardsContainer" class="profiles-grid" aria-live="polite"></div>
+
+            <div id="tableContainer" class="table-wrap glass" style="display:none;">
                 <table class="table" id="profilesTable">
                     <thead>
                         <tr>

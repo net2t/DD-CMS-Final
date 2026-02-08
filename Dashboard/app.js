@@ -7,6 +7,8 @@ const CONFIG = {
 
 const el = (id) => document.getElementById(id);
 
+let _viewMode = "cards"; // 'cards' | 'table'
+
 function setSyncState(state, text) {
     const dot = el("syncDot");
     const label = el("syncText");
@@ -162,6 +164,8 @@ function deriveProfilesModel(rows) {
             const phase2 = getField(r, idx, ["PHASE 2", "PHASE2"]);
             const scraped = getField(r, idx, ["DATETIME SCRAP", "DATETIME SCRAPED", "DATETIME"]);
             const profileLink = getField(r, idx, ["PROFILE LINK", "PROFILE"]);
+            const image = getField(r, idx, ["IMAGE", "AVATAR", "PROFILE IMAGE"]);
+            const postUrl = getField(r, idx, ["POST URL", "PUBLIC PROFILE", "POSTURL"]);
 
             return {
                 _i: i + 1,
@@ -174,6 +178,8 @@ function deriveProfilesModel(rows) {
                 phase2: String(phase2 || "").trim(),
                 scraped: String(scraped || "").trim(),
                 profileLink: String(profileLink || "").trim(),
+                image: String(image || "").trim(),
+                postUrl: String(postUrl || "").trim(),
                 _raw: r,
             };
         });
@@ -308,6 +314,80 @@ function renderTable(items) {
     });
 }
 
+function renderCards(items) {
+    const container = el("cardsContainer");
+    const filters = getFilters();
+    const filtered = items.filter((it) => matchesFilters(it, filters));
+
+    el("totalCount").textContent = String(items.length);
+    el("shownCount").textContent = String(filtered.length);
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="muted">No rows match filters.</div>`;
+        return;
+    }
+
+    container.innerHTML = filtered
+        .slice(0, 300)
+        .map((it) => {
+            const nick = escapeHtml(it.nick || "—");
+            const city = escapeHtml(it.city || "");
+            const tags = escapeHtml(it.tags || "");
+            const scraped = escapeHtml(it.scraped || "");
+
+            const img = safeUrl(it.image);
+            const posts = safeInt(it.posts || "");
+            const followers = safeInt(it.followers || "");
+
+            const profileLink = safeUrl(it.profileLink);
+            const publicLink = safeUrl(it.postUrl);
+
+            const status = statusBadge(it.status);
+            const phase2 = phase2Badge(it.phase2);
+
+            return `
+        <article class="profile-card" data-link="${escapeHtml(profileLink || publicLink)}">
+          <div class="profile-head">
+            <img class="avatar" alt="${nick}" src="${img || ""}" onerror="this.style.display='none'" />
+            <div class="profile-title">
+              <div class="profile-nick">${nick}</div>
+              <div class="profile-sub">${city ? city : ""}${city && scraped ? " • " : ""}${scraped}</div>
+            </div>
+            <div>${status}</div>
+          </div>
+          <div class="profile-body">
+            <div class="kv"><div class="k">FOLLOWERS</div><div class="v">${followers}</div></div>
+            <div class="kv"><div class="k">POSTS</div><div class="v">${posts}</div></div>
+            <div class="kv" style="grid-column: 1 / -1;"><div class="k">PHASE 2</div><div class="v">${phase2}</div></div>
+          </div>
+          <div class="profile-foot">
+            <div class="tag-pill">${tags || "No tags"}</div>
+            <a class="link" href="${escapeHtml(publicLink || profileLink || "#")}" target="_blank" rel="noreferrer">Open</a>
+          </div>
+        </article>
+      `;
+        })
+        .join("");
+
+    container.querySelectorAll(".profile-card[data-link]").forEach((card) => {
+        card.addEventListener("click", (ev) => {
+            const a = ev.target && ev.target.closest ? ev.target.closest("a") : null;
+            if (a) return;
+            const link = card.getAttribute("data-link") || "";
+            if (link && /^https?:\/\//i.test(link)) {
+                window.open(link, "_blank", "noreferrer");
+            }
+        });
+    });
+}
+
+function safeUrl(url) {
+    const u = String(url || "").trim();
+    if (!u) return "";
+    if (/^https?:\/\//i.test(u)) return u;
+    return "";
+}
+
 let _pollTimer = null;
 let _currentItems = [];
 
@@ -326,11 +406,20 @@ async function fetchProfiles() {
     const rows = parseCsv(text);
     const model = deriveProfilesModel(rows);
 
-    _currentItems = model.items;
+    // Extend model items with more fields used in cards
+    _currentItems = model.items.map((it) => ({
+        ...it,
+        imageUrl: it.imageUrl || it.image || "",
+        postUrl: it.postUrl || "",
+    }));
 
     const kpis = computeKpis(model.items);
     applyKpis(kpis);
-    renderTable(model.items);
+    if (_viewMode === "table") {
+        renderTable(_currentItems);
+    } else {
+        renderCards(_currentItems);
+    }
 
     const ms = Date.now() - startedAt;
     setSyncState("good", `Live • ${ms}ms`);
@@ -358,13 +447,51 @@ function bindUi() {
     });
 
     ["searchInput", "statusFilter", "phase2Filter"].forEach((id) => {
-        el(id).addEventListener("input", () => renderTable(_currentItems));
-        el(id).addEventListener("change", () => renderTable(_currentItems));
+        el(id).addEventListener("input", () => {
+            if (_viewMode === "table") renderTable(_currentItems);
+            else renderCards(_currentItems);
+        });
+        el(id).addEventListener("change", () => {
+            if (_viewMode === "table") renderTable(_currentItems);
+            else renderCards(_currentItems);
+        });
     });
+
+    el("cardViewBtn").addEventListener("click", () => {
+        _viewMode = "cards";
+        applyViewMode();
+        renderCards(_currentItems);
+    });
+
+    el("tableViewBtn").addEventListener("click", () => {
+        _viewMode = "table";
+        applyViewMode();
+        renderTable(_currentItems);
+    });
+}
+
+function applyViewMode() {
+    const cards = el("cardsContainer");
+    const table = el("tableContainer");
+    const cardBtn = el("cardViewBtn");
+    const tableBtn = el("tableViewBtn");
+
+    if (_viewMode === "table") {
+        cards.style.display = "none";
+        table.style.display = "block";
+        cardBtn.classList.remove("is-active");
+        tableBtn.classList.add("is-active");
+    } else {
+        cards.style.display = "grid";
+        table.style.display = "none";
+        cardBtn.classList.add("is-active");
+        tableBtn.classList.remove("is-active");
+    }
 }
 
 function init() {
     bindUi();
+    applyViewMode();
     fetchProfiles()
         .catch((e) => {
             console.error(e);
