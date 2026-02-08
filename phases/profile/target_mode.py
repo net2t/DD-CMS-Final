@@ -572,13 +572,6 @@ class ProfileScraper:
                 if raw_time:
                     last_post['LAST POST TIME'] = normalize_post_datetime(raw_time)
 
-                if last_post.get('LAST POST') or last_post.get('LAST POST TIME'):
-                    log_msg(
-                        f"Public last post extracted for {nickname}: "
-                        f"text_len={len(last_post.get('LAST POST') or '')}, time='{last_post.get('LAST POST TIME')}'",
-                        "OK"
-                    )
-
             except Exception:
                 log_msg(f"Public last post scrape failed for {nickname}", "WARNING")
                 pass

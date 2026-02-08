@@ -116,10 +116,6 @@ class SheetsBatchWriter:
         if self.auto_flush_interval > 0:
             elapsed = time.time() - self.last_flush_time
             if elapsed >= self.auto_flush_interval:
-                log_msg(
-                    f"Auto-flush triggered (interval: {elapsed:.1f}s)",
-                    "INFO"
-                )
                 self.flush()
         
         return True
@@ -144,7 +140,7 @@ class SheetsBatchWriter:
             return {'success': 0, 'failed': 0, 'total': 0}
         
         queue_size = len(self.queue)
-        log_msg(f"Flushing {queue_size} profile(s) to sheet...", "INFO")
+        # Intentionally keep flush quiet; batch writer can be noisy during scraping.
         
         success_count = 0
         failed_count = 0
@@ -249,19 +245,11 @@ class SheetsBatchWriter:
         Ensures all queued profiles are written even if exception occurred.
         """
         if self.queue:
-            log_msg(
-                "Context exit: auto-flushing remaining profiles...",
-                "INFO"
-            )
             self.flush()
         
         # Print final statistics
         stats = self.get_stats()
-        log_msg(
-            f"Batch writer stats: {stats['flushed']} flushed, "
-            f"{stats['failed']} failed, {stats['batches']} batches",
-            "INFO"
-        )
+        # Keep context-exit summary quiet; flush() already reports success/failure.
         
         return False  # Don't suppress exceptions
     
