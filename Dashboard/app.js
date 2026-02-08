@@ -8,6 +8,8 @@ const CONFIG = {
 const el = (id) => document.getElementById(id);
 
 let _viewMode = "cards"; // 'cards' | 'table'
+let _page = 1;
+const PAGE_SIZE = 6;
 
 function setSyncState(state, text) {
     const dot = el("syncDot");
@@ -161,6 +163,9 @@ function deriveProfilesModel(rows) {
             const status = getField(r, idx, ["STATUS"]);
             const posts = getField(r, idx, ["POSTS"]);
             const followers = getField(r, idx, ["FOLLOWERS"]);
+            const gender = getField(r, idx, ["GENDER"]);
+            const married = getField(r, idx, ["MARRIED", "MARITAL"]);
+            const age = getField(r, idx, ["AGE"]);
             const phase2 = getField(r, idx, ["PHASE 2", "PHASE2"]);
             const scraped = getField(r, idx, ["DATETIME SCRAP", "DATETIME SCRAPED", "DATETIME"]);
             const profileLink = getField(r, idx, ["PROFILE LINK", "PROFILE"]);
@@ -175,6 +180,9 @@ function deriveProfilesModel(rows) {
                 status: String(status || "").trim(),
                 posts: String(posts || "").trim(),
                 followers: String(followers || "").trim(),
+                gender: String(gender || "").trim(),
+                married: String(married || "").trim(),
+                age: String(age || "").trim(),
                 phase2: String(phase2 || "").trim(),
                 scraped: String(scraped || "").trim(),
                 profileLink: String(profileLink || "").trim(),
@@ -319,6 +327,20 @@ function renderCards(items) {
     const filters = getFilters();
     const filtered = items.filter((it) => matchesFilters(it, filters));
 
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (_page > totalPages) _page = totalPages;
+    if (_page < 1) _page = 1;
+
+    const start = (_page - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+    const pageLabel = el("pageLabel");
+    if (pageLabel) pageLabel.textContent = `Page ${_page} / ${totalPages}`;
+    const prevBtn = el("prevPageBtn");
+    const nextBtn = el("nextPageBtn");
+    if (prevBtn) prevBtn.disabled = _page <= 1;
+    if (nextBtn) nextBtn.disabled = _page >= totalPages;
+
     el("totalCount").textContent = String(items.length);
     el("shownCount").textContent = String(filtered.length);
 
@@ -327,8 +349,7 @@ function renderCards(items) {
         return;
     }
 
-    container.innerHTML = filtered
-        .slice(0, 300)
+    container.innerHTML = pageItems
         .map((it) => {
             const nick = escapeHtml(it.nick || "—");
             const city = escapeHtml(it.city || "");
@@ -339,6 +360,10 @@ function renderCards(items) {
             const posts = safeInt(it.posts || "");
             const followers = safeInt(it.followers || "");
 
+            const gender = escapeHtml(it.gender || "—");
+            const married = escapeHtml(it.married || "—");
+            const age = escapeHtml(it.age || "—");
+
             const profileLink = safeUrl(it.profileLink);
             const publicLink = safeUrl(it.postUrl);
 
@@ -347,8 +372,11 @@ function renderCards(items) {
 
             return `
         <article class="profile-card" data-link="${escapeHtml(profileLink || publicLink)}">
+          <div class="profile-bg" style="background-image:url('${escapeHtml(img)}')"></div>
           <div class="profile-head">
-            <img class="avatar" alt="${nick}" src="${img || ""}" onerror="this.style.display='none'" />
+            <div class="avatar-wrap">
+              <img class="avatar" alt="${nick}" src="${img || ""}" onerror="this.style.display='none'" />
+            </div>
             <div class="profile-title">
               <div class="profile-nick">${nick}</div>
               <div class="profile-sub">${city ? city : ""}${city && scraped ? " • " : ""}${scraped}</div>
@@ -356,6 +384,9 @@ function renderCards(items) {
             <div>${status}</div>
           </div>
           <div class="profile-body">
+            <div class="kv"><div class="k">GENDER</div><div class="v">${gender}</div></div>
+            <div class="kv"><div class="k">MARRIED</div><div class="v">${married}</div></div>
+            <div class="kv"><div class="k">AGE</div><div class="v">${age}</div></div>
             <div class="kv"><div class="k">FOLLOWERS</div><div class="v">${followers}</div></div>
             <div class="kv"><div class="k">POSTS</div><div class="v">${posts}</div></div>
             <div class="kv" style="grid-column: 1 / -1;"><div class="k">PHASE 2</div><div class="v">${phase2}</div></div>
@@ -448,10 +479,12 @@ function bindUi() {
 
     ["searchInput", "statusFilter", "phase2Filter"].forEach((id) => {
         el(id).addEventListener("input", () => {
+            _page = 1;
             if (_viewMode === "table") renderTable(_currentItems);
             else renderCards(_currentItems);
         });
         el(id).addEventListener("change", () => {
+            _page = 1;
             if (_viewMode === "table") renderTable(_currentItems);
             else renderCards(_currentItems);
         });
@@ -468,6 +501,19 @@ function bindUi() {
         applyViewMode();
         renderTable(_currentItems);
     });
+
+    const prevBtn = el("prevPageBtn");
+    const nextBtn = el("nextPageBtn");
+    if (prevBtn && nextBtn) {
+        prevBtn.addEventListener("click", () => {
+            _page = Math.max(1, _page - 1);
+            if (_viewMode === "cards") renderCards(_currentItems);
+        });
+        nextBtn.addEventListener("click", () => {
+            _page = _page + 1;
+            if (_viewMode === "cards") renderCards(_currentItems);
+        });
+    }
 }
 
 function applyViewMode() {
@@ -481,11 +527,15 @@ function applyViewMode() {
         table.style.display = "block";
         cardBtn.classList.remove("is-active");
         tableBtn.classList.add("is-active");
+        const pager = el("cardsPager");
+        if (pager) pager.style.display = "none";
     } else {
         cards.style.display = "grid";
         table.style.display = "none";
         cardBtn.classList.add("is-active");
         tableBtn.classList.remove("is-active");
+        const pager = el("cardsPager");
+        if (pager) pager.style.display = "flex";
     }
 }
 

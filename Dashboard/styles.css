@@ -509,6 +509,198 @@ input[type="search"]:focus {
     text-decoration: underline;
 }
 
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 16px 18px;
+    border-top: 1px solid var(--border);
+}
+
+.profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 14px;
+    padding: 16px;
+}
+
+.profile-card {
+    position: relative;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.profile-card::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    background: conic-gradient(from 180deg, rgba(124, 58, 237, 0.0), rgba(124, 58, 237, 0.35), rgba(59, 130, 246, 0.25), rgba(124, 58, 237, 0.0));
+    filter: blur(10px);
+    opacity: 0.35;
+    animation: edgeSpin 6s linear infinite;
+    pointer-events: none;
+}
+
+.profile-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(600px 220px at 20% 0%, rgba(124, 58, 237, 0.14), transparent 60%);
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.profile-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(124, 58, 237, 0.25);
+}
+
+.profile-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(14px) saturate(1.15);
+    opacity: 0.16;
+    transform: scale(1.12);
+    pointer-events: none;
+}
+
+.profile-head,
+.profile-body,
+.profile-foot {
+    position: relative;
+    z-index: 1;
+}
+
+.profile-head {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    align-items: center;
+}
+
+.avatar-wrap {
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+}
+
+.avatar-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 999px;
+    background: conic-gradient(from 0deg, var(--primary), var(--secondary), var(--info), var(--primary));
+    animation: ringSpin 3.8s linear infinite;
+    filter: blur(0px);
+}
+
+.avatar-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: var(--bg-card);
+}
+
+.avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.profile-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-nick {
+    font-weight: 900;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.profile-sub {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-body {
+    padding: 0 16px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.kv {
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    background: rgba(241, 245, 249, 0.72);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+}
+
+.kv .k {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.kv .v {
+    margin-top: 4px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.profile-foot {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.tag-pill {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 0.8rem;
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    max-width: 55%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .panel-foot {
     display: flex;
     justify-content: space-between;
@@ -535,10 +727,26 @@ input[type="search"]:focus {
     .kpi-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .profiles-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 @media (min-width: 1160px) {
     .kpi-grid {
         grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+@keyframes ringSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes edgeSpin {
+    to {
+        transform: rotate(360deg);
     }
 }
