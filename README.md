@@ -6,6 +6,8 @@
 ![License](https://img.shields.io/badge/license-Educational-green.svg)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen.svg)
 ![Phase](https://img.shields.io/badge/phase-1%20Complete-success.svg)
+![Target Mode Workflow](https://github.com/net2t/DD-CMS-Final/actions/workflows/scrape-target.yml/badge.svg)
+![Online Mode Workflow](https://github.com/net2t/DD-CMS-Final/actions/workflows/scrape-online.yml/badge.svg)
 
 **Professional automation bot for scraping DamaDam.pk user profiles**
 

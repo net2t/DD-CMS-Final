@@ -142,12 +142,49 @@ class SheetsManager:
         self.tags_mapping = {}
         self.existing_profiles = {}
         self._sorted_profiles_this_run = False
+        self._writes_since_profile_reload = 0
+        self._profile_reload_interval = 50
         
         self._init_headers()
         self._load_tags()
         self._load_existing_profiles()
         
         log_msg("Google Sheets connected successfully", "OK")
+
+    def _maybe_reload_existing_profiles(self, force: bool = False):
+        """Reload existing profiles cache occasionally to reduce expensive full-sheet reads."""
+        if force:
+            self._writes_since_profile_reload = 0
+            self._load_existing_profiles()
+            return
+
+        self._writes_since_profile_reload += 1
+        if self._writes_since_profile_reload >= self._profile_reload_interval:
+            self._writes_since_profile_reload = 0
+            self._load_existing_profiles()
+
+    def _update_existing_profiles_cache_after_insert(self, nickname: str, inserted_row_data: list, inserted_row_num: int = 2):
+        """Best-effort update of in-memory cache without a full reload."""
+        try:
+            key = (nickname or "").strip().lower()
+            if not key:
+                return
+
+            # Inserted at row 2 means all existing cached row numbers shift down by 1.
+            if inserted_row_num == 2:
+                for rec in self.existing_profiles.values():
+                    try:
+                        rec['row'] = int(rec.get('row') or 0) + 1
+                    except Exception:
+                        continue
+
+            self.existing_profiles[key] = {
+                'row': inserted_row_num,
+                'data': inserted_row_data
+            }
+        except Exception:
+            # Cache update is opportunistic; ignore failures.
+            pass
     
     def _get_or_create(self, name, cols=20, rows=1000):
         """Safely gets a worksheet by name, creating it if it doesn't exist."""
@@ -511,13 +548,15 @@ class SheetsManager:
                             self._perform_write_operation(self.profiles_ws.update_note, cell_a1, note_text)
                     except Exception:
                         pass
-                    self._load_existing_profiles()
+                    self._update_existing_profiles_cache_after_insert(nickname, updated_row, inserted_row_num=2)
+                    self._maybe_reload_existing_profiles()
                     return {"status": "updated", "changed_fields": changed_fields}
             return {"status": "error", "error": "Failed to update sheet"}
         else:
             if self._perform_write_operation(self.profiles_ws.insert_row, row_data, index=2):
                 log_msg(f"New profile {nickname} added at Row 2.", "OK")
-                self._load_existing_profiles()
+                self._update_existing_profiles_cache_after_insert(nickname, row_data, inserted_row_num=2)
+                self._maybe_reload_existing_profiles()
                 return {"status": "new"}
             return {"status": "error", "error": "Failed to write to sheet"}
 
@@ -689,7 +728,7 @@ class SheetsManager:
                     except Exception:
                         pass
                 self._apply_header_format(self.profiles_ws)
-                self._load_existing_profiles()
+                self._maybe_reload_existing_profiles(force=True)
                 log_msg("Profiles sorted by date.", "OK")
                 self._sorted_profiles_this_run = True
         except (ValueError, APIError) as e:

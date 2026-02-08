@@ -24,6 +24,7 @@ from config.config_common import Config
 from config.selectors import ProfileSelectors
 from utils.ui import get_pkt_time, log_msg, log_progress
 from utils.url_builder import get_profile_url, get_public_profile_url
+from utils.sheets_batch_writer import SheetsBatchWriter
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -863,6 +864,8 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
     scraper = ProfileScraper(driver)
 
+    writer = SheetsBatchWriter(sheets, batch_size=Config.BATCH_SIZE)
+
     for i, target in enumerate(targets, 1):
         try:
             # Validate and clean nickname
@@ -898,21 +901,23 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
                     stats["phase2_not_eligible"] += 1
                     profile_data["PHASE 2"] = "Not Eligible"
 
-                # Write to sheet
-                result = sheets.write_profile(profile_data)
-                status = result.get('status', 'error')
+                # Queue for batch write; actual write occurs on flush.
+                writer.add_profile(profile_data)
+                stats['success'] += 1
+                if row:
+                    sheets.update_target_status(row, 'Done', 'Queued')
 
-                if status in {"new", "updated", "unchanged"}:
-                    stats[status] += 1
-                    stats['success'] += 1
-                    if row:
-                        sheets.update_target_status(row, 'Done', f'Scraped: {status}')
+                # Flush on batch boundary or final profile, then update stats/statuses.
+                if (i % Config.BATCH_SIZE == 0) or (i == len(targets)):
+                    flush_result = writer.flush()
+                    # We can't map per-profile status from batch flush (uses write_profile internally),
+                    # so we treat flush failures as run-level failures.
+                    if flush_result.get('failed', 0) > 0:
+                        stats['failed'] += flush_result.get('failed', 0)
+                    # Success statuses (new/updated/unchanged) are not available here; keep success count.
+                    log_progress(i, len(targets), nickname, "queued")
                 else:
-                    stats['failed'] += 1
-                    if row:
-                        sheets.update_target_status(row, 'Error', 'Sheet write failed')
-                
-                log_progress(i, len(targets), nickname, status)
+                    log_progress(i, len(targets), nickname, "queued")
 
             else: # Scrape failed
                 stats['failed'] += 1
@@ -933,6 +938,12 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
         # Add delay between requests
         if i < len(targets):
             time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
+
+    # Ensure any remaining queued profiles are flushed.
+    try:
+        writer.flush()
+    except Exception:
+        pass
     
     log_msg(f"=== {label} MODE COMPLETED ===")
     log_msg(
