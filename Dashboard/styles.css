@@ -11,6 +11,19 @@ body::before {
     z-index: -1;
 }
 
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+    background-size: 80px 80px;
+    opacity: 0.25;
+    z-index: -1;
+}
+
 :root {
     --primary: #7C3AED;
     --secondary: #3B82F6;
@@ -349,27 +362,27 @@ a {
 }
 
 .kpi-purple {
-    background-color: var(--primary);
+    background: linear-gradient(135deg, var(--primary), var(--accent-a));
 }
 
 .kpi-green {
-    background-color: var(--success);
+    background: linear-gradient(135deg, var(--success), #34D399);
 }
 
 .kpi-amber {
-    background-color: var(--warning);
+    background: linear-gradient(135deg, var(--warning), #FDE047);
 }
 
 .kpi-red {
-    background-color: var(--danger);
+    background: linear-gradient(135deg, var(--danger), #FB7185);
 }
 
 .kpi-cyan {
-    background-color: var(--info);
+    background: linear-gradient(135deg, var(--info), var(--accent-b));
 }
 
 .kpi-slate {
-    background-color: var(--secondary);
+    background: linear-gradient(135deg, var(--secondary), var(--accent-b));
 }
 
 .panel {
@@ -379,6 +392,8 @@ a {
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-lg);
+    transition: var(--transition);
+    cursor: pointer;
 }
 
 .panel-head {
@@ -788,6 +803,17 @@ body.theme-1 {
     --secondary: #3B82F6;
     --accent-a: #A78BFA;
     --accent-b: #22D3EE;
+    --bg-primary: #F8FAFC;
+    --bg-secondary: #F1F5F9;
+    --bg-card: #FFFFFF;
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --border: #E2E8F0;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --transition: all 0.3s ease;
 }
 
 body.theme-2 {
@@ -795,6 +821,17 @@ body.theme-2 {
     --secondary: #06B6D4;
     --accent-a: #F472B6;
     --accent-b: #34D399;
+    --bg-primary: #F7F7F7;
+    --bg-secondary: #F2F2F2;
+    --bg-card: #FFFFFF;
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --border: #E2E8F0;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --transition: all 0.3s ease;
 }
 
 body.theme-3 {
@@ -802,6 +839,54 @@ body.theme-3 {
     --secondary: #7C3AED;
     --accent-a: #22C55E;
     --accent-b: #F59E0B;
+    --bg-primary: #F0F0F0;
+    --bg-secondary: #E5E5E5;
+    --bg-card: #FFFFFF;
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --border: #E2E8F0;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --transition: all 0.3s ease;
+}
+
+body.theme-1 .profile-card::before {
+    background: conic-gradient(from 180deg,
+            rgba(0, 0, 0, 0),
+            rgba(124, 58, 237, 0.45),
+            rgba(59, 130, 246, 0.35),
+            rgba(34, 211, 238, 0.28),
+            rgba(0, 0, 0, 0));
+}
+
+body.theme-2 .profile-card::before {
+    background: conic-gradient(from 180deg,
+            rgba(0, 0, 0, 0),
+            rgba(244, 114, 182, 0.42),
+            rgba(6, 182, 212, 0.34),
+            rgba(52, 211, 153, 0.26),
+            rgba(0, 0, 0, 0));
+}
+
+body.theme-3 .profile-card::before {
+    background: conic-gradient(from 180deg,
+            rgba(0, 0, 0, 0),
+            rgba(37, 99, 235, 0.40),
+            rgba(34, 197, 94, 0.30),
+            rgba(245, 158, 11, 0.22),
+            rgba(0, 0, 0, 0));
+}
+
+body.theme-4 .profile-card::before {
+    background: conic-gradient(from 180deg,
+            rgba(0, 0, 0, 0),
+            rgba(124, 58, 237, 0.55),
+            rgba(6, 182, 212, 0.38),
+            rgba(239, 68, 68, 0.28),
+            rgba(0, 0, 0, 0));
+    opacity: 0.45;
 }
 
 body.theme-4 {
