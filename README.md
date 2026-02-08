@@ -153,7 +153,7 @@ DD-CMS-Final/
 │
 ├── .env.example               # Environment variables template
 ├── .gitignore                 # Git ignore rules
-├── CHANGELOG.md               # Version history
+├── docs/meta/CHANGELOG.md     # Version history
 ├── ISSUE_DOC.md              # Issue tracking
 ├── LICENSE                    # License information
 ├── README.md                  # This file
@@ -802,7 +802,7 @@ Please respect DamaDam.pk's Terms of Service and robots.txt.
 - 🔧 [GitHub Actions Guide](docs/guides/GITHUB_ACTIONS_GUIDE.md) - CI/CD troubleshooting
 - 🏗️ [Architecture](docs/reference/ARCHITECTURE.md) - System design overview
 - 🔒 [Security](SECURITY.txt) - Security best practices
-- 📝 [Changelog](CHANGELOG.md) - Version history
+- 📝 [Changelog](docs/meta/CHANGELOG.md) - Version history
 
 ---
 

@@ -12,7 +12,7 @@ BATCH 3 introduces **advanced production features** focused on:
 
 ## 📦 New Files Created
 
-### 1. `PROJECT_RULES.md` 🔒 CRITICAL
+### 1. `docs/meta/project_rules.md` 🔒 CRITICAL
 **Purpose**: Global architecture rules and AI guidelines
 
 **This is the MOST IMPORTANT file in BATCH 3!**
@@ -456,7 +456,7 @@ python main.py target --max-profiles 10
 
 ## 🚨 Important Reminders
 
-### 1. PROJECT_RULES.md is Law
+### 1. docs/meta/project_rules.md is Law
 ```
 ┌─────────────────────────────────────────────────┐
 │  READ PROJECT_RULES.md BEFORE ANY CHANGES       │
@@ -523,7 +523,7 @@ After testing BATCH 3, we'll create BATCH 4 with:
 
 ### File Locations
 ```
-PROJECT_RULES.md                  → Root (read first!)
+docs/meta/project_rules.md         → Read first!
 utils/sheets_batch_writer.py     → Batch writes
 utils/profile_cache.py            → Profile caching
 utils/dashboard_generator.py     → Dynamic dashboards

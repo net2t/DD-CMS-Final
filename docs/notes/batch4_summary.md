@@ -134,28 +134,28 @@ Practical > Theoretical
 1. README.md              → Overview + quick start
 2. SETUP_WINDOWS.md       → Get it running
 3. TESTING.md             → Verify it works
-4. LIMIT_HANDLING.md      → If problems occur
+4. docs/guides/LIMIT_HANDLING.md      → If problems occur
 ```
 
 ### Developer (Want to modify code)
 ```
 1. ARCHITECTURE.md        → Understand structure
-2. PROJECT_RULES.md       → Know the rules
+2. docs/meta/project_rules.md       → Know the rules
 3. PHASE_GUIDE.md         → Understand phases
 4. TESTING.md             → Test your changes
 ```
 
 ### Contributor (Want to add features)
 ```
-1. CONTRIBUTING.md        → Contribution guidelines
-2. PROJECT_RULES.md       → Architecture rules
+1. docs/meta/CONTRIBUTING.md        → Contribution guidelines
+2. docs/meta/project_rules.md       → Architecture rules
 3. PHASE_GUIDE.md         → Phase system
 4. TESTING.md             → Test requirements
 ```
 
 ### Troubleshooter (Having issues)
 ```
-1. LIMIT_HANDLING.md      → Rate limit issues
+1. docs/guides/LIMIT_HANDLING.md      → Rate limit issues
 2. TESTING.md             → Verify setup
 3. GITHUB_ACTIONS_FIX.md  → CI/CD problems
 4. SECURITY.md            → Security concerns
@@ -170,7 +170,7 @@ Practical > Theoretical
 ### 🎯 Core Documentation
 - ✅ **README.md** - Main overview
 - ✅ **ARCHITECTURE.md** - System design (BATCH 4)
-- ✅ **PROJECT_RULES.md** - Architecture rules (BATCH 3)
+- ✅ **docs/meta/project_rules.md** - Architecture rules (BATCH 3)
 - ✅ **PHASE_GUIDE.md** - Phase system (BATCH 4)
 
 ### 🔧 Setup Guides
@@ -180,13 +180,13 @@ Practical > Theoretical
 
 ### 🐛 Troubleshooting
 - ✅ **TESTING.md** - Testing guide (BATCH 4)
-- ✅ **LIMIT_HANDLING.md** - Rate limits (BATCH 1)
+- ✅ **docs/guides/LIMIT_HANDLING.md** - Rate limits (BATCH 1)
 - ✅ **GITHUB_ACTIONS_FIX.md** - CI/CD fix
 
 ### 🔒 Security & Governance
 - ✅ **SECURITY.md** - Security best practices (BATCH 1)
-- ✅ **CONTRIBUTING.md** - Contribution guide (BATCH 1)
-- ✅ **CHANGELOG.md** - Version history
+- ✅ **docs/meta/CONTRIBUTING.md** - Contribution guide (BATCH 1)
+- ✅ **docs/meta/CHANGELOG.md** - Version history
 
 ### 📊 Development
 - ✅ **BATCH_2_SUMMARY.md** - Code improvements (BATCH 2)
@@ -206,7 +206,7 @@ Practical > Theoretical
 1. README.md              (15 min) - Overview
 2. SETUP_WINDOWS.md       (40 min) - Setup
 3. TESTING.md             (10 min) - Verify
-4. LIMIT_HANDLING.md      (10 min) - If issues
+4. docs/guides/LIMIT_HANDLING.md      (10 min) - If issues
 
 Total: ~75 minutes
 ```
@@ -215,7 +215,7 @@ Total: ~75 minutes
 ```
 1. README.md              (15 min)
 2. ARCHITECTURE.md        (20 min) ← Start here for structure
-3. PROJECT_RULES.md       (30 min) ← Critical!
+3. docs/meta/project_rules.md       (30 min) ← Critical!
 4. PHASE_GUIDE.md         (20 min)
 5. Code files             (varies)
 
@@ -225,7 +225,7 @@ Total: ~85 minutes + coding time
 ### Path 3: Quick Start (Experienced dev)
 ```
 1. README.md              (5 min)  - Skim
-2. PROJECT_RULES.md       (10 min) - Phase 1 lock section
+2. docs/meta/project_rules.md       (10 min) - Phase 1 lock section
 3. ARCHITECTURE.md        (10 min) - File organization
 4. Start coding
 
@@ -280,8 +280,8 @@ Total: ~25 minutes
 
 ### BATCH 1 ✅
 - [x] SECURITY.md
-- [x] CONTRIBUTING.md
-- [x] LIMIT_HANDLING.md
+- [x] docs/meta/CONTRIBUTING.md
+- [x] docs/guides/LIMIT_HANDLING.md
 - [x] .env.example
 - [x] Pre-commit hook
 - [x] Comprehensive README.md
@@ -292,7 +292,7 @@ Total: ~25 minutes
 - [x] Inline comments
 
 ### BATCH 3 ✅
-- [x] PROJECT_RULES.md (Critical!)
+- [x] docs/meta/project_rules.md (Critical!)
 - [x] BATCH_3_SUMMARY.md
 
 ### BATCH 4 ✅
@@ -367,13 +367,13 @@ Readiness:         ████████████████████ 
 **Best Features:**
 
 1. **ARCHITECTURE.md** - Beautiful visual flow diagrams
-2. **PROJECT_RULES.md** - Prevents code mixing forever
+2. **docs/meta/project_rules.md** - Prevents code mixing forever
 3. **PHASE_GUIDE.md** - Crystal clear do/don't examples
 4. **SETUP_WINDOWS.md** - Beginner-friendly step-by-step
 5. **TESTING.md** - Practical, not theoretical
 
 **Innovation:**
-- PROJECT_RULES.md includes AI assistant rules
+- docs/meta/project_rules.md includes AI assistant rules
 - Visual diagrams throughout
 - Multiple learning paths
 - Real error messages with solutions

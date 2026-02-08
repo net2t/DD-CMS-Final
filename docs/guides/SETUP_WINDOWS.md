@@ -500,6 +500,6 @@ python main.py target --max-profiles 5
 **What to read next:**
 1. README.md - Full feature list
 2. LIMIT_HANDLING.md - If you hit rate limits
-3. PROJECT_RULES.md - If you want to modify code
+3. docs/meta/project_rules.md - If you want to modify code
 
 **Happy scraping! 🚀**

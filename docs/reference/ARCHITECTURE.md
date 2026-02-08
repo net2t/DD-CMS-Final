@@ -389,7 +389,7 @@ Update: main.py to call new phase
 
 1. **README.md** - Overview + quick start
 2. **ARCHITECTURE.md** (this file) - How it works
-3. **PROJECT_RULES.md** - What you can/can't change
+3. **docs/meta/project_rules.md** - What you can/can't change
 4. **PHASE_GUIDE.md** - Phase system details
 5. **SETUP_WINDOWS.md** - Platform setup
 6. **Code files** - Start with main.py
@@ -434,7 +434,7 @@ Identify layer:
   ├─ Sheets error? → utils/sheets_manager.py
   └─ Config error? → config/*.py
   ↓
-Read PROJECT_RULES.md
+Read docs/meta/project_rules.md
   ├─ Is this a locked element?
   └─ What's the proper fix location?
   ↓
@@ -495,4 +495,4 @@ Commit with clear message
 
 ---
 
-**Questions?** Read PROJECT_RULES.md next!
+**Questions?** Read docs/meta/project_rules.md next!
