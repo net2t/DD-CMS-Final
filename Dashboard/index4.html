@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DamaDam Dashboard (Live) • Demo 4</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="theme-4">
+    <div class="bg" aria-hidden="true"></div>
+
+    <header class="topbar">
+        <div class="brand">
+            <div class="logo">DD</div>
+            <div>
+                <div class="brand-title">DamaDam</div>
+                <div class="brand-subtitle">Live Sheet Dashboard • Demo 4 (Dark)</div>
+            </div>
+        </div>
+
+        <nav class="tabs" aria-label="Dashboard tabs">
+            <a class="tab" href="index1.html">Demo 1</a>
+            <a class="tab" href="index2.html">Demo 2</a>
+            <a class="tab" href="index3.html">Demo 3</a>
+            <a class="tab is-active" href="index4.html">Demo 4</a>
+        </nav>
+
+        <div class="topbar-actions">
+            <div class="sync-pill" id="syncPill">
+                <span class="dot" id="syncDot"></span>
+                <span id="syncText">Connecting…</span>
+            </div>
+            <button class="btn" id="refreshBtn" type="button">Refresh</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <div>
+                <h1 class="h1">Profiles Overview</h1>
+                <p class="muted">Demo 4 uses a dark glass look with neon accents. Auto refresh: <span
+                        id="pollIntervalLabel">15s</span>.</p>
+            </div>
+
+            <div class="hero-right">
+                <div class="stage">
+                    <div class="stage-top">
+                        <div class="stage-title">Phase 2 Eligibility</div>
+                        <div class="stage-meta"><span id="phase2Ready">0</span> Ready / <span
+                                id="phase2NotEligible">0</span> Not Eligible</div>
+                    </div>
+                    <div class="stage-bar">
+                        <div class="stage-bar-fill" id="phase2Bar" style="width:0%"></div>
+                    </div>
+                    <div class="stage-foot">
+                        <span class="muted">Ready rate</span>
+                        <span class="mono" id="phase2Rate">0%</span>
+                    </div>
+                </div>
+
+                <div class="stage">
+                    <div class="stage-top">
+                        <div class="stage-title">Data Freshness</div>
+                        <div class="stage-meta">Latest DATETIME SCRAP</div>
+                    </div>
+                    <div class="freshness" id="freshness">—</div>
+                    <div class="stage-foot">
+                        <span class="muted">Last sync</span>
+                        <span class="mono" id="lastSync">—</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="kpi-grid" id="kpis">
+            <div class="kpi">
+                <div class="kpi-icon kpi-purple">⧉</div>
+                <div>
+                    <div class="kpi-label">Total Profiles</div>
+                    <div class="kpi-value" id="kpiTotal">0</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-icon kpi-green">✓</div>
+                <div>
+                    <div class="kpi-label">Verified</div>
+                    <div class="kpi-value" id="kpiVerified">0</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-icon kpi-amber">!</div>
+                <div>
+                    <div class="kpi-label">Unverified</div>
+                    <div class="kpi-value" id="kpiUnverified">0</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-icon kpi-red">×</div>
+                <div>
+                    <div class="kpi-label">Banned/Dead</div>
+                    <div class="kpi-value" id="kpiBanned">0</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-icon kpi-cyan">⇡</div>
+                <div>
+                    <div class="kpi-label">Newest Scrape</div>
+                    <div class="kpi-value mono" id="kpiNewest">—</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-icon kpi-slate">⟲</div>
+                <div>
+                    <div class="kpi-label">Rows Loaded</div>
+                    <div class="kpi-value" id="kpiRows">0</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <div>
+                    <h2 class="h2">Profiles</h2>
+                    <p class="muted">Cards + Table view. Theme 4 (Dark).</p>
+                </div>
+
+                <div class="panel-actions">
+                    <div class="view-toggle" role="group" aria-label="View mode">
+                        <button class="view-btn is-active" id="cardViewBtn" type="button">Cards</button>
+                        <button class="view-btn" id="tableViewBtn" type="button">Table</button>
+                    </div>
+                    <div class="input">
+                        <span class="input-icon">⌕</span>
+                        <input id="searchInput" type="search" placeholder="Search nickname, city, tags…"
+                            autocomplete="off" />
+                    </div>
+                    <select id="statusFilter" class="select">
+                        <option value="">All Status</option>
+                        <option value="VERIFIED">VERIFIED</option>
+                        <option value="UNVERIFIED">UNVERIFIED</option>
+                        <option value="BANNED">BANNED</option>
+                        <option value="DEAD">DEAD</option>
+                    </select>
+                    <select id="phase2Filter" class="select">
+                        <option value="">All Phase 2</option>
+                        <option value="Ready">Ready</option>
+                        <option value="Not Eligible">Not Eligible</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="cardsContainer" class="profiles-grid" aria-live="polite"></div>
+
+            <div class="pagination" id="cardsPager" aria-label="Cards pagination">
+                <button class="btn" id="prevPageBtn" type="button">Back</button>
+                <div class="muted mono" id="pageLabel">Page 1 / 1</div>
+                <button class="btn" id="nextPageBtn" type="button">Next</button>
+            </div>
+
+            <div id="tableContainer" class="table-wrap glass" style="display:none;">
+                <table class="table" id="profilesTable">
+                    <thead>
+                        <tr>
+                            <th style="width:56px;">#</th>
+                            <th>Nick</th>
+                            <th>Tags</th>
+                            <th>City</th>
+                            <th>Status</th>
+                            <th>Posts</th>
+                            <th>Followers</th>
+                            <th>Phase 2</th>
+                            <th>Scraped</th>
+                        </tr>
+                    </thead>
+                    <tbody id="profilesTbody">
+                        <tr>
+                            <td colspan="9" class="muted">Loading…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel-foot">
+                <div class="muted">Showing <span id="shownCount">0</span> of <span id="totalCount">0</span></div>
+                <div class="muted">CSV: <a class="link" id="csvLink" href="#" target="_blank" rel="noreferrer">open</a>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="muted">Demo 4: Dark neon • Theme 4</div>
+        </footer>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

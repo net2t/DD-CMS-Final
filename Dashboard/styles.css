@@ -1,5 +1,16 @@
 /* Modern Purple Glassmorphism Dashboard */
 
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(900px 600px at 10% 10%, rgba(167, 139, 250, 0.10), transparent 60%),
+        radial-gradient(900px 600px at 90% 0%, rgba(34, 211, 238, 0.10), transparent 55%);
+    z-index: -1;
+}
+
 :root {
     --primary: #7C3AED;
     --secondary: #3B82F6;
@@ -7,12 +18,15 @@
     --warning: #F59E0B;
     --danger: #EF4444;
     --info: #06B6D4;
+    --accent-a: #A78BFA;
+    --accent-b: #22D3EE;
     --bg-primary: #F8FAFC;
     --bg-secondary: #F1F5F9;
     --bg-card: #FFFFFF;
     --text-primary: #1E293B;
     --text-secondary: #64748B;
     --border: #E2E8F0;
+
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --radius: 8px;
@@ -749,4 +763,77 @@ input[type="search"]:focus {
     to {
         transform: rotate(360deg);
     }
+}
+
+@keyframes cardShine {
+    0% {
+        transform: translateX(-45%) rotate(12deg);
+        opacity: 0.15;
+    }
+
+    40% {
+        transform: translateX(10%) rotate(12deg);
+        opacity: 0.28;
+    }
+
+    100% {
+        transform: translateX(55%) rotate(12deg);
+        opacity: 0.10;
+    }
+}
+
+/* Demo theme variants (applied by body class) */
+body.theme-1 {
+    --primary: #7C3AED;
+    --secondary: #3B82F6;
+    --accent-a: #A78BFA;
+    --accent-b: #22D3EE;
+}
+
+body.theme-2 {
+    --primary: #8B5CF6;
+    --secondary: #06B6D4;
+    --accent-a: #F472B6;
+    --accent-b: #34D399;
+}
+
+body.theme-3 {
+    --primary: #2563EB;
+    --secondary: #7C3AED;
+    --accent-a: #22C55E;
+    --accent-b: #F59E0B;
+}
+
+body.theme-4 {
+    --primary: #111827;
+    --secondary: #7C3AED;
+    --accent-a: #EF4444;
+    --accent-b: #06B6D4;
+    --bg-primary: #0B1220;
+    --bg-secondary: rgba(255, 255, 255, 0.06);
+    --bg-card: rgba(255, 255, 255, 0.06);
+    --text-primary: rgba(255, 255, 255, 0.92);
+    --text-secondary: rgba(255, 255, 255, 0.68);
+    --border: rgba(255, 255, 255, 0.12);
+}
+
+body.theme-4 .topbar {
+    background: rgba(6, 9, 20, 0.65);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+body.theme-4 .tabs,
+body.theme-4 .btn,
+body.theme-4 .sync-pill,
+body.theme-4 input[type="search"],
+body.theme-4 .select,
+body.theme-4 .stage,
+body.theme-4 .kpi,
+body.theme-4 .panel {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.theme-4 .glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.04));
 }

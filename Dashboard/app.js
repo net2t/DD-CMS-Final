@@ -373,6 +373,7 @@ function renderCards(items) {
             return `
         <article class="profile-card" data-link="${escapeHtml(profileLink || publicLink)}">
           <div class="profile-bg" style="background-image:url('${escapeHtml(img)}')"></div>
+          <div class="shine" aria-hidden="true"></div>
           <div class="profile-head">
             <div class="avatar-wrap">
               <img class="avatar" alt="${nick}" src="${img || ""}" onerror="this.style.display='none'" />
