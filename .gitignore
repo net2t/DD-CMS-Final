@@ -28,6 +28,7 @@ damadam_cookies.pkl
 # ============ IDE & EDITOR ============
 .vscode/
 .idea/
+.windsurf/
 *.swp
 *.swo
 *~

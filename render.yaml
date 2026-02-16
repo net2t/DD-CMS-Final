@@ -1,0 +1,26 @@
+name: dd-cms-final
+services:
+- type: web
+  name: dd-cms-final
+  env: static
+  buildCommand: ""
+  publishDir: .
+  headers:
+    - path: /*
+      name: X-Frame-Options
+      value: DENY
+    - path: /*
+      name: X-Content-Type-Options
+      value: nosniff
+    - path: /*
+      name: X-XSS-Protection
+      value: "1; mode=block"
+    - path: /*
+      name: Referrer-Policy
+      value: strict-origin-when-cross-origin
+    - path: /*
+      name: Permissions-Policy
+      value: "camera=(), microphone=(), geolocation=()"
+  routes:
+    - path: /*
+      dest: /index.html
