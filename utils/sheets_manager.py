@@ -325,6 +325,7 @@ class SheetsManager:
             if ws:
                 self._apply_sheet_font(ws)
                 self._apply_sheet_wrap(ws, "CLIP")
+                self._apply_header_format(ws)
 
     def _apply_header_format(self, ws):
         """Apply 'Quantico' font to the header row (font-only)."""
@@ -335,7 +336,8 @@ class SheetsManager:
                 header_range,
                 {
                     "textFormat": {
-                        "fontFamily": "Quantico"
+                        "fontFamily": "Quantico",
+                        "foregroundColor": {"red": 1, "green": 1, "blue": 1}
                     }
                 }
             )
