@@ -2,7 +2,29 @@
 
 const CONFIG = {
     pollIntervalMs: 15000,
-    profilesCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTKKALF4TyTPNlHmAEBMGNL8SG7HW9a-4aMHo5DTVeYttUI_YspNAsffRFw6wZW7w7D9XAZctcYuZz5/pub?gid=143642608&single=true&output=csv",
+    tabs: {
+        profiles: {
+            label: "Profiles",
+            csvUrl:
+                "https://docs.google.com/spreadsheets/d/e/2PACX-1vTKKALF4TyTPNlHmAEBMGNL8SG7HW9a-4aMHo5DTVeYttUI_YspNAsffRFw6wZW7w7D9XAZctcYuZz5/pub?gid=143642608&single=true&output=csv",
+        },
+        runlist: {
+            label: "RunList",
+            csvUrl:
+                "https://docs.google.com/spreadsheets/d/e/2PACX-1vTKKALF4TyTPNlHmAEBMGNL8SG7HW9a-4aMHo5DTVeYttUI_YspNAsffRFw6wZW7w7D9XAZctcYuZz5/pub?gid=652207062&single=true&output=csv",
+        },
+        dashboard: {
+            label: "Dashboard",
+            csvUrl:
+                "https://docs.google.com/spreadsheets/d/e/2PACX-1vTKKALF4TyTPNlHmAEBMGNL8SG7HW9a-4aMHo5DTVeYttUI_YspNAsffRFw6wZW7w7D9XAZctcYuZz5/pub?gid=1956711073&single=true&output=csv",
+        },
+        onlinelog: {
+            label: "OnlineLog",
+            csvUrl:
+                "https://docs.google.com/spreadsheets/d/e/2PACX-1vTKKALF4TyTPNlHmAEBMGNL8SG7HW9a-4aMHo5DTVeYttUI_YspNAsffRFw6wZW7w7D9XAZctcYuZz5/pub?gid=2031676954&single=true&output=csv",
+        },
+    },
+    defaultTab: "profiles",
 };
 
 const el = (id) => document.getElementById(id);
@@ -10,6 +32,22 @@ const el = (id) => document.getElementById(id);
 let _viewMode = "cards"; // 'cards' | 'table'
 let _page = 1;
 const PAGE_SIZE = 6;
+
+let _activeTab = CONFIG.defaultTab;
+let _currentModel = { headers: [], rows: [], items: [] };
+
+function getActiveTabConfig() {
+    return CONFIG.tabs[_activeTab] || CONFIG.tabs[CONFIG.defaultTab];
+}
+
+function setHeroTitles() {
+    const t = getActiveTabConfig();
+    const h1 = document.querySelector(".hero .h1");
+    if (h1) h1.textContent = `${t.label} Overview`;
+
+    const panelH2 = document.querySelector(".panel .h2");
+    if (panelH2) panelH2.textContent = t.label;
+}
 
 function setSyncState(state, text) {
     const dot = el("syncDot");
@@ -256,9 +294,19 @@ function getFilters() {
 }
 
 function matchesFilters(it, filters) {
+    if (_activeTab !== "profiles") {
+        if (!filters.q) return true;
+        const obj = it && it._obj ? it._obj : {};
+        const hay = Object.values(obj)
+            .map((v) => String(v || ""))
+            .join(" ")
+            .toLowerCase();
+        return hay.includes(filters.q);
+    }
     if (filters.status) {
         if (String(it.status || "").trim().toUpperCase() !== filters.status) return false;
     }
+
     if (filters.phase2) {
         if (String(it.phase2 || "").trim() !== filters.phase2) return false;
     }
@@ -271,6 +319,10 @@ function matchesFilters(it, filters) {
 
 function renderTable(items) {
     const tbody = el("profilesTbody");
+    if (_activeTab !== "profiles") {
+        renderGenericTable(items);
+        return;
+    }
     const filters = getFilters();
     const filtered = items.filter((it) => matchesFilters(it, filters));
 
@@ -322,8 +374,63 @@ function renderTable(items) {
     });
 }
 
+function renderGenericTable(items) {
+    const tbody = el("profilesTbody");
+    const filters = getFilters();
+    const filtered = items.filter((it) => matchesFilters(it, filters));
+
+    el("totalCount").textContent = String(items.length);
+    el("shownCount").textContent = String(filtered.length);
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="muted">No rows match filters.</td></tr>`;
+        return;
+    }
+
+    const headers = (_currentModel && _currentModel.headers) || [];
+    const hA = headers[0] || "Row";
+    const hB = headers[1] || "";
+    const hC = headers[2] || "";
+
+    tbody.innerHTML = filtered
+        .slice(0, 400)
+        .map((it, idx) => {
+            const rowNo = idx + 1;
+            const a = escapeHtml(String(it._obj?.[String(hA)] ?? ""));
+            const b = escapeHtml(String(it._obj?.[String(hB)] ?? ""));
+            const c = escapeHtml(String(it._obj?.[String(hC)] ?? ""));
+
+            return `
+        <tr data-idx="${it._i}">
+          <td class="mono">${rowNo}</td>
+          <td><strong>${a || "—"}</strong></td>
+          <td>${b || ""}</td>
+          <td>${c || ""}</td>
+          <td>${escapeHtml(getActiveTabConfig().label)}</td>
+          <td class="mono">${it._i}</td>
+          <td class="mono">${escapeHtml(JSON.stringify(it._obj, null, 2))}</td>
+          <td></td>
+          <td class="mono"></td>
+        </tr>
+      `;
+        })
+        .join("");
+
+    tbody.querySelectorAll("tr[data-idx]").forEach((tr) => {
+        tr.addEventListener("click", () => {
+            const idx = parseInt(tr.getAttribute("data-idx") || "0", 10);
+            const item = filtered.find((x) => x._i === idx) || null;
+            if (item) openDetailModal(item);
+        });
+    });
+}
+
 function renderCards(items) {
     const container = el("cardsContainer");
+    if (_activeTab !== "profiles") {
+        renderGenericCards(items);
+        return;
+    }
     const filters = getFilters();
     const filtered = items.filter((it) => matchesFilters(it, filters));
 
@@ -371,7 +478,7 @@ function renderCards(items) {
             const phase2 = phase2Badge(it.phase2);
 
             return `
-        <article class="profile-card" data-link="${escapeHtml(profileLink || publicLink)}">
+        <article class="profile-card" data-idx="${it._i}" data-link="${escapeHtml(profileLink || publicLink)}">
           <div class="profile-bg" style="background-image:url('${escapeHtml(img)}')"></div>
           <div class="shine" aria-hidden="true"></div>
           <div class="profile-head">
@@ -401,14 +508,86 @@ function renderCards(items) {
         })
         .join("");
 
-    container.querySelectorAll(".profile-card[data-link]").forEach((card) => {
-        card.addEventListener("click", (ev) => {
-            const a = ev.target && ev.target.closest ? ev.target.closest("a") : null;
-            if (a) return;
-            const link = card.getAttribute("data-link") || "";
-            if (link && /^https?:\/\//i.test(link)) {
-                window.open(link, "_blank", "noreferrer");
-            }
+    container.querySelectorAll(".profile-card[data-idx]").forEach((card) => {
+        card.addEventListener("click", () => {
+            const idx = parseInt(card.getAttribute("data-idx") || "0", 10);
+            const item = _currentItems.find((x) => x._i === idx) || null;
+            if (item) openDetailModal(item);
+        });
+    });
+}
+
+function renderGenericCards(items) {
+    const container = el("cardsContainer");
+    const filters = getFilters();
+    const filtered = items.filter((it) => matchesFilters(it, filters));
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (_page > totalPages) _page = totalPages;
+    if (_page < 1) _page = 1;
+
+    const start = (_page - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+    const pageLabel = el("pageLabel");
+    if (pageLabel) pageLabel.textContent = `Page ${_page} / ${totalPages}`;
+    const prevBtn = el("prevPageBtn");
+    const nextBtn = el("nextPageBtn");
+    if (prevBtn) prevBtn.disabled = _page <= 1;
+    if (nextBtn) nextBtn.disabled = _page >= totalPages;
+
+    el("totalCount").textContent = String(items.length);
+    el("shownCount").textContent = String(filtered.length);
+
+    const headers = (_currentModel && _currentModel.headers) || [];
+    const hA = headers[0] || "Row";
+    const hB = headers[1] || "";
+    const hC = headers[2] || "";
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="muted">No rows match filters.</div>`;
+        return;
+    }
+
+    container.innerHTML = pageItems
+        .map((it) => {
+            const a = escapeHtml(String(it._obj?.[String(hA)] ?? ""));
+            const b = escapeHtml(String(it._obj?.[String(hB)] ?? ""));
+            const c = escapeHtml(String(it._obj?.[String(hC)] ?? ""));
+            return `
+        <article class="profile-card" data-idx="${it._i}" data-link="">
+          <div class="profile-head">
+            <div class="profile-title">
+              <div class="profile-nick">${a || "—"}</div>
+              <div class="profile-sub">${b}${b && c ? " • " : ""}${c}</div>
+            </div>
+            <div><span class="badge info"><span class="badge-dot"></span>${escapeHtml(getActiveTabConfig().label)}</span></div>
+          </div>
+          <div class="profile-body" style="grid-template-columns: 1fr;">
+            ${headers
+                .slice(3, 8)
+                .map((h) => {
+                    const v = it._obj?.[String(h)] ?? "";
+                    return `<div class="kv"><div class="k">${escapeHtml(String(h || ""))}</div><div class="v">${escapeHtml(
+                        String(v || "—")
+                    )}</div></div>`;
+                })
+                .join("")}
+          </div>
+          <div class="profile-foot">
+            <div class="tag-pill">Row #${it._i}</div>
+            <span class="link">Details</span>
+          </div>
+        </article>
+      `;
+        })
+        .join("");
+
+    container.querySelectorAll(".profile-card[data-idx]").forEach((card) => {
+        card.addEventListener("click", () => {
+            const idx = parseInt(card.getAttribute("data-idx") || "0", 10);
+            const item = filtered.find((x) => x._i === idx) || null;
+            if (item) openDetailModal(item);
         });
     });
 }
@@ -420,33 +599,170 @@ function safeUrl(url) {
     return "";
 }
 
+function setFiltersVisibility() {
+    const show = _activeTab === "profiles";
+    const status = el("statusFilter");
+    const phase2 = el("phase2Filter");
+    if (status) status.style.display = show ? "" : "none";
+    if (phase2) phase2.style.display = show ? "" : "none";
+}
+
+function deriveGenericModel(rows) {
+    if (!rows || rows.length < 1) return { headers: [], rows: [], items: [] };
+    const headers = rows[0] || [];
+    const dataRows = rows
+        .slice(1)
+        .filter((r) => Array.isArray(r) && r.some((c) => String(c || "").trim() !== ""));
+
+    const items = dataRows.map((r, i) => {
+        const obj = {};
+        for (let c = 0; c < headers.length; c++) {
+            const key = String(headers[c] || `COL_${c + 1}`);
+            obj[key] = r[c] ?? "";
+        }
+        return { _i: i + 1, _raw: r, _obj: obj };
+    });
+
+    return { headers, rows: dataRows, items };
+}
+
+function openDetailModal(item) {
+    const modal = el("detailModal");
+    if (!modal) return;
+
+    const headers = (_currentModel && _currentModel.headers) || [];
+    const title = el("detailTitle");
+    const sub = el("detailSub");
+    const body = el("detailBody");
+    const openLink = el("detailOpenLink");
+
+    const primary = (() => {
+        if (_activeTab === "profiles") return item.nick || "Profile";
+        const h0 = headers[0];
+        const v0 = item && item._obj ? item._obj[String(h0 || "")] : "";
+        return String(v0 || "Row").trim() || "Row";
+    })();
+
+    if (title) title.textContent = primary;
+    if (sub) sub.textContent = `${getActiveTabConfig().label} • Row #${item._i || "—"}`;
+
+    const kvHtml = headers
+        .map((h, i) => {
+            const key = String(h || "");
+            const value = (() => {
+                if (_activeTab === "profiles") {
+                    const raw = item && item._raw ? item._raw[i] : "";
+                    return raw ?? "";
+                }
+                return item && item._obj ? item._obj[key] : "";
+            })();
+            return `<div class="kv"><div class="k">${escapeHtml(key || `COL_${i + 1}`)}</div><div class="v">${escapeHtml(
+                String(value ?? "")
+            )}</div></div>`;
+        })
+        .join("");
+
+    if (body) body.innerHTML = `<div class="profiles-grid" style="padding:0;grid-template-columns:1fr 1fr;">${kvHtml}</div>`;
+
+    const candidateLink = (() => {
+        if (_activeTab === "profiles") return safeUrl(item.profileLink) || safeUrl(item.postUrl) || "";
+        const obj = item && item._obj ? item._obj : {};
+        for (const k of Object.keys(obj)) {
+            const v = safeUrl(obj[k]);
+            if (v) return v;
+        }
+        return "";
+    })();
+
+    if (openLink) {
+        if (candidateLink) {
+            openLink.href = candidateLink;
+            openLink.style.display = "";
+        } else {
+            openLink.href = "#";
+            openLink.style.display = "none";
+        }
+    }
+
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    modal._activeItem = item;
+}
+
+function closeDetailModal() {
+    const modal = el("detailModal");
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
 let _pollTimer = null;
 let _currentItems = [];
 
-async function fetchProfiles() {
-    const url = CONFIG.profilesCsvUrl;
-    el("csvLink").href = url;
+function resolveTabFromUrl() {
+    const u = new URL(window.location.href);
+    const tab = String(u.searchParams.get("tab") || "").trim().toLowerCase();
+    if (tab && CONFIG.tabs[tab]) return tab;
+    return CONFIG.defaultTab;
+}
+
+function writeTabToUrl(tab) {
+    const u = new URL(window.location.href);
+    u.searchParams.set("tab", tab);
+    window.history.replaceState({}, "", u.toString());
+}
+
+function applyActiveTabUi() {
+    document.querySelectorAll(".tab[data-tab]").forEach((b) => {
+        const t = b.getAttribute("data-tab");
+        b.classList.toggle("is-active", t === _activeTab);
+    });
+    setHeroTitles();
+    setFiltersVisibility();
+}
+
+async function fetchActiveTab() {
+    const { csvUrl } = getActiveTabConfig();
+    el("csvLink").href = csvUrl;
 
     setSyncState("warn", "Syncing…");
     const startedAt = Date.now();
 
-    const res = await fetch(`${url}&_ts=${Date.now()}`, { cache: "no-store" });
+    const res = await fetch(`${csvUrl}&_ts=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) {
         throw new Error(`CSV fetch failed: ${res.status}`);
     }
     const text = await res.text();
     const rows = parseCsv(text);
-    const model = deriveProfilesModel(rows);
 
-    // Extend model items with more fields used in cards
-    _currentItems = model.items.map((it) => ({
-        ...it,
-        imageUrl: it.imageUrl || it.image || "",
-        postUrl: it.postUrl || "",
-    }));
+    if (_activeTab === "profiles") {
+        const model = deriveProfilesModel(rows);
+        _currentModel = { headers: model.headers, rows: rows.slice(1), items: model.items };
+        _currentItems = model.items.map((it) => ({
+            ...it,
+            imageUrl: it.imageUrl || it.image || "",
+            postUrl: it.postUrl || "",
+        }));
 
-    const kpis = computeKpis(model.items);
-    applyKpis(kpis);
+        const kpis = computeKpis(model.items);
+        applyKpis(kpis);
+    } else {
+        const model = deriveGenericModel(rows);
+        _currentModel = model;
+        _currentItems = model.items;
+        applyKpis({
+            total: model.items.length,
+            verified: 0,
+            unverified: 0,
+            banned: 0,
+            phase2Ready: 0,
+            phase2NotEligible: 0,
+            newestScrape: "—",
+        });
+        const freshness = el("freshness");
+        if (freshness) freshness.textContent = "—";
+    }
+
     if (_viewMode === "table") {
         renderTable(_currentItems);
     } else {
@@ -461,7 +777,7 @@ async function fetchProfiles() {
 function schedulePolling() {
     if (_pollTimer) clearInterval(_pollTimer);
     _pollTimer = setInterval(() => {
-        fetchProfiles().catch((e) => {
+        fetchActiveTab().catch((e) => {
             console.error(e);
             setSyncState("bad", "Sync error");
         });
@@ -471,8 +787,23 @@ function schedulePolling() {
 function bindUi() {
     el("pollIntervalLabel").textContent = `${Math.round(CONFIG.pollIntervalMs / 1000)}s`;
 
+    document.querySelectorAll(".tab[data-tab]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const t = btn.getAttribute("data-tab");
+            if (!t || !CONFIG.tabs[t]) return;
+            _activeTab = t;
+            _page = 1;
+            writeTabToUrl(_activeTab);
+            applyActiveTabUi();
+            fetchActiveTab().catch((e) => {
+                console.error(e);
+                setSyncState("bad", "Sync error");
+            });
+        });
+    });
+
     el("refreshBtn").addEventListener("click", () => {
-        fetchProfiles().catch((e) => {
+        fetchActiveTab().catch((e) => {
             console.error(e);
             setSyncState("bad", "Sync error");
         });
@@ -515,6 +846,38 @@ function bindUi() {
             if (_viewMode === "cards") renderCards(_currentItems);
         });
     }
+
+    const closeBtn = el("detailCloseBtn");
+    if (closeBtn) closeBtn.addEventListener("click", closeDetailModal);
+
+    const modal = el("detailModal");
+    if (modal) {
+        modal.addEventListener("click", (ev) => {
+            const t = ev.target;
+            if (t && t.getAttribute && t.getAttribute("data-close") === "true") {
+                closeDetailModal();
+            }
+        });
+    }
+
+    document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape") closeDetailModal();
+    });
+
+    const copyBtn = el("detailCopyBtn");
+    if (copyBtn) {
+        copyBtn.addEventListener("click", async () => {
+            const m = el("detailModal");
+            const item = m ? m._activeItem : null;
+            if (!item) return;
+            const payload = _activeTab === "profiles" ? item : item._obj || {};
+            try {
+                await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+            } catch (e) {
+                console.error(e);
+            }
+        });
+    }
 }
 
 function applyViewMode() {
@@ -541,9 +904,11 @@ function applyViewMode() {
 }
 
 function init() {
+    _activeTab = resolveTabFromUrl();
+    applyActiveTabUi();
     bindUi();
     applyViewMode();
-    fetchProfiles()
+    fetchActiveTab()
         .catch((e) => {
             console.error(e);
             setSyncState("bad", "Sync error");

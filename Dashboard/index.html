@@ -31,12 +31,9 @@
 
         <nav class="tabs" aria-label="Dashboard tabs">
             <button class="tab is-active" data-tab="profiles" type="button">Profiles</button>
-            <button class="tab" data-tab="runlist" type="button" disabled
-                title="Demo focuses on Profiles. Add RunList CSV later.">RunList</button>
-            <button class="tab" data-tab="dashboard" type="button" disabled
-                title="Add Dashboard CSV later.">Dashboard</button>
-            <button class="tab" data-tab="onlinelog" type="button" disabled
-                title="Add OnlineLog CSV later.">OnlineLog</button>
+            <button class="tab" data-tab="runlist" type="button">RunList</button>
+            <button class="tab" data-tab="dashboard" type="button">Dashboard</button>
+            <button class="tab" data-tab="onlinelog" type="button">OnlineLog</button>
         </nav>
 
         <div class="topbar-actions">
@@ -209,6 +206,24 @@
             <div class="muted">Dashboard demo (static). Purple UI + glassmorphism. Live sync via polling.</div>
         </footer>
     </main>
+
+    <div class="modal" id="detailModal" aria-hidden="true">
+        <div class="modal-backdrop" data-close="true"></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+            <div class="modal-head">
+                <div>
+                    <div class="modal-title" id="detailTitle">Row Details</div>
+                    <div class="modal-sub" id="detailSub">—</div>
+                </div>
+                <button class="icon-btn" id="detailCloseBtn" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="modal-body" id="detailBody"></div>
+            <div class="modal-foot">
+                <a class="btn" id="detailOpenLink" href="#" target="_blank" rel="noreferrer">Open link</a>
+                <button class="btn" id="detailCopyBtn" type="button">Copy JSON</button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
