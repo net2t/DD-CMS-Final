@@ -1,14 +1,14 @@
-# Online Mode Workflow - Runs every 15 minutes or manually
+# Online Mode Workflow - Runs every 10 minutes or manually
 name: Online Mode ⭕ (AUTO)
 
 concurrency:
   group: dd-scraper-online
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 on:
-  # Scheduled run every 15 minutes
+  # Scheduled run every 10 minutes
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/10 * * * *"
 
   # Manual trigger with options
   workflow_dispatch:
@@ -21,7 +21,7 @@ on:
       batch_size:
         description: "Batch size for processing"
         required: false
-        default: "20"
+        default: "50"
         type: string
 
 jobs:
@@ -106,15 +106,15 @@ jobs:
 
           # Run Configuration (limit to 30 for scheduled runs)
           MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '0' }}
-          BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || '50' }}
         run: |
           echo "🌐 Starting Online Mode..."
           echo "Max Profiles: ${{ github.event.inputs.max_profiles || '0' }}"
-          echo "Batch Size: ${{ github.event.inputs.batch_size || '20' }}"
+          echo "Batch Size: ${{ github.event.inputs.batch_size || '50' }}"
           
           python main.py online \
             --max-profiles ${{ github.event.inputs.max_profiles || '0' }} \
-            --batch-size ${{ github.event.inputs.batch_size || '20' }}
+            --batch-size ${{ github.event.inputs.batch_size || '50' }}
 
       # ============================================================
       # STEP 7: Upload Logs (Always run, even on failure)
