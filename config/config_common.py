@@ -43,8 +43,8 @@ class Config:
     BATCH_SIZE = int(os.getenv('BATCH_SIZE', '20'))
     MIN_DELAY = float(os.getenv('MIN_DELAY', '0.3'))
     MAX_DELAY = float(os.getenv('MAX_DELAY', '0.5'))
-    PAGE_LOAD_TIMEOUT = int(os.getenv('PAGE_LOAD_TIMEOUT', '20'))   # Reduced from 30
-    SHEET_WRITE_DELAY = float(os.getenv('SHEET_WRITE_DELAY', '1.0'))
+    PAGE_LOAD_TIMEOUT = int(os.getenv('PAGE_LOAD_TIMEOUT', '10'))   # Reduced from 20
+    SHEET_WRITE_DELAY = float(os.getenv('SHEET_WRITE_DELAY', '0.5')) # Reduced from 1.0
     # Speed: false = fast mode (skip public page fetch), true = full data but slower
     LAST_POST_FETCH_PUBLIC_PAGE = os.getenv('LAST_POST_FETCH_PUBLIC_PAGE', 'false').lower() == 'true'
     LAST_POST_PUBLIC_PAGE_TIMEOUT = int(os.getenv('LAST_POST_PUBLIC_PAGE_TIMEOUT', '8'))

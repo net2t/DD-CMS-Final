@@ -53,6 +53,15 @@ class BrowserManager:
             opts.add_argument("--disable-dev-shm-usage")
             opts.add_argument("--disable-gpu")
             opts.add_argument("--log-level=3")
+            # Speed optimizations
+            opts.add_argument("--disable-infobars")
+            opts.add_argument("--disable-notifications")
+            opts.add_argument("--disable-popup-blocking")
+            opts.add_argument("--disable-default-apps")
+            opts.add_argument("--mute-audio")
+            opts.add_argument("--no-pings")
+            opts.add_argument("--disable-setuid-sandbox")
+            opts.add_argument("--dns-prefetch-disable")
             # Speed: block images, fonts, CSS downloads - we only need HTML text
             opts.add_argument("--blink-settings=imagesEnabled=false")
             opts.add_argument("--disable-extensions")
@@ -74,7 +83,7 @@ class BrowserManager:
                 self.driver = webdriver.Chrome(options=opts)
 
             # Speed: 'eager' means stop waiting once DOM is ready (don't wait for images)
-            self.driver.execute_cdp_cmd("Page.enable", {})
+            # self.driver.execute_cdp_cmd("Page.enable", {}) # Optimization: Disable if not strictly needed
             self.driver.set_page_load_timeout(Config.PAGE_LOAD_TIMEOUT)
             self.driver.execute_script("Object.defineProperty(navigator,'webdriver',{get:()=>undefined})")
 

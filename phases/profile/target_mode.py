@@ -674,7 +674,7 @@ class ProfileScraper:
             log_msg(f"Scraping: {nickname}", "SCRAPING")
             
             self.driver.get(url)
-            WebDriverWait(self.driver, 10).until(
+            WebDriverWait(self.driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, ProfileSelectors.NICKNAME_HEADER))
             )
 
