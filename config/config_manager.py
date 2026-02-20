@@ -66,9 +66,6 @@ class ConfigManager:
             elif phase_lower == 'target':
                 from .config_target import TargetPhaseConfig
                 return TargetPhaseConfig
-            elif phase_lower == 'test':
-                from .config_test import TestPhaseConfig
-                return TestPhaseConfig
             else:
                 log_msg(f"Unknown phase: {phase}, using base config only", "WARNING")
                 return None

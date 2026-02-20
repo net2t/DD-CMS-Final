@@ -22,7 +22,6 @@ Usage:
     Modes:
         target  - Process profiles from RunList sheet
         online  - Scrape currently online users
-        test    - Quick test with predefined profiles
     
     Options:
         --max-profiles N    Limit to N profiles (0 = unlimited)
@@ -32,7 +31,6 @@ Usage:
 Examples:
     python main.py target --max-profiles 50
     python main.py online --max-profiles 20 --metrics
-    python main.py test --max-profiles 3
 """
 
 import sys
@@ -84,10 +82,7 @@ def parse_arguments() -> argparse.Namespace:
   python main.py target --max-profiles 50
   python main.py online --max-profiles 10
   python main.py target --batch-size 10
-  python main.py online --max-profiles 20 --metrics
-
-📚 Documentation:
-  README.md          - Complete documentation
+  python main.py online --max-profiles 20 --metrics README.md          - Complete documentation
   LIMIT_HANDLING.md  - Handling API limits
   SECURITY.md        - Security best practices
   
@@ -101,7 +96,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         'mode_pos',
         nargs='?',
-        choices=['target', 'online', 'test'],
+        choices=['target', 'online'],
         default=None,
         help='Scraping mode'
     )
@@ -109,7 +104,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         '--mode',
         dest='mode_opt',
-        choices=['target', 'online', 'test'],
+        choices=['target', 'online'],
         help='Scraping mode (alternative to positional)'
     )
     
@@ -147,7 +142,7 @@ def parse_arguments() -> argparse.Namespace:
     # Determine mode
     args.mode = args.mode_opt or args.mode_pos
     if not args.mode:
-        parser.error("❌ No mode specified. Choose: target, online, or test")
+        parser.error("❌ No mode specified. Choose: target or online")
     
     return args
 

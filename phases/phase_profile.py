@@ -8,7 +8,6 @@ from .profile.online_mode import run_online_mode
 from .profile.target_mode import run_target_mode
 from config.config_online import OnlinePhaseConfig
 from config.config_target import TargetPhaseConfig
-from config.config_test import TestPhaseConfig
 from utils.ui import log_msg
 
 def run(context, mode, max_profiles=0):
@@ -45,23 +44,6 @@ def run(context, mode, max_profiles=0):
             credentials_path=TargetPhaseConfig.CREDENTIALS_PATH
         )
         stats = run_target_mode(driver=context.driver, sheets=sheets, max_profiles=max_profiles)
-        return stats, sheets
-    
-    elif mode == 'test':
-        log_msg("=== RUNNING PROFILE PHASE (TEST MODE) ===")
-        # In test mode, we still use a sheet to see the output, so we initialize it.
-        # We can reuse the target mode's credentials for this.
-        sheets = context.get_sheets_manager(
-            credentials_json=TargetPhaseConfig.CREDENTIALS_JSON,
-            credentials_path=TargetPhaseConfig.CREDENTIALS_PATH
-        )
-        # Run the target mode logic, but pass in the hardcoded list of test profiles.
-        stats = run_target_mode(
-            driver=context.driver, 
-            sheets=sheets, 
-            max_profiles=max_profiles, 
-            targets=TestPhaseConfig.TEST_PROFILES
-        )
         return stats, sheets
     
     else:

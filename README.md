@@ -126,10 +126,10 @@ Open `.env` and fill in your credentials (see Configuration section below).
 5. Create a Google Sheet and **share it** with the service account email
 6. Your sheet needs these tabs (auto-created if missing): `Profiles`, `RunList`, `OnlineLog`, `Dashboard`
 
-### Step 4 — Test
+### Step 4 — Run
 
 ```bash
-python main.py test --max-profiles 3
+python main.py target --max-profiles 1
 ```
 
 ---
@@ -179,9 +179,6 @@ python main.py target --max-profiles 50
 
 # Scrape currently online users
 python main.py online --max-profiles 30
-
-# Quick test (3 profiles)
-python main.py test
 ```
 
 **RunList sheet format:**
@@ -246,7 +243,7 @@ ID, Nickname, Tags, City, Gender, Married, Age, Joined, Followers, Status, Posts
 **Login keeps failing**
 ```bash
 del damadam_cookies.pkl
-python main.py test --max-profiles 1
+python main.py target --max-profiles 1
 ```
 
 **Google Sheets 429 error (rate limit)**
