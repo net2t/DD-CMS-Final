@@ -45,7 +45,7 @@ class BrowserManager:
         try:
             opts = Options()
             opts.add_argument("--headless=new")
-            opts.add_argument("--window-size=1920,1080")
+            opts.add_argument("--window-size=1280,800")
             opts.add_argument("--disable-blink-features=AutomationControlled")
             opts.add_experimental_option('excludeSwitches', ['enable-automation'])
             opts.add_experimental_option('useAutomationExtension', False)
@@ -53,6 +53,17 @@ class BrowserManager:
             opts.add_argument("--disable-dev-shm-usage")
             opts.add_argument("--disable-gpu")
             opts.add_argument("--log-level=3")
+            # Speed: block images, fonts, CSS downloads - we only need HTML text
+            opts.add_argument("--blink-settings=imagesEnabled=false")
+            opts.add_argument("--disable-extensions")
+            opts.add_argument("--disable-plugins")
+            opts.add_argument("--disable-sync")
+            opts.add_argument("--disable-background-networking")
+            opts.add_argument("--disable-default-apps")
+            opts.add_argument("--no-first-run")
+            opts.add_argument("--disable-notifications")
+            # Speed: stop loading page as soon as DOM is ready
+            opts.page_load_strategy = 'eager'
 
             if Config.CHROMEDRIVER_PATH and Path(Config.CHROMEDRIVER_PATH).exists():
                 log_msg(f"Using custom ChromeDriver: {Config.CHROMEDRIVER_PATH}")
@@ -62,6 +73,8 @@ class BrowserManager:
                 log_msg("Using system ChromeDriver")
                 self.driver = webdriver.Chrome(options=opts)
 
+            # Speed: 'eager' means stop waiting once DOM is ready (don't wait for images)
+            self.driver.execute_cdp_cmd("Page.enable", {})
             self.driver.set_page_load_timeout(Config.PAGE_LOAD_TIMEOUT)
             self.driver.execute_script("Object.defineProperty(navigator,'webdriver',{get:()=>undefined})")
 

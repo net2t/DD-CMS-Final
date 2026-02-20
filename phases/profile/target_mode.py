@@ -510,12 +510,13 @@ class ProfileScraper:
         if posts_count == 0:
             return last_post
 
-        if (not last_post['LAST POST'] or not last_post['LAST POST TIME']) and nickname:
+        # SPEED FLAG: Only open public page if enabled in config (default: off)
+        if (not last_post['LAST POST'] or not last_post['LAST POST TIME']) and nickname and Config.LAST_POST_FETCH_PUBLIC_PAGE:
             private_url = self.driver.current_url
             public_url = get_public_profile_url(nickname)
             try:
                 self.driver.get(public_url)
-                WebDriverWait(self.driver, 12).until(
+                WebDriverWait(self.driver, Config.LAST_POST_PUBLIC_PAGE_TIMEOUT).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "article"))
                 )
 
@@ -578,7 +579,7 @@ class ProfileScraper:
             finally:
                 try:
                     self.driver.get(private_url)
-                    WebDriverWait(self.driver, 10).until(
+                    WebDriverWait(self.driver, Config.LAST_POST_PUBLIC_PAGE_TIMEOUT).until(
                         EC.presence_of_element_located((By.XPATH, ProfileSelectors.NICKNAME_HEADER))
                     )
                 except Exception:
@@ -673,7 +674,7 @@ class ProfileScraper:
             log_msg(f"Scraping: {nickname}", "SCRAPING")
             
             self.driver.get(url)
-            WebDriverWait(self.driver, 12).until(
+            WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, ProfileSelectors.NICKNAME_HEADER))
             )
 
