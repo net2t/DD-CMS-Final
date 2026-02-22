@@ -104,9 +104,18 @@ jobs:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           GOOGLE_APPLICATION_CREDENTIALS: credentials.json
 
-          # Run Configuration (limit to 30 for scheduled runs)
+          # Run Configuration
           MAX_PROFILES_PER_RUN: ${{ github.event.inputs.max_profiles || '0' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
+
+          # Performance Tuning
+          PAGE_LOAD_TIMEOUT: '12'
+          SHEET_WRITE_DELAY: '0.4'
+          MIN_DELAY: '1.0'
+          MAX_DELAY: '2.5'
+          SORT_PROFILES_BY_DATE: 'true'
+          FINALIZE_FORMATTING: 'false'
+          LAST_POST_FETCH_PUBLIC_PAGE: 'false'
         run: |
           echo "🌐 Starting Online Mode..."
           echo "Max Profiles: ${{ github.event.inputs.max_profiles || '0' }}"
