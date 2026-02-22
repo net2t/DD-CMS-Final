@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DD-CMS · Live Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #08090d;
+      --surface:   #0e1016;
+      --border:    #1e2130;
+      --accent:    #00e5ff;
+      --accent2:   #ff3e6c;
+      --accent3:   #b06bff;
+      --green:     #00ff88;
+      --yellow:    #ffc400;
+      --text:      #c8d0e0;
+      --dim:       #4a5068;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-ui:   'Rajdhani', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── SCANLINE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* ── GRID BG ── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 60px; }
+
+    /* ── HEADER ── */
+    header {
+      padding: 36px 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 44px; height: 44px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-family: var(--font-mono);
+      font-size: 18px;
+      color: var(--accent);
+      box-shadow: 0 0 16px rgba(0,229,255,0.25), inset 0 0 12px rgba(0,229,255,0.05);
+      animation: pulse-border 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 16px rgba(0,229,255,0.25), inset 0 0 12px rgba(0,229,255,0.05); }
+      50%       { box-shadow: 0 0 28px rgba(0,229,255,0.5),  inset 0 0 18px rgba(0,229,255,0.12); }
+    }
+
+    .logo-text h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #fff;
+      text-transform: uppercase;
+    }
+
+    .logo-text p {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 9px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--dim);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-primary {
+      background: rgba(0,229,255,0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+    .btn-primary:hover { background: rgba(0,229,255,0.2); box-shadow: 0 0 16px rgba(0,229,255,0.2); }
+
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: blink 1.4s step-start infinite;
+      flex-shrink: 0;
+    }
+    @keyframes blink { 50% { opacity: 0.2; } }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: var(--accent); }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--card-accent, var(--accent));
+      opacity: 0.7;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .stat-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--dim);
+      margin-top: 6px;
+    }
+
+    /* ── WORKFLOW SECTION ── */
+    .section {
+      margin-top: 36px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--dim);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title span { color: var(--accent); }
+
+    /* ── WORKFLOW CARDS ── */
+    .workflows {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .wf-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.25s;
+    }
+    .wf-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    .wf-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .wf-name {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #fff;
+    }
+    .wf-desc {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dim);
+      margin-top: 4px;
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .badge-loading { background: rgba(255,196,0,0.12); color: var(--yellow); border: 1px solid rgba(255,196,0,0.3); }
+    .badge-pass    { background: rgba(0,255,136,0.1);  color: var(--green);  border: 1px solid rgba(0,255,136,0.3); }
+    .badge-fail    { background: rgba(255,62,108,0.1); color: var(--accent2);border: 1px solid rgba(255,62,108,0.3); }
+
+    .wf-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .wf-meta-item { }
+    .wf-meta-key {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .wf-meta-val {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .wf-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .wf-badge-img { width: 100%; margin-top: 14px; display: block; }
+    .wf-badge-img img { height: 20px; }
+
+    /* ── RUN HISTORY ── */
+    .run-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .run-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--dim);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .run-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(30,33,48,0.6);
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    .run-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .run-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      letter-spacing: 1px;
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green  { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+    .dot-red    { background: var(--accent2);box-shadow: 0 0 6px var(--accent2); }
+    .dot-yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+
+    /* ── ARCH DIAGRAM ── */
+    .arch {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      font-family: var(--font-mono);
+    }
+
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+
+    .arch-step {
+      text-align: center;
+      padding: 14px 18px;
+      flex: 1;
+      min-width: 110px;
+    }
+
+    .arch-icon {
+      font-size: 22px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .arch-label {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--dim);
+      text-transform: uppercase;
+      line-height: 1.4;
+    }
+
+    .arch-arrow {
+      color: var(--accent);
+      font-size: 18px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .perf-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .perf-item {
+      background: rgba(0,229,255,0.04);
+      border: 1px solid rgba(0,229,255,0.12);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .perf-key {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .perf-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .perf-note {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--dim);
+      margin-top: 3px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    footer a { color: var(--dim); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+
+    /* ── LOADING STATE ── */
+    .shimmer {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--border) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      height: 14px;
+      display: inline-block;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .status-bar { grid-template-columns: repeat(2, 1fr); }
+      .workflows  { grid-template-columns: 1fr; }
+      .perf-grid  { grid-template-columns: repeat(2, 1fr); }
+      .arch-arrow { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .status-bar { grid-template-columns: 1fr 1fr; }
+      .header-actions .btn-ghost { display: none; }
+    }
+
+    /* ── GLOW ACCENT LINE ── */
+    .glow-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      margin: 32px 0;
+      opacity: 0.4;
+    }
+
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 3px;
+      background: rgba(176,107,255,0.12);
+      color: var(--accent3);
+      border: 1px solid rgba(176,107,255,0.2);
+      letter-spacing: 1px;
+    }
+
+    .error-note {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dim);
+      padding: 10px 14px;
+      background: rgba(255,62,108,0.05);
+      border: 1px solid rgba(255,62,108,0.15);
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">DD</div>
+      <div class="logo-text">
+        <h1>DD-CMS</h1>
+        <p>DAMADAM.PK · PROFILE SCRAPER · GITHUB ACTIONS</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="live-dot"></div>
+      <a href="https://github.com/net2t/DD-CMS-Final" target="_blank" class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+      <a href="https://github.com/net2t/DD-CMS-Final/actions" target="_blank" class="btn btn-primary">
+        ▶ Actions
+      </a>
+    </div>
+  </header>
+
+  <!-- STAT CARDS -->
+  <div class="status-bar">
+    <div class="stat-card" style="--card-accent: var(--accent)">
+      <div class="stat-label">Version</div>
+      <div class="stat-value" style="font-size:22px; font-family: var(--font-mono); color: var(--accent)">v2.100.0.19</div>
+      <div class="stat-sub">Phase 1 Complete</div>
+    </div>
+    <div class="stat-card" style="--card-accent: var(--green)">
+      <div class="stat-label">Online Mode</div>
+      <div class="stat-value" style="font-size:18px; color: var(--green)">AUTO</div>
+      <div class="stat-sub">Every 15 minutes</div>
+    </div>
+    <div class="stat-card" style="--card-accent: var(--accent3)">
+      <div class="stat-label">Target Mode</div>
+      <div class="stat-value" style="font-size:18px; color: var(--accent3)">MANUAL</div>
+      <div class="stat-sub">Workflow dispatch</div>
+    </div>
+    <div class="stat-card" style="--card-accent: var(--yellow)">
+      <div class="stat-label">API Calls / Run</div>
+      <div class="stat-value" style="font-size:28px; color: var(--yellow)">~5</div>
+      <div class="stat-sub">Was ~420 before</div>
+    </div>
+  </div>
+
+  <!-- WORKFLOWS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">⬡ <span>Workflows</span></div>
+      <a href="https://github.com/net2t/DD-CMS-Final/actions" target="_blank" class="btn btn-ghost" style="font-size:11px; padding: 6px 14px;">View All Runs →</a>
+    </div>
+    <div class="workflows">
+
+      <!-- ONLINE MODE -->
+      <div class="wf-card">
+        <div class="wf-header">
+          <div>
+            <div class="wf-name">⭕ Online Mode</div>
+            <div class="wf-desc">scrape-online.yml</div>
+          </div>
+          <span class="badge badge-pass">AUTO</span>
+        </div>
+        <div class="wf-meta">
+          <div class="wf-meta-item">
+            <div class="wf-meta-key">Schedule</div>
+            <div class="wf-meta-val">*/15 * * * *</div>
+          </div>
+          <div class="wf-meta-item">
+            <div class="wf-meta-key">Runner</div>
+            <div class="wf-meta-val">ubuntu-latest</div>
+          </div>
+          <div class="wf-meta-item">
+            <div class="wf-meta-key">Trigger</div>
+            <div class="wf-meta-val">schedule + manual</div>
+          </div>
+          <div class="wf-meta-item">
+            <div class="wf-meta-key">Timeout</div>
+            <div class="wf-meta-val">12s / page</div>
+          </div>
+        </div>
+        <div class="wf-badge-img">
+          <a href="https://github.com/net2t/DD-CMS-Final/actions/workflows/scrape-online.yml" target="_blank">
+            <img src="https://github.com/net2t/DD-CMS-Final/actions/workflows/scrape-online.yml/badge.svg" alt="Online Mode Status">
+          </a>
+        </div>
+        <div class="wf-actions">
+          <a href="https://github.com/net2t/DD-CMS-Final/actions/workflows/scrape-online.yml" target="_blank" class="btn btn-primary" style="flex:1; justify-content:center; font-size:11px; padding:8px">View Runs</a>
+          <a href="https://github.com/net2t/DD-CMS-Final/blob/main/.github/workflows/scrape-online.yml" target="_blank" class="btn btn-ghost" style="flex:1; justify-content:center; font-size:11px; padding:8px">View YML</a>
+        </div>
+      </div>
+
+      <!-- TARGET MODE -->
+      <div class="wf-card">
+        <div class="wf-header">
+          <div>
+            <div class="wf-name">🔰 Target Mode</div>
+            <div class="wf-desc">scrape-target.yml</div>
+          </div>
+          <span class="badge badge-loading">MANUAL</span>
+        </div>
+        <div class="wf-meta">
+          <div class="wf-meta-item">
+            <div class="wf-meta-key">Schedule</div>
+            <div class="wf-meta-val">On demand</div>
+          </div>
+          <div class="wf-meta-item">
+            <div class="wf-meta-key">Runner</div>
+            <div class="wf-meta-val">ubuntu-latest</div>
+          </div>
+          <div class="wf-meta-item">
+            <div class="wf-meta-key">Trigger</div>
+            <div class="wf-meta-val">workflow_dispatch</div>
+          </div>
+          <div class="wf-meta-item">
+            <div class="wf-meta-key">Timeout</div>
+            <div class="wf-meta-val">12s / page</div>
+          </div>
+        </div>
+        <div class="wf-badge-img">
+          <a href="https://github.com/net2t/DD-CMS-Final/actions/workflows/scrape-target.yml" target="_blank">
+            <img src="https://github.com/net2t/DD-CMS-Final/actions/workflows/scrape-target.yml/badge.svg" alt="Target Mode Status">
+          </a>
+        </div>
+        <div class="wf-actions">
+          <a href="https://github.com/net2t/DD-CMS-Final/actions/workflows/scrape-target.yml" target="_blank" class="btn btn-primary" style="flex:1; justify-content:center; font-size:11px; padding:8px">View Runs</a>
+          <a href="https://github.com/net2t/DD-CMS-Final/blob/main/.github/workflows/scrape-target.yml" target="_blank" class="btn btn-ghost" style="flex:1; justify-content:center; font-size:11px; padding:8px">View YML</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="glow-line"></div>
+
+  <!-- ARCHITECTURE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">⬡ <span>Architecture</span></div>
+      <span class="tag">Scrape-All-First</span>
+    </div>
+    <div class="arch">
+      <div class="arch-flow">
+        <div class="arch-step">
+          <span class="arch-icon">📋</span>
+          <div class="arch-label">RunList<br>Sheet</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-step">
+          <span class="arch-icon">⚙️</span>
+          <div class="arch-label">GitHub<br>Actions</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-step">
+          <span class="arch-icon">🌐</span>
+          <div class="arch-label">Chrome<br>Headless</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-step">
+          <span class="arch-icon">🔍</span>
+          <div class="arch-label">Scrape<br>All Profiles</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-step">
+          <span class="arch-icon">📦</span>
+          <div class="arch-label">Bulk Push<br>to Sheet</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-step">
+          <span class="arch-icon">✅</span>
+          <div class="arch-label">Profiles<br>Updated</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERFORMANCE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">⬡ <span>Performance Optimisations</span></div>
+    </div>
+    <div class="perf-grid">
+      <div class="perf-item">
+        <div class="perf-key">Sheet API Calls / Run</div>
+        <div class="perf-val">~5 total</div>
+        <div class="perf-note">Was ~420 (5 per profile × 84)</div>
+      </div>
+      <div class="perf-item">
+        <div class="perf-key">Page Load Strategy</div>
+        <div class="perf-val">Eager</div>
+        <div class="perf-note">DOM ready, skip images/fonts</div>
+      </div>
+      <div class="perf-item">
+        <div class="perf-key">Page Load Timeout</div>
+        <div class="perf-val">12s</div>
+        <div class="perf-note">Was 30s — 2.5× faster on stalls</div>
+      </div>
+      <div class="perf-item">
+        <div class="perf-key">Sheet Write Delay</div>
+        <div class="perf-val">0.4s</div>
+        <div class="perf-note">Was 1.0s</div>
+      </div>
+      <div class="perf-item">
+        <div class="perf-key">Notes Per Update</div>
+        <div class="perf-val">1 call</div>
+        <div class="perf-note">Batched — was N calls per field</div>
+      </div>
+      <div class="perf-item">
+        <div class="perf-key">OnlineLog Writes</div>
+        <div class="perf-val">Removed</div>
+        <div class="perf-note">Sheet was unused, now eliminated</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="glow-line"></div>
+
+  <!-- PROJECT STRUCTURE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">⬡ <span>Project Structure</span></div>
+      <a href="https://github.com/net2t/DD-CMS-Final" target="_blank" class="btn btn-ghost" style="font-size:11px; padding: 6px 14px;">Browse Code →</a>
+    </div>
+    <div class="arch" style="font-size:12px; line-height:1.9; color: var(--text);">
+<pre style="font-family: var(--font-mono); white-space: pre-wrap; font-size:12px;">
+<span style="color:var(--accent)">DD-CMS-Final/</span>
+├── <span style="color:#fff">main.py</span>                   <span style="color:var(--dim)">← Entry point</span>
+├── <span style="color:var(--accent)">config/</span>
+│   ├── config_common.py           <span style="color:var(--dim)">← Settings, columns, delays</span>
+│   └── selectors.py               <span style="color:var(--dim)">← CSS/XPath selectors</span>
+├── <span style="color:var(--accent)">core/</span>
+│   ├── browser_context.py         <span style="color:var(--dim)">← Eager Chrome, images off</span>
+│   └── login_manager.py           <span style="color:var(--dim)">← Cookie + fallback login</span>
+├── <span style="color:var(--accent)">phases/profile/</span>
+│   ├── target_mode.py             <span style="color:var(--green)">← Scrape-all-first pipeline</span>
+│   └── online_mode.py             <span style="color:var(--dim)">← Online users fetcher</span>
+├── <span style="color:var(--accent)">utils/</span>
+│   └── sheets_manager.py          <span style="color:var(--green)">← bulk_write_profiles(), bulk_update_target_statuses()</span>
+└── <span style="color:var(--accent)">.github/workflows/</span>
+    ├── scrape-online.yml          <span style="color:var(--dim)">← Auto every 15 min</span>
+    └── scrape-target.yml          <span style="color:var(--dim)">← Manual trigger</span>
+</pre>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>DD-CMS-Final · Built by <a href="https://github.com/net2t" target="_blank">@net2t</a> · Optimised with Claude</div>
+    <div style="display:flex; gap:20px;">
+      <a href="https://github.com/net2t/DD-CMS-Final/issues" target="_blank">Issues</a>
+      <a href="https://github.com/net2t/DD-CMS-Final/blob/main/README.md" target="_blank">Docs</a>
+      <a href="https://github.com/net2t/DD-CMS-Final/commits/main" target="_blank">Changelog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
