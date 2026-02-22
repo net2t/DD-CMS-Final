@@ -24,7 +24,6 @@ from config.config_common import Config
 from config.selectors import ProfileSelectors
 from utils.ui import get_pkt_time, log_msg, log_progress
 from utils.url_builder import get_profile_url, get_public_profile_url
-from utils.sheets_batch_writer import SheetsBatchWriter
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -858,133 +857,128 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
     scraper = ProfileScraper(driver)
 
-    writer = SheetsBatchWriter(sheets, batch_size=Config.BATCH_SIZE)
-
-    # Stall tracking: if too many consecutive failures, pause to let site recover
+    # ── PHASE 1: Scrape ALL profiles first (browser only, zero sheet API calls) ──
+    log_msg("Phase 1/2: Scraping all profiles...", "INFO")
+    scraped_results = []   # list of (target, profile_data or None)
     consecutive_failures = 0
     MAX_CONSECUTIVE_FAILURES = 5
-    STALL_PAUSE_SECONDS = 120  # 2 min cooldown if site is throttling
+    STALL_PAUSE_SECONDS = 120
 
     for i, target in enumerate(targets, 1):
-        try:
-            # Validate and clean nickname
-            nickname = validate_nickname(target.get('nickname', '').strip())
-            if not nickname:
-                log_msg(f"Skipping invalid nickname: {target.get('nickname', '')}", "WARNING")
-                stats["invalid_nicknames"] += 1
-                stats["skipped"] += 1
-                continue
-                
-            row = target.get('row')
-                
-            # Use the new progress logger
-            log_progress(i, len(targets), nickname, "scraping...")
-            
-            # Scrape profile
-            profile_data = scraper.scrape_profile(nickname, source=target.get('source', 'Target'))
+        nickname = validate_nickname(target.get('nickname', '').strip())
+        if not nickname:
+            log_msg(f"Skipping invalid nickname: {target.get('nickname', '')}", "WARNING")
+            stats["invalid_nicknames"] += 1
+            stats["skipped"] += 1
+            scraped_results.append((target, None))
+            continue
 
-            if profile_data:
-                consecutive_failures = 0  # Reset on success
-                # Determine Phase 2 eligibility
-                posts_raw = str(profile_data.get("POSTS", "") or "")
-                posts_digits = re.sub(r"\D+", "", posts_raw)
-                posts_count = None
-                try:
-                    posts_count = int(posts_digits) if posts_digits else None
-                except (ValueError, TypeError):
-                    posts_count = None
+        log_progress(i, len(targets), nickname, "scraping...")
+        profile_data = scraper.scrape_profile(nickname, source=target.get('source', 'Target'))
+        scraped_results.append((target, profile_data))
 
-                if posts_count is not None and posts_count < 100:
-                    stats["phase2_ready"] += 1
-                    profile_data["PHASE 2"] = "Ready"
-                else:
-                    stats["phase2_not_eligible"] += 1
-                    profile_data["PHASE 2"] = "Not Eligible"
+        if profile_data:
+            consecutive_failures = 0
+        else:
+            consecutive_failures += 1
+            if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                log_msg(
+                    f"⚠️ {consecutive_failures} consecutive failures. "
+                    f"Pausing {STALL_PAUSE_SECONDS}s to let site recover...",
+                    "WARNING"
+                )
+                time.sleep(STALL_PAUSE_SECONDS)
+                consecutive_failures = 0
 
-                # Write immediately so we can set correct RunList remarks (NEW/UPDATED/UNCHANGED).
-                write_result = sheets.write_profile(profile_data, target_tag=target.get("tag"))
-                status = write_result.get("status")
-                if status in {"new", "updated", "unchanged"}:
-                    stats['success'] += 1
-                    if status == "new":
-                        stats["new"] += 1
-                    elif status == "updated":
-                        stats["updated"] += 1
-                    elif status == "unchanged":
-                        stats["unchanged"] += 1
-
-                    ts = profile_data.get("DATETIME SCRAP")
-                    if not ts:
-                        try:
-                            ts = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-                        except Exception:
-                            ts = ""
-
-                    if status == "new":
-                        remark = f"New Added: on {ts}" if ts else "New Added"
-                    elif status == "updated":
-                        remark = f"Updated: on {ts}" if ts else "Updated"
-                    else:
-                        remark = f"Scraped ✅ : on {ts}" if ts else "Scraped ✅"
-
-                    if row:
-                        sheets.update_target_status(row, 'done', remark)
-                    log_progress(i, len(targets), nickname, status)
-                elif status == "skipped" and write_result.get("reason") == "non_verified":
-                    # Non-verified profiles are not written to Profiles sheet, but we still complete the target.
-                    stats['success'] += 1
-                    ts = profile_data.get("DATETIME SCRAP")
-                    if not ts:
-                        try:
-                            ts = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-                        except Exception:
-                            ts = ""
-                    remark = f"Skipped (non-verified): on {ts}" if ts else "Skipped (non-verified)"
-                    if row:
-                        sheets.update_target_status(row, 'done', remark)
-                    log_progress(i, len(targets), nickname, "skipped")
-                else:
-                    stats['failed'] += 1
-                    if row:
-                        sheets.update_target_status(row, 'error', write_result.get("error") or "Sheet write failed")
-                    log_progress(i, len(targets), nickname, "failed")
-
-            else: # Scrape failed
-                stats['failed'] += 1
-                consecutive_failures += 1
-                if row:
-                    sheets.update_target_status(row, 'error', 'Scraping failed')
-                log_progress(i, len(targets), nickname, "failed")
-
-                # Site may be throttling — pause and let it recover
-                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
-                    log_msg(
-                        f"⚠️ {consecutive_failures} consecutive failures detected. "
-                        f"Pausing {STALL_PAUSE_SECONDS}s to let site recover...",
-                        "WARNING"
-                    )
-                    time.sleep(STALL_PAUSE_SECONDS)
-                    consecutive_failures = 0
-            
-        except Exception as e:
-            log_msg(f"Error processing {nickname}: {str(e)}", "ERROR")
-            stats["failed"] += 1
-            stats["processed"] += 1
-            if row:
-                try:
-                    sheets.update_target_status(row, "Error", f"Processing error: {str(e)[:100]}")
-                except:
-                    log_msg("Failed to update target status", "ERROR")
-        
-        # Add delay between requests
         if i < len(targets):
             time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
 
-    # Ensure any remaining queued profiles are flushed.
-    try:
-        writer.flush()
-    except Exception:
-        pass
+    # ── PHASE 2: Push ALL results to sheet in bulk ──
+    log_msg(f"Phase 2/2: Pushing {len(scraped_results)} results to sheet in bulk...", "INFO")
+
+    # Separate successful scrapes from failures
+    profiles_with_tags = []
+    target_status_updates = []  # queued RunList updates
+    ts = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+
+    for target, profile_data in scraped_results:
+        nickname = (target.get('nickname') or '').strip()
+        row = target.get('row')
+
+        if profile_data is None:
+            stats['failed'] += 1
+            if row:
+                target_status_updates.append({
+                    'row_num': row, 'status': 'error', 'remarks': 'Scraping failed'
+                })
+            continue
+
+        # Phase 2 eligibility (pre-compute before bulk write)
+        posts_raw = str(profile_data.get("POSTS", "") or "")
+        posts_digits = re.sub(r"\D+", "", posts_raw)
+        try:
+            posts_count = int(posts_digits) if posts_digits else None
+        except (ValueError, TypeError):
+            posts_count = None
+
+        if posts_count is not None and posts_count < 100:
+            stats["phase2_ready"] += 1
+            profile_data["PHASE 2"] = "Ready"
+        else:
+            stats["phase2_not_eligible"] += 1
+            profile_data["PHASE 2"] = "Not Eligible"
+
+        profiles_with_tags.append((profile_data, target.get('tag')))
+
+    # Bulk write to Profiles sheet
+    if profiles_with_tags:
+        write_results = sheets.bulk_write_profiles(profiles_with_tags)
+    else:
+        write_results = {}
+
+    # Build RunList status updates from write results
+    for target, profile_data in scraped_results:
+        if profile_data is None:
+            continue  # already handled above
+
+        nickname = (profile_data.get("NICK NAME") or target.get('nickname') or '').strip()
+        row = target.get('row')
+        write_result = write_results.get(nickname, {"status": "error", "error": "not found in results"})
+        status = write_result.get("status")
+        scrap_ts = profile_data.get("DATETIME SCRAP") or ts
+
+        if status == "new":
+            stats['success'] += 1
+            stats['new'] += 1
+            remark = f"New Added: on {scrap_ts}"
+            log_progress(0, len(targets), nickname, "new")
+        elif status == "updated":
+            stats['success'] += 1
+            stats['updated'] += 1
+            remark = f"Updated: on {scrap_ts}"
+            log_progress(0, len(targets), nickname, "updated")
+        elif status == "unchanged":
+            stats['success'] += 1
+            stats['unchanged'] += 1
+            remark = f"Scraped ✅ : on {scrap_ts}"
+            log_progress(0, len(targets), nickname, "unchanged")
+        elif status == "skipped" and write_result.get("reason") == "non_verified":
+            stats['success'] += 1
+            remark = f"Skipped (non-verified): on {scrap_ts}"
+            log_progress(0, len(targets), nickname, "skipped")
+        else:
+            stats['failed'] += 1
+            remark = write_result.get('error') or 'Sheet write failed'
+            if row:
+                target_status_updates.append({'row_num': row, 'status': 'error', 'remarks': remark})
+            continue
+
+        if row:
+            target_status_updates.append({'row_num': row, 'status': 'done', 'remarks': remark})
+
+    # Bulk update RunList statuses in ONE API call
+    if target_status_updates:
+        sheets.bulk_update_target_statuses(target_status_updates)
     
     log_msg(f"=== {label} MODE COMPLETED ===")
     log_msg(

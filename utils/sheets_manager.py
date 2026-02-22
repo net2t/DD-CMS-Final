@@ -770,6 +770,259 @@ class SheetsManager:
         normalized_status = status_map.get((status or "").lower().strip(), status)
         self._perform_write_operation(self.target_ws.update, f"B{row_num}:C{row_num}", [[normalized_status, remarks]])
 
+    def bulk_update_target_statuses(self, updates: list):
+        """
+        Update multiple RunList rows in a single API call.
+
+        Args:
+            updates: list of dicts with keys: row_num, status, remarks
+        """
+        if not updates:
+            return
+
+        status_map = {
+            'pending': Config.TARGET_STATUS_PENDING,
+            'done': Config.TARGET_STATUS_DONE,
+            'complete': Config.TARGET_STATUS_DONE,
+            'error': Config.TARGET_STATUS_ERROR,
+            'suspended': Config.TARGET_STATUS_ERROR,
+            'unverified': Config.TARGET_STATUS_SKIP_DEL,
+            'skip': Config.TARGET_STATUS_SKIP_DEL,
+            'del': Config.TARGET_STATUS_SKIP_DEL,
+            'skip/del': Config.TARGET_STATUS_SKIP_DEL
+        }
+
+        sheet_id = self.target_ws._properties.get('sheetId')
+        requests = []
+        for u in updates:
+            row_num = u.get('row_num')
+            if not row_num:
+                continue
+            raw_status = (u.get('status') or '').lower().strip()
+            norm_status = status_map.get(raw_status, u.get('status', ''))
+            remarks = u.get('remarks', '')
+            # Columns B (index 1) and C (index 2) — 0-based
+            requests.append({
+                "updateCells": {
+                    "rows": [{"values": [
+                        {"userEnteredValue": {"stringValue": norm_status}},
+                        {"userEnteredValue": {"stringValue": str(remarks)}}
+                    ]}],
+                    "fields": "userEnteredValue",
+                    "start": {"sheetId": sheet_id, "rowIndex": row_num - 1, "columnIndex": 1}
+                }
+            })
+
+        if not requests:
+            return
+
+        try:
+            self.spreadsheet.batch_update({"requests": requests})
+            time.sleep(Config.SHEET_WRITE_DELAY)
+            log_msg(f"Bulk updated {len(requests)} RunList statuses in 1 API call.", "OK")
+        except Exception as e:
+            log_msg(f"Bulk target status update failed: {e}", "ERROR")
+            # Fallback: update one by one
+            for u in updates:
+                if u.get('row_num'):
+                    self.update_target_status(u['row_num'], u.get('status', ''), u.get('remarks', ''))
+
+    def bulk_write_profiles(self, profiles_with_tags: list) -> dict:
+        """
+        Write ALL scraped profiles in bulk — one API call for new rows,
+        one batch_update for existing rows + notes.
+
+        Args:
+            profiles_with_tags: list of (profile_data, target_tag) tuples
+
+        Returns:
+            dict mapping nickname -> write result {status, ...}
+        """
+        results = {}
+        new_rows = []           # rows to insert_rows in one call
+        update_requests = []    # batchUpdate requests for existing profiles
+        note_requests = []      # batchUpdate requests for notes
+
+        ts = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+        sheet_id = self.profiles_ws._properties.get('sheetId')
+
+        uppercase_cols = {
+            "CITY", "GENDER", "MARRIED", "STATUS", "JOINED",
+            "SKIP/DEL", "DATETIME SCRAP", "LAST POST TIME", "MEH NAME", "MEH DATE",
+        }
+        mehfil_multiline_cols = {"MEH NAME", "MEH LINK", "MEH DATE"}
+        preserve_if_blank = {"POSTS", "LAST POST", "LAST POST TIME"}
+        ignore_for_diff_only = {
+            "ID", "NICK NAME", "JOINED", "DATETIME SCRAP", "LAST POST",
+            "LAST POST TIME", "PROFILE LINK", "POST URL", "PHASE 2",
+        }
+        excluded_note_col_letters = {"A", "B", "H", "L", "M", "N", "O", "Q", "R", "U", "V"}
+
+        for profile_data, target_tag in profiles_with_tags:
+            nickname = (profile_data.get("NICK NAME") or "").strip()
+            if not nickname:
+                continue
+
+            incoming_status = clean_data(profile_data.get("STATUS", ""))
+            if (incoming_status or "").strip().upper() != "VERIFIED":
+                results[nickname] = {"status": "skipped", "reason": "non_verified"}
+                continue
+
+            profile_data["DATETIME SCRAP"] = ts
+
+            if target_tag is not None:
+                try:
+                    profile_data[Config.COLUMN_ORDER[9]] = str(target_tag).strip()
+                except Exception:
+                    pass
+
+            profile_data["_PROFILE_STATE"] = self._compute_profile_state(profile_data)
+
+            if nickname.lower() in self.tags_mapping:
+                profile_data["TAGS"] = self.tags_mapping[nickname.lower()]
+
+            posts_raw = str(profile_data.get("POSTS", "") or "")
+            posts_digits = re.sub(r"\D+", "", posts_raw)
+            try:
+                posts_count = int(posts_digits) if posts_digits else None
+            except Exception:
+                posts_count = None
+            profile_data["PHASE 2"] = "Ready" if (posts_count is not None and posts_count < 100) else "Not Eligible"
+
+            # Build row_data
+            row_data = []
+            for col in Config.COLUMN_ORDER:
+                if col in mehfil_multiline_cols:
+                    val = clean_data_preserve_newlines(profile_data.get(col, ""))
+                else:
+                    val = clean_data(profile_data.get(col, ""))
+                if col == "POSTS" and val:
+                    val = re.sub(r"\D+", "", str(val))
+                if col in mehfil_multiline_cols and val and ',' in val:
+                    val = re.sub(r",\s*", "\n", str(val))
+                if col in uppercase_cols and val:
+                    val = val.upper()
+                row_data.append(val)
+
+            existing = self._get_existing_profile_record(nickname)
+
+            if existing:
+                old_row_num = existing['row']
+                old_data = existing['data']
+                changed_fields = []
+                updated_row = []
+
+                for i, col in enumerate(Config.COLUMN_ORDER):
+                    old_val = old_data[i] if i < len(old_data) else ""
+                    new_val = row_data[i]
+                    if col in preserve_if_blank and (not new_val) and old_val:
+                        new_val = old_val
+                    if col not in {"SKIP/DEL"} and col not in ignore_for_diff_only and old_val != new_val:
+                        changed_fields.append(col)
+                    updated_row.append(new_val)
+
+                # Queue a moveDimension + updateCells as batch requests
+                # moveDimension must be done separately (changes row indices), so we
+                # fall back to individual move then queue the data update.
+                update_requests.append({
+                    '_nickname': nickname,
+                    '_old_row': old_row_num,
+                    '_updated_row': updated_row,
+                    '_old_data': old_data,
+                    '_changed_fields': changed_fields,
+                })
+
+                # Queue notes
+                for i, col in enumerate(Config.COLUMN_ORDER):
+                    old_val = old_data[i] if i < len(old_data) else ""
+                    new_val = updated_row[i]
+                    if old_val == new_val:
+                        continue
+                    col_num = i + 1
+                    col_a1 = gspread.utils.rowcol_to_a1(1, col_num)
+                    col_letter = re.sub(r"\d+", "", col_a1)
+                    if col_letter in excluded_note_col_letters:
+                        continue
+                    note_requests.append((col_num, old_val, new_val))
+
+                status = "updated" if changed_fields else "unchanged"
+                results[nickname] = {"status": status, "changed_fields": changed_fields}
+            else:
+                new_rows.append((nickname, row_data))
+                results[nickname] = {"status": "new"}
+
+        # ── PHASE 1: Move existing profiles to top + update data ──
+        # moveDimension changes row indices so we must do them one at a time,
+        # but we batch the data writes right after each move.
+        for req in update_requests:
+            nick = req['_nickname']
+            old_row = req['_old_row']
+            updated_row = req['_updated_row']
+            key = nick.lower()
+
+            if self._move_profile_row_to_top(old_row, to_row=2):
+                self._update_row_mapping_after_move_to_top(key, from_row=old_row, to_row=2)
+                end_a1 = gspread.utils.rowcol_to_a1(2, len(Config.COLUMN_ORDER))
+                self._perform_write_operation(self.profiles_ws.update, f"A2:{end_a1}", [updated_row])
+                self._update_existing_profiles_cache_after_insert(nick, updated_row, inserted_row_num=2)
+                log_msg(f"Updated {nick} → Row 2", "OK")
+            else:
+                results[nick] = {"status": "error", "error": "move failed"}
+
+        # ── PHASE 2: Insert ALL new profiles in one call ──
+        if new_rows:
+            rows_to_insert = [r for _, r in new_rows]
+            try:
+                self.profiles_ws.insert_rows(rows_to_insert, row=2)
+                time.sleep(Config.SHEET_WRITE_DELAY)
+                log_msg(f"Bulk inserted {len(new_rows)} new profiles in 1 API call.", "OK")
+                # Update cache: all existing rows shift down by len(new_rows)
+                shift = len(new_rows)
+                for k in list(self._existing_profile_rows.keys()):
+                    self._existing_profile_rows[k] = self._existing_profile_rows[k] + shift
+                for rec in self.existing_profiles.values():
+                    try:
+                        rec['row'] = int(rec.get('row') or 0) + shift
+                    except Exception:
+                        pass
+                for idx, (nick, row_data) in enumerate(new_rows):
+                    inserted_row = 2 + idx
+                    self._existing_profile_rows[nick.lower()] = inserted_row
+                    self.existing_profiles[nick.lower()] = {'row': inserted_row, 'data': row_data}
+            except Exception as e:
+                log_msg(f"Bulk insert failed: {e}", "ERROR")
+                # Fallback: insert one by one
+                for nick, row_data in new_rows:
+                    if self._perform_write_operation(self.profiles_ws.insert_row, row_data, index=2):
+                        self._update_existing_profiles_cache_after_insert(nick, row_data, inserted_row_num=2)
+                    else:
+                        results[nick] = {"status": "error", "error": "insert failed"}
+
+        # ── PHASE 3: Write all notes in ONE batch_update call ──
+        if note_requests and sheet_id:
+            batch_note_reqs = []
+            for col_num, old_val, new_val in note_requests:
+                batch_note_reqs.append({
+                    "updateCells": {
+                        "rows": [{"values": [{"note": f"Before: {old_val}\nAfter: {new_val}"}]}],
+                        "fields": "note",
+                        "start": {
+                            "sheetId": sheet_id,
+                            "rowIndex": 1,  # row 2 = index 1
+                            "columnIndex": col_num - 1
+                        }
+                    }
+                })
+            try:
+                self.spreadsheet.batch_update({"requests": batch_note_reqs})
+                time.sleep(Config.SHEET_WRITE_DELAY)
+                log_msg(f"Bulk wrote {len(batch_note_reqs)} notes in 1 API call.", "OK")
+            except Exception as e:
+                log_msg(f"Bulk note update failed: {e}", "WARNING")
+
+        self._maybe_reload_existing_profiles(force=True)
+        return results
+
     # ==================== ONLINE LOG OPERATIONS ====================
 
     def log_online_user(self, nickname, timestamp=None):
