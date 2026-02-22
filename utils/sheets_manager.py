@@ -142,13 +142,14 @@ class SheetsManager:
         # Load data
         self.tags_mapping = {}
         self.existing_profiles = {}
+        self._existing_profile_rows = {}
         self._sorted_profiles_this_run = False
         self._writes_since_profile_reload = 0
         self._profile_reload_interval = 50
         
         self._init_headers()
         self._load_tags()
-        self._load_existing_profiles()
+        self._load_existing_profile_rows()
         
         log_msg("Google Sheets connected successfully", "OK")
 
@@ -156,13 +157,15 @@ class SheetsManager:
         """Reload existing profiles cache occasionally to reduce expensive full-sheet reads."""
         if force:
             self._writes_since_profile_reload = 0
-            self._load_existing_profiles()
+            self._load_existing_profile_rows()
+            self.existing_profiles = {}
             return
 
         self._writes_since_profile_reload += 1
         if self._writes_since_profile_reload >= self._profile_reload_interval:
             self._writes_since_profile_reload = 0
-            self._load_existing_profiles()
+            self._load_existing_profile_rows()
+            self.existing_profiles = {}
 
     def _update_existing_profiles_cache_after_insert(self, nickname: str, inserted_row_data: list, inserted_row_num: int = 2):
         """Best-effort update of in-memory cache without a full reload."""
@@ -179,12 +182,46 @@ class SheetsManager:
                     except Exception:
                         continue
 
+                try:
+                    for k in list(self._existing_profile_rows.keys()):
+                        self._existing_profile_rows[k] = int(self._existing_profile_rows[k]) + 1
+                except Exception:
+                    pass
+
             self.existing_profiles[key] = {
                 'row': inserted_row_num,
                 'data': inserted_row_data
             }
+            self._existing_profile_rows[key] = inserted_row_num
         except Exception:
             # Cache update is opportunistic; ignore failures.
+            pass
+
+    def _update_row_mapping_after_move_to_top(self, moved_key: str, from_row: int, to_row: int = 2):
+        """Update nickname->row mapping after moving one row to the top (row 2)."""
+        try:
+            moved_key = (moved_key or "").strip().lower()
+            if not moved_key:
+                return
+            if not from_row or from_row <= 1 or from_row == to_row:
+                self._existing_profile_rows[moved_key] = to_row
+                return
+
+            # When moving from_row -> 2, the range [2, from_row-1] shifts down by 1.
+            if to_row == 2 and from_row > 2:
+                for k, r in list(self._existing_profile_rows.items()):
+                    try:
+                        r = int(r)
+                    except Exception:
+                        continue
+                    if 2 <= r < from_row:
+                        self._existing_profile_rows[k] = r + 1
+
+            self._existing_profile_rows[moved_key] = to_row
+
+            # Invalidate full-row cache for anything affected.
+            self.existing_profiles.pop(moved_key, None)
+        except Exception:
             pass
     
     def _get_or_create(self, name, cols=20, rows=1000):
@@ -320,11 +357,20 @@ class SheetsManager:
             log_msg(f"Failed to apply wrap for '{ws.title}': {e}", "WARNING")
 
     def finalize_formatting(self):
-        """Apply final formatting in one shot at end of run."""
+        """Apply final formatting at end of run.
+
+        Speed-first: this is optional and defaults to off (Config.FINALIZE_FORMATTING).
+        """
+        if not getattr(Config, 'FINALIZE_FORMATTING', False):
+            return
+
+        max_rows = getattr(Config, 'FORMAT_MAX_ROWS', 500)
+        max_rows = None if (isinstance(max_rows, int) and max_rows <= 0) else max_rows
+
         for ws in [self.profiles_ws, self.target_ws, self.dashboard_ws, self.online_log_ws]:
             if ws:
-                self._apply_sheet_font(ws)
-                self._apply_sheet_wrap(ws, "CLIP")
+                self._apply_sheet_font(ws, max_rows=max_rows)
+                self._apply_sheet_wrap(ws, "CLIP", max_rows=max_rows)
                 self._apply_header_format(ws)
 
     def _apply_header_format(self, ws):
@@ -376,26 +422,80 @@ class SheetsManager:
         except Exception as e:
             log_msg(f"Tags load failed: {e}")
     
-    def _load_existing_profiles(self):
-        """Loads all existing profiles from the 'Profiles' sheet into cache."""
+    def _load_existing_profile_rows(self):
+        """Loads only nickname->row index mapping from the 'Profiles' sheet (fast)."""
         try:
-            rows = self.profiles_ws.get_all_values()[1:]
-            nick_idx = Config.COLUMN_ORDER.index("NICK NAME")
-            
-            for i, row in enumerate(rows, start=2):
-                if len(row) > nick_idx:
-                    nickname = row[nick_idx].strip()
-                    if nickname:
-                        key = nickname.lower()
-                        self.existing_profiles[key] = {
-                            'row': i,
-                            'data': row
-                        }
-            
-            log_msg(f"Loaded {len(self.existing_profiles)} existing profiles")
+            nick_idx = Config.COLUMN_ORDER.index("NICK NAME") + 1
+            col_letter = gspread.utils.rowcol_to_a1(1, nick_idx).rstrip('1')
+            values = self.profiles_ws.col_values(nick_idx)
+            # values includes header at index 0
+            rows = values[1:] if values else []
+            mapping = {}
+            for i, nickname in enumerate(rows, start=2):
+                nickname = (nickname or "").strip()
+                if nickname:
+                    mapping[nickname.lower()] = i
+
+            self._existing_profile_rows = mapping
+            log_msg(f"Loaded {len(self._existing_profile_rows)} existing profile rows")
         
         except Exception as e:
-            log_msg(f"Failed to load existing profiles: {e}")
+            log_msg(f"Failed to load existing profile rows: {e}")
+
+    def _get_existing_profile_record(self, nickname: str):
+        """Get existing profile record, fetching row values on-demand."""
+        key = (nickname or "").strip().lower()
+        if not key:
+            return None
+
+        # In-memory full record cache
+        if key in self.existing_profiles:
+            return self.existing_profiles[key]
+
+        row_num = self._existing_profile_rows.get(key)
+        if not row_num:
+            return None
+
+        try:
+            row = self.profiles_ws.row_values(row_num)
+            rec = {'row': row_num, 'data': row}
+            self.existing_profiles[key] = rec
+            return rec
+        except Exception:
+            return None
+
+    def _move_profile_row_to_top(self, from_row: int, to_row: int = 2) -> bool:
+        """Move a row within Profiles sheet using Sheets API (faster and safer than delete+insert)."""
+        try:
+            if not from_row or from_row <= 1 or from_row == to_row:
+                return True
+
+            sheet_id = self.profiles_ws._properties.get('sheetId')
+            if sheet_id is None:
+                return False
+
+            # Google Sheets uses 0-based, endIndex is exclusive
+            body = {
+                "requests": [
+                    {
+                        "moveDimension": {
+                            "source": {
+                                "sheetId": sheet_id,
+                                "dimension": "ROWS",
+                                "startIndex": from_row - 1,
+                                "endIndex": from_row
+                            },
+                            "destinationIndex": to_row - 1
+                        }
+                    }
+                ]
+            }
+            self.spreadsheet.batch_update(body)
+            time.sleep(Config.SHEET_WRITE_DELAY)
+            return True
+        except Exception as e:
+            log_msg(f"Failed to move profile row {from_row} -> {to_row}: {e}", "WARNING")
+            return False
     
     # ==================== PROFILE OPERATIONS ====================
 
@@ -507,7 +607,7 @@ class SheetsManager:
             row_data.append(val)
         
         key = nickname.lower()
-        existing = self.existing_profiles.get(key)
+        existing = self._get_existing_profile_record(nickname)
 
         if existing:
             old_row_num = existing['row']
@@ -537,9 +637,11 @@ class SheetsManager:
                 updated_row.append(new_val)
 
             # Always move scraped profile to row 2 (most recent), even if unchanged.
-            # (DATETIME SCRAP is updated above on every scrape.)
-            if self._perform_write_operation(self.profiles_ws.delete_rows, old_row_num):
-                if self._perform_write_operation(self.profiles_ws.insert_row, updated_row, index=2):
+            # Speed+correctness: moveDimension avoids out-of-range deletes and keeps sheet size stable.
+            if self._move_profile_row_to_top(old_row_num, to_row=2):
+                self._update_row_mapping_after_move_to_top(key, from_row=old_row_num, to_row=2)
+                end_a1 = gspread.utils.rowcol_to_a1(2, len(Config.COLUMN_ORDER))
+                if self._perform_write_operation(self.profiles_ws.update, f"A2:{end_a1}", [updated_row]):
                     if changed_fields:
                         log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
                     else:
@@ -563,10 +665,27 @@ class SheetsManager:
 
                             note_updates.append((col_num, old_val, new_val))
 
-                        for col_num, old_val, new_val in note_updates:
-                            cell_a1 = gspread.utils.rowcol_to_a1(2, col_num)
-                            note_text = f"Before: {old_val}\nAfter: {new_val}"
-                            self._perform_write_operation(self.profiles_ws.update_note, cell_a1, note_text)
+                        # Batch all notes into a single API call instead of one per field
+                        if note_updates:
+                            sheet_id = self.profiles_ws._properties.get('sheetId')
+                            requests = []
+                            for col_num, old_val, new_val in note_updates:
+                                requests.append({
+                                    "updateCells": {
+                                        "rows": [{"values": [{"note": f"Before: {old_val}\nAfter: {new_val}"}]}],
+                                        "fields": "note",
+                                        "start": {
+                                            "sheetId": sheet_id,
+                                            "rowIndex": 1,  # row 2 = index 1
+                                            "columnIndex": col_num - 1
+                                        }
+                                    }
+                                })
+                            try:
+                                self.spreadsheet.batch_update({"requests": requests})
+                                time.sleep(Config.SHEET_WRITE_DELAY)
+                            except Exception as e:
+                                log_msg(f"Batch note update failed: {e}", "WARNING")
                     except Exception:
                         pass
                     self._update_existing_profiles_cache_after_insert(nickname, updated_row, inserted_row_num=2)
@@ -717,44 +836,44 @@ class SheetsManager:
 
     def sort_profiles_by_date(self):
         """Sorts the 'Profiles' sheet by 'DATETIME SCRAP' descending."""
+        if not getattr(Config, 'SORT_PROFILES_BY_DATE', True):
+            return
         if self._sorted_profiles_this_run:
             return
         log_msg("Sorting profiles by date...")
         try:
-            all_rows = self.profiles_ws.get_all_values()
-            if len(all_rows) <= 1:
-                return
-
-            header, rows = all_rows[0], all_rows[1:]
             date_idx = Config.COLUMN_ORDER.index("DATETIME SCRAP")
 
-            def parse_date(row):
-                try:
-                    return datetime.strptime(row[date_idx], "%d-%b-%y %I:%M %p")
-                except (ValueError, IndexError):
-                    return datetime.min
+            sheet_id = self.profiles_ws._properties.get('sheetId')
+            if sheet_id is None:
+                return
 
-            rows.sort(key=parse_date, reverse=True)
-            
-            # Update values without clearing formatting.
-            new_values = [header] + rows
-            if self._perform_write_operation(self.profiles_ws.update, "A1", new_values):
-                # If old sheet had more rows, clear leftover values (keep formatting).
-                old_total = len(all_rows)
-                new_total = len(new_values)
-                if old_total > new_total:
-                    try:
-                        end_col_a1 = gspread.utils.rowcol_to_a1(1, self.profiles_ws.col_count)
-                        end_col = end_col_a1.rstrip('1')
-                        self._perform_write_operation(
-                            self.profiles_ws.batch_clear,
-                            [f"A{new_total + 1}:{end_col}{old_total}"]
-                        )
-                    except Exception:
-                        pass
-                self._apply_header_format(self.profiles_ws)
-                self._maybe_reload_existing_profiles(force=True)
-                log_msg("Profiles sorted by date.", "OK")
-                self._sorted_profiles_this_run = True
+            # sortRange is performed server-side; far faster than reading+rewriting all rows.
+            body = {
+                "requests": [
+                    {
+                        "sortRange": {
+                            "range": {
+                                "sheetId": sheet_id,
+                                "startRowIndex": 1,
+                                "startColumnIndex": 0,
+                                "endColumnIndex": self.profiles_ws.col_count
+                            },
+                            "sortSpecs": [
+                                {
+                                    "dimensionIndex": date_idx,
+                                    "sortOrder": "DESCENDING"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+            self.spreadsheet.batch_update(body)
+            time.sleep(Config.SHEET_WRITE_DELAY)
+            self._apply_header_format(self.profiles_ws)
+            self._maybe_reload_existing_profiles(force=True)
+            log_msg("Profiles sorted by date.", "OK")
+            self._sorted_profiles_this_run = True
         except (ValueError, APIError) as e:
             log_msg(f"Failed to sort profiles by date: {e}", "ERROR")
