@@ -4,7 +4,6 @@ Phase 1 (Profiles) - Online Mode
 What this mode does:
 - Opens the "online users" page
 - Collects online nicknames using multiple fallback strategies
-- Logs the online nicknames to the OnlineLog sheet
 - Reuses the same profile scraping pipeline as Target mode
 """
 
@@ -17,7 +16,7 @@ from selenium.common.exceptions import TimeoutException
 
 from config.config_common import Config
 from config.selectors import OnlineUserSelectors
-from utils.ui import get_pkt_time, log_msg
+from utils.ui import log_msg
 from phases.profile.target_mode import run_target_mode, validate_nickname
 
 # ==================== ONLINE USERS PARSER ====================
@@ -143,11 +142,6 @@ def run_online_mode(driver, sheets, max_profiles=0):
             "success": 0, "failed": 0, "new": 0,
             "updated": 0, "unchanged": 0, "logged": 0
         }
-
-    # Log all users to the OnlineLog sheet in a single batch operation
-    timestamp = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-    batch_no = get_pkt_time().strftime("%Y%m%d_%H%M")
-    sheets.batch_log_online_users(nicknames, timestamp, batch_no)
 
     # Format nicknames into the target structure for run_target_mode
     targets = [

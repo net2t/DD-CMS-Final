@@ -70,7 +70,6 @@ class Config:
     SHEET_TARGET = "RunList"
     SHEET_DASHBOARD = "Dashboard"
     SHEET_TAGS = "Tags"
-    SHEET_ONLINE_LOG = "OnlineLog"
     
     # ==================== COLUMN CONFIGURATION ====================
     # FIXED: Removed INTRO column (was position 11)
@@ -99,8 +98,6 @@ class Config:
         "MEH DATE",           # 21
         "PHASE 2"             # 22
     ]
-    
-    ONLINE_LOG_COLUMNS = ["Date Time", "Nickname", "Last Seen", "Batch #"]
     
     # ==================== TARGET STATUS ====================
     TARGET_STATUS_PENDING = "⚡ Pending"

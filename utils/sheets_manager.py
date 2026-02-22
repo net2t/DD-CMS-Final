@@ -129,11 +129,8 @@ class SheetsManager:
         self.profiles_ws = self._get_or_create(Config.SHEET_PROFILES, cols=len(Config.COLUMN_ORDER))
         self.target_ws = self._get_or_create(Config.SHEET_TARGET, cols=6)
         self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD, cols=12)
-        self.online_log_ws = self._get_or_create(Config.SHEET_ONLINE_LOG, cols=4)
-
         # Ensure existing sheets have expected column counts
         self._ensure_min_cols(self.dashboard_ws, 12)
-        self._ensure_min_cols(self.online_log_ws, 4)
         self._ensure_min_cols(self.target_ws, 6)
         
         # Optional sheets
@@ -274,7 +271,6 @@ class SheetsManager:
                 "RUN#", "TIMESTAMP", "PROFILES", "SUCCESS", "FAILED",
                 "NEW", "UPDATED", "DIFF", "UNCHANGED", "TRIGGER", "START", "END"
             ],
-            self.online_log_ws: Config.ONLINE_LOG_COLUMNS
         }
 
         for ws, headers in sheets_to_format.items():
@@ -367,7 +363,7 @@ class SheetsManager:
         max_rows = getattr(Config, 'FORMAT_MAX_ROWS', 500)
         max_rows = None if (isinstance(max_rows, int) and max_rows <= 0) else max_rows
 
-        for ws in [self.profiles_ws, self.target_ws, self.dashboard_ws, self.online_log_ws]:
+        for ws in [self.profiles_ws, self.target_ws, self.dashboard_ws]:
             if ws:
                 self._apply_sheet_font(ws, max_rows=max_rows)
                 self._apply_sheet_wrap(ws, "CLIP", max_rows=max_rows)
@@ -1022,33 +1018,6 @@ class SheetsManager:
 
         self._maybe_reload_existing_profiles(force=True)
         return results
-
-    # ==================== ONLINE LOG OPERATIONS ====================
-
-    def log_online_user(self, nickname, timestamp=None):
-        """Inserts a new row at Row 2 in the 'OnlineLog' sheet."""
-        ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        self._perform_write_operation(self.online_log_ws.insert_row, [ts, nickname, ts, ""], index=2)
-
-    def batch_log_online_users(self, nicknames, timestamp=None, batch_no=None):
-        """
-        Appends multiple rows to the 'OnlineLog' sheet in a single batch operation.
-
-        Args:
-            nicknames (list[str]): A list of nicknames to log.
-            timestamp (str, optional): The timestamp for all entries. Defaults to now.
-            batch_no (str, optional): The batch number for all entries. Defaults to generated.
-        """
-        if not nicknames:
-            return
-        
-        ts = timestamp or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        if batch_no is None:
-            batch_no = get_pkt_time().strftime("%Y%m%d_%H%M")
-        
-        rows_to_add = [[ts, nickname, ts, batch_no] for nickname in nicknames]
-        log_msg(f"Logging {len(rows_to_add)} online users to the sheet with batch {batch_no}...", "INFO")
-        self._perform_write_operation(self.online_log_ws.insert_rows, rows_to_add, row=2)
 
     # ==================== DASHBOARD OPERATIONS ====================
 
