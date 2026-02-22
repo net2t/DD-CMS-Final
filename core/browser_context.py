@@ -97,6 +97,18 @@ class BrowserContext:
         
         # Reduce noise
         opts.add_argument("--log-level=3")
+
+        # Speed: stop waiting once DOM is ready (don't wait for images/fonts/CSS)
+        opts.page_load_strategy = 'eager'
+
+        # Speed: block images so pages load faster
+        opts.add_argument("--blink-settings=imagesEnabled=false")
+        opts.add_argument("--disable-extensions")
+        opts.add_argument("--disable-sync")
+        opts.add_argument("--disable-background-networking")
+        opts.add_argument("--no-first-run")
+        opts.add_argument("--mute-audio")
+        opts.add_argument("--no-pings")
         
         return opts
     

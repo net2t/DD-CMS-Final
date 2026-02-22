@@ -860,6 +860,11 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
     writer = SheetsBatchWriter(sheets, batch_size=Config.BATCH_SIZE)
 
+    # Stall tracking: if too many consecutive failures, pause to let site recover
+    consecutive_failures = 0
+    MAX_CONSECUTIVE_FAILURES = 5
+    STALL_PAUSE_SECONDS = 120  # 2 min cooldown if site is throttling
+
     for i, target in enumerate(targets, 1):
         try:
             # Validate and clean nickname
@@ -879,6 +884,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
             profile_data = scraper.scrape_profile(nickname, source=target.get('source', 'Target'))
 
             if profile_data:
+                consecutive_failures = 0  # Reset on success
                 # Determine Phase 2 eligibility
                 posts_raw = str(profile_data.get("POSTS", "") or "")
                 posts_digits = re.sub(r"\D+", "", posts_raw)
@@ -945,9 +951,20 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
             else: # Scrape failed
                 stats['failed'] += 1
+                consecutive_failures += 1
                 if row:
                     sheets.update_target_status(row, 'error', 'Scraping failed')
                 log_progress(i, len(targets), nickname, "failed")
+
+                # Site may be throttling — pause and let it recover
+                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                    log_msg(
+                        f"⚠️ {consecutive_failures} consecutive failures detected. "
+                        f"Pausing {STALL_PAUSE_SECONDS}s to let site recover...",
+                        "WARNING"
+                    )
+                    time.sleep(STALL_PAUSE_SECONDS)
+                    consecutive_failures = 0
             
         except Exception as e:
             log_msg(f"Error processing {nickname}: {str(e)}", "ERROR")
