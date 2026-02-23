@@ -1,13 +1,15 @@
 """
-Phase 1 (Profiles) - Online Mode
+Online Mode Runner — DD-CMS-V3
 
-What this mode does:
-- Opens the "online users" page
-- Collects online nicknames using multiple fallback strategies
-- Reuses the same profile scraping pipeline as Target mode
+What this module does:
+- Opens the DamaDam online users page
+- Collects all visible nicknames using multiple fallback strategies
+- Passes them to run_target_mode() (shared scraping pipeline)
+- Does NOT update RunList (Online mode has no RunList rows)
+- Col 9  (LIST)     → empty string for Online mode
+- Col 11 (RUN MODE) → "Online"
 """
 
-import time
 import re
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -19,146 +21,124 @@ from config.selectors import OnlineUserSelectors
 from utils.ui import log_msg
 from phases.profile.target_mode import run_target_mode, validate_nickname
 
-# ==================== ONLINE USERS PARSER ====================
 
 class OnlineUsersParser:
-    """
-    Parses the 'Online Users' page to extract a list of nicknames.
+    """Parses the DamaDam online users page and returns a list of nicknames."""
 
-    It uses multiple strategies to find nicknames on the page to make the scraper
-    more resilient to changes in the website's HTML structure.
-    """
-    
     def __init__(self, driver):
-        """Initializes the parser with the WebDriver instance."""
         self.driver = driver
-    
+
     def get_online_nicknames(self):
         """
-        Fetches and extracts all unique nicknames from the online users page.
+        Fetch the online users page and extract unique nicknames.
+
+        Uses three fallback strategies so it stays resilient to site HTML changes.
 
         Returns:
-            list[str]: A sorted list of unique nicknames.
+            list[str]: Sorted list of unique valid nicknames.
         """
         try:
             log_msg("Fetching online users list...")
-            
             self.driver.get(Config.ONLINE_USERS_URL)
-            
-            # Wait for page to load
+
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, OnlineUserSelectors.PAGE_HEADER))
             )
-            
-            # Find all nickname elements
+
             nicknames = set()
-            
-            # Strategy 1: Find <b><bdi> elements with nicknames
+
+            # Strategy 1 — <b><bdi> text inside user cards
             try:
-                elements = self.driver.find_elements(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_1)
-                for elem in elements:
+                for elem in self.driver.find_elements(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_1):
                     nick = elem.text.strip()
                     if nick:
                         nicknames.add(nick)
             except Exception as e:
-                log_msg(f"Strategy 1 failed: {e}")
-            
-            # Strategy 2: Find form action URLs containing nicknames
+                log_msg(f"Online parser strategy 1 failed: {e}", "WARNING")
+
+            # Strategy 2 — form action URLs like /search/nickname/redirect/SomeNick/
             try:
-                forms = self.driver.find_elements(
-                    By.CSS_SELECTOR, 
-                    OnlineUserSelectors.NICKNAME_STRATEGY_2
-                )
-                
-                for form in forms:
-                    action = form.get_attribute('action')
-                    if action:
-                        # Extract nickname from URL
-                        # Example: /search/nickname/redirect/Alz/
-                        match = re.search(r'/redirect/([^/]+)/?$', action)
-                        if match:
-                            nick = match.group(1)
-                            if nick:
-                                nicknames.add(nick)
+                for form in self.driver.find_elements(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_2):
+                    action = form.get_attribute('action') or ""
+                    m = re.search(r'/redirect/([^/]+)/?$', action)
+                    if m and m.group(1):
+                        nicknames.add(m.group(1))
             except Exception as e:
-                log_msg(f"Strategy 2 failed: {e}")
-            
-            # Strategy 3: Parse from list items
+                log_msg(f"Online parser strategy 2 failed: {e}", "WARNING")
+
+            # Strategy 3 — list items containing <b class="clb">
             try:
-                items = self.driver.find_elements(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_3)
-                for item in items:
-                    # Find <b> tag inside
+                for item in self.driver.find_elements(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_3):
                     try:
-                        b_tag = item.find_element(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_3_CHILD)
-                        nick = b_tag.text.strip()
+                        b = item.find_element(By.CSS_SELECTOR, OnlineUserSelectors.NICKNAME_STRATEGY_3_CHILD)
+                        nick = b.text.strip()
                         if nick:
                             nicknames.add(nick)
-                    except:
-                        pass
+                    except Exception:
+                        continue
             except Exception as e:
-                log_msg(f"Strategy 3 failed: {e}")
-            
-            # Convert to sorted list
-            result = sorted(list(nicknames))
-            log_msg(f"Found {len(result)} online users", "OK")
-            
-            return result
-        
+                log_msg(f"Online parser strategy 3 failed: {e}", "WARNING")
+
+            # Validate all nicknames before returning
+            valid = sorted(n for n in nicknames if validate_nickname(n))
+            log_msg(f"Found {len(valid)} valid online users", "OK")
+            return valid
+
         except TimeoutException:
             log_msg("Timeout loading online users page", "TIMEOUT")
             return []
-        
         except Exception as e:
             log_msg(f"Error fetching online users: {e}", "ERROR")
             return []
 
-# ==================== ONLINE MODE RUNNER ====================
 
 def run_online_mode(driver, sheets, max_profiles=0):
     """
-    Orchestrates the scraping process for the 'online' mode.
+    Orchestrate Online Mode scraping.
 
-    This function fetches the list of online users and then delegates the scraping
-    to the `run_target_mode` function. This ensures that the same, consistent
-    scraping and data handling logic is used across all modes.
+    Steps:
+      1. Parse online users page → collect nicknames
+      2. Build target list with source="Online" (no RunList rows)
+      3. Delegate to run_target_mode() with run_label="ONLINE"
+         - COL 9  LIST     = "" (empty — no RunList Col F for online)
+         - COL 11 RUN MODE = "Online"
 
     Args:
-        driver: The Selenium WebDriver instance.
-        sheets: An initialized SheetsManager instance.
-        max_profiles (int): The maximum number of profiles to process (0 for all).
+        driver:       Selenium WebDriver
+        sheets:       SheetsManager instance
+        max_profiles: 0 = unlimited
 
     Returns:
-        dict: A dictionary of statistics from the scraping run.
+        dict of run statistics
     """
     log_msg("=== ONLINE MODE STARTED ===")
-    
-    # Get online users
-    parser = OnlineUsersParser(driver)
-    nicknames = parser.get_online_nicknames()
-    
-    if not nicknames:
-        log_msg("No online users found")
-        return {
-            "success": 0, "failed": 0, "new": 0,
-            "updated": 0, "unchanged": 0, "logged": 0
-        }
 
-    # Format nicknames into the target structure for run_target_mode
+    parser    = OnlineUsersParser(driver)
+    nicknames = parser.get_online_nicknames()
+
+    if not nicknames:
+        log_msg("No online users found — nothing to scrape")
+        return {"success": 0, "failed": 0, "new": 0, "updated": 0, "unchanged": 0}
+
+    # Build target list — no 'row' key means RunList will NOT be updated
     targets = [
-        {'nickname': nick, 'source': 'Online'}
-        for nick in nicknames if validate_nickname(nick)
+        {
+            'nickname': nick,
+            'source':   'Online',
+            'tag':      '',       # No RunList Col F value for online mode
+            'row':      None,     # No RunList row to update
+        }
+        for nick in nicknames
     ]
 
-    # Delegate the scraping to the centralized target mode runner
-    stats = run_target_mode(driver, sheets, max_profiles, targets, run_label="ONLINE")
-    
-    # Add online-specific stats
-    stats['logged'] = len(nicknames)
-    
-    log_msg("=== ONLINE MODE COMPLETED ===")
-    log_msg(
-        f"Results: {stats.get('success', 0)} success, {stats.get('failed', 0)} failed, "
-        f"{stats.get('logged', 0)} logged"
+    stats = run_target_mode(
+        driver=driver,
+        sheets=sheets,
+        max_profiles=max_profiles,
+        targets=targets,
+        run_label="ONLINE",
     )
-    
+
+    log_msg(f"=== ONLINE MODE COMPLETED — "
+            f"success={stats.get('success',0)} failed={stats.get('failed',0)} ===")
     return stats

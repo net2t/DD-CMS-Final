@@ -1,15 +1,13 @@
 """
-Google Sheets Manager (Phase 1)
+Google Sheets Manager — DD-CMS-V3
 
-This module is responsible for:
-- Connecting to your Google Sheet
-- Ensuring required sheets + headers exist
-- Writing profile rows to the Profiles sheet
-- Logging online users to OnlineLog
-- Updating run stats to Dashboard
-
-Important rule:
-- Keep sheet output the same (schema + values). Refactors must not change output.
+Key changes from V2:
+- No OnlineLog sheet (removed completely)
+- Dashboard kept for run summaries only
+- write_profile() updates RunList IMMEDIATELY after each profile (no batch queue)
+- Col 9  = LIST     → RunList Col F value
+- Col 11 = RUN MODE → "Online" / "Target"
+- sort_profiles_by_date() called once at end of run
 """
 
 import json
@@ -25,478 +23,181 @@ from gspread.exceptions import WorksheetNotFound, APIError
 from config.config_common import Config
 from utils.ui import get_pkt_time, log_msg
 
+
+# ── Data Cleaning ─────────────────────────────────────────────────────────────
+
 def clean_data(value):
-    """Clean cell data, returning empty string for invalid values."""
+    """Strip and normalize a cell value; returns empty string for junk values."""
     if not value:
         return ""
-    
     v = str(value).strip().replace('\xa0', ' ')
-    bad_values = {
-        "No city", "Not set", "[No Posts]", "N/A", 
-        "no city", "not set", "[no posts]", "n/a",
-        "[No Post URL]", "[Error]", "no set", "none", "null", "no age"
+    junk = {
+        "No city", "Not set", "[No Posts]", "N/A", "no city", "not set",
+        "[no posts]", "n/a", "[No Post URL]", "[Error]", "no set", "none",
+        "null", "no age",
     }
-    
-    if v in bad_values or not v:
+    if v in junk:
         return ""
-    
     return re.sub(r"\s+", " ", v)
 
+
 def clean_data_preserve_newlines(value):
-    """Clean cell data but preserve newline characters for multiline cells."""
+    """Like clean_data but keeps newlines (used for mehfil multi-line cells)."""
     if not value:
         return ""
-
     v = str(value).replace('\xa0', ' ').strip()
-    bad_values = {
-        "No city", "Not set", "[No Posts]", "N/A",
-        "no city", "not set", "[no posts]", "n/a",
-        "[No Post URL]", "[Error]", "no set", "none", "null", "no age"
+    junk = {
+        "No city", "Not set", "[No Posts]", "N/A", "no city", "not set",
+        "[no posts]", "n/a", "[No Post URL]", "[Error]", "no set", "none",
+        "null", "no age",
     }
-    if v in bad_values or not v:
+    if v in junk:
         return ""
-
     lines = [re.sub(r"\s+", " ", line).strip() for line in v.splitlines()]
-    lines = [line for line in lines if line]
-    return "\n".join(lines)
+    return "\n".join(l for l in lines if l)
 
-# ==================== GOOGLE SHEETS CLIENT ====================
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
 
 def create_gsheets_client(credentials_json=None, credentials_path=None):
-    """Create authenticated Google Sheets client"""
+    """Create an authenticated gspread client."""
     log_msg("Authenticating with Google Sheets API...")
-    
-    if not Config.GOOGLE_SHEET_URL:
-        log_msg("GOOGLE_SHEET_URL is not set", "ERROR")
-        raise ValueError("Missing GOOGLE_SHEET_URL")
-    
     scope = [
         "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
+        "https://www.googleapis.com/auth/drive",
     ]
-    
     try:
-        json_source = credentials_json or Config.GOOGLE_CREDENTIALS_JSON
-        path_source = credentials_path
-        
-        if not path_source:
-            default_cred = Config.get_credentials_path()
-            path_source = default_cred if default_cred else None
+        json_src = credentials_json or Config.GOOGLE_CREDENTIALS_JSON
+        path_src = credentials_path or Config.get_credentials_path()
 
-        if json_source:
-            log_msg("Using credentials from provided JSON")
-            try:
-                cred_data = json.loads(json_source)
-                if isinstance(cred_data, dict):
-                    pk = cred_data.get("private_key")
-                    if isinstance(pk, str) and "\\n" in pk:
-                        cred_data["private_key"] = pk.replace("\\n", "\n")
-                creds = Credentials.from_service_account_info(cred_data, scopes=scope)
-                return gspread.authorize(creds)
-            except json.JSONDecodeError as e:
-                log_msg(f"Invalid JSON in credentials: {e}", "ERROR")
-                raise
-        
-        if path_source and Path(path_source).exists():
-            log_msg(f"Using credentials file: {path_source}")
-            creds = Credentials.from_service_account_file(str(path_source), scopes=scope)
+        if json_src:
+            log_msg("Using credentials from JSON env var")
+            data = json.loads(json_src)
+            pk = data.get("private_key")
+            if isinstance(pk, str) and "\\n" in pk:
+                data["private_key"] = pk.replace("\\n", "\n")
+            creds = Credentials.from_service_account_info(data, scopes=scope)
             return gspread.authorize(creds)
-        
-        log_msg("No valid credentials found", "ERROR")
-        raise ValueError("Missing Google credentials")
-    
+
+        if path_src and Path(path_src).exists():
+            log_msg(f"Using credentials file: {path_src}")
+            creds = Credentials.from_service_account_file(str(path_src), scopes=scope)
+            return gspread.authorize(creds)
+
+        raise ValueError("No valid Google credentials found.")
+
     except Exception as e:
-        log_msg(f"Google Sheets authentication failed: {e}", "ERROR")
+        log_msg(f"Google Sheets auth failed: {e}", "ERROR")
         raise
 
-# ==================== SHEETS MANAGER ====================
+
+# ── SheetsManager ─────────────────────────────────────────────────────────────
 
 class SheetsManager:
-    """Manages all interactions with the Google Sheets document."""
-    
+    """All Google Sheets interactions for DD-CMS-V3."""
+
     def __init__(self, client=None, credentials_json=None, credentials_path=None):
-        """Initializes the SheetsManager."""
         if client is None:
-            client = create_gsheets_client(
-                credentials_json=credentials_json,
-                credentials_path=credentials_path
-            )
-        
-        self.client = client
+            client = create_gsheets_client(credentials_json, credentials_path)
+
+        self.client      = client
         self.spreadsheet = client.open_by_url(Config.GOOGLE_SHEET_URL)
-        
-        # Initialize worksheets
-        self.profiles_ws = self._get_or_create(Config.SHEET_PROFILES, cols=len(Config.COLUMN_ORDER))
-        self.target_ws = self._get_or_create(Config.SHEET_TARGET, cols=6)
-        self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD, cols=12)
-        # Ensure existing sheets have expected column counts
+
+        # Required sheets
+        self.profiles_ws  = self._get_or_create(Config.SHEET_PROFILES,  cols=len(Config.COLUMN_ORDER))
+        self.target_ws    = self._get_or_create(Config.SHEET_TARGET,     cols=6)
+        self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD,  cols=12)
+
+        # Optional
+        self.tags_ws = self._get_sheet_if_exists(Config.SHEET_TAGS)
+
+        # In-memory caches
+        self.tags_mapping       = {}          # nick_lower → tag string
+        self.existing_profiles  = {}          # nick_lower → {'row': int, 'data': list}
+        self._existing_profile_rows = {}      # nick_lower → row int (fast lookup)
+        self._sorted_profiles_this_run = False
+
         self._ensure_min_cols(self.dashboard_ws, 12)
         self._ensure_min_cols(self.target_ws, 6)
-        
-        # Optional sheets
-        self.tags_ws = self._get_sheet_if_exists(Config.SHEET_TAGS)
-        
-        # Load data
-        self.tags_mapping = {}
-        self.existing_profiles = {}
-        self._existing_profile_rows = {}
-        self._sorted_profiles_this_run = False
-        self._writes_since_profile_reload = 0
-        self._profile_reload_interval = 50
-        
         self._init_headers()
         self._load_tags()
         self._load_existing_profile_rows()
-        
-        log_msg("Google Sheets connected successfully", "OK")
 
-    def _maybe_reload_existing_profiles(self, force: bool = False):
-        """Reload existing profiles cache occasionally to reduce expensive full-sheet reads."""
-        if force:
-            self._writes_since_profile_reload = 0
-            self._load_existing_profile_rows()
-            self.existing_profiles = {}
-            return
+        log_msg("Google Sheets connected", "OK")
 
-        self._writes_since_profile_reload += 1
-        if self._writes_since_profile_reload >= self._profile_reload_interval:
-            self._writes_since_profile_reload = 0
-            self._load_existing_profile_rows()
-            self.existing_profiles = {}
+    # ── Sheet helpers ──────────────────────────────────────────────────────────
 
-    def _update_existing_profiles_cache_after_insert(self, nickname: str, inserted_row_data: list, inserted_row_num: int = 2):
-        """Best-effort update of in-memory cache without a full reload."""
-        try:
-            key = (nickname or "").strip().lower()
-            if not key:
-                return
-
-            # Inserted at row 2 means all existing cached row numbers shift down by 1.
-            if inserted_row_num == 2:
-                for rec in self.existing_profiles.values():
-                    try:
-                        rec['row'] = int(rec.get('row') or 0) + 1
-                    except Exception:
-                        continue
-
-                try:
-                    for k in list(self._existing_profile_rows.keys()):
-                        self._existing_profile_rows[k] = int(self._existing_profile_rows[k]) + 1
-                except Exception:
-                    pass
-
-            self.existing_profiles[key] = {
-                'row': inserted_row_num,
-                'data': inserted_row_data
-            }
-            self._existing_profile_rows[key] = inserted_row_num
-        except Exception:
-            # Cache update is opportunistic; ignore failures.
-            pass
-
-    def _update_row_mapping_after_move_to_top(self, moved_key: str, from_row: int, to_row: int = 2):
-        """Update nickname->row mapping after moving one row to the top (row 2)."""
-        try:
-            moved_key = (moved_key or "").strip().lower()
-            if not moved_key:
-                return
-            if not from_row or from_row <= 1 or from_row == to_row:
-                self._existing_profile_rows[moved_key] = to_row
-                return
-
-            # When moving from_row -> 2, the range [2, from_row-1] shifts down by 1.
-            if to_row == 2 and from_row > 2:
-                for k, r in list(self._existing_profile_rows.items()):
-                    try:
-                        r = int(r)
-                    except Exception:
-                        continue
-                    if 2 <= r < from_row:
-                        self._existing_profile_rows[k] = r + 1
-
-            self._existing_profile_rows[moved_key] = to_row
-
-            # Invalidate full-row cache for anything affected.
-            self.existing_profiles.pop(moved_key, None)
-        except Exception:
-            pass
-    
     def _get_or_create(self, name, cols=20, rows=1000):
-        """Safely gets a worksheet by name, creating it if it doesn't exist."""
         try:
             return self.spreadsheet.worksheet(name)
         except WorksheetNotFound:
             log_msg(f"Creating worksheet: {name}")
             return self.spreadsheet.add_worksheet(title=name, rows=rows, cols=cols)
 
-    def _ensure_min_cols(self, ws, min_cols):
-        if not ws:
-            return
-        try:
-            if ws.col_count < min_cols:
-                self._perform_write_operation(ws.add_cols, min_cols - ws.col_count)
-        except Exception:
-            pass
-
-    def _format_header_cell(self, text):
-        if not text:
-            return ""
-        t = str(text).strip().upper()
-        # Split on '/' and whitespace into separate lines
-        parts = []
-        for chunk in t.split('/'):
-            chunk = chunk.strip()
-            if not chunk:
-                continue
-            parts.extend([p for p in chunk.split() if p])
-        return "\n".join(parts) if parts else t
-    
     def _get_sheet_if_exists(self, name):
-        """Safely gets a worksheet by name, returning None if it doesn't exist."""
         try:
             return self.spreadsheet.worksheet(name)
         except WorksheetNotFound:
-            log_msg(f"Optional sheet '{name}' not found, skipping")
             return None
-    
+
+    def _ensure_min_cols(self, ws, min_cols):
+        if ws and ws.col_count < min_cols:
+            try:
+                self._write(ws.add_cols, min_cols - ws.col_count)
+            except Exception:
+                pass
+
+    def _format_header_cell(self, text):
+        """Convert header text to multi-line uppercase (words on separate lines)."""
+        if not text:
+            return ""
+        parts = []
+        for chunk in str(text).strip().upper().split('/'):
+            parts.extend(w for w in chunk.split() if w)
+        return "\n".join(parts) if parts else text.strip().upper()
+
     def _init_headers(self):
-        """Initialize headers and apply formatting for all sheets."""
-        sheets_to_format = {
-            self.profiles_ws: [
-                ("RUN MODE" if h == "SKIP/DEL" else h)
-                for h in Config.COLUMN_ORDER
-            ],
-            self.target_ws: ["NICKNAME", "STATUS", "REMARKS"],
+        """Ensure all sheets have correct headers."""
+        sheet_headers = {
+            self.profiles_ws:  [self._format_header_cell(h) for h in Config.COLUMN_ORDER],
+            self.target_ws:    ["NICKNAME", "STATUS", "REMARKS"],
             self.dashboard_ws: [
                 "RUN#", "TIMESTAMP", "PROFILES", "SUCCESS", "FAILED",
-                "NEW", "UPDATED", "DIFF", "UNCHANGED", "TRIGGER", "START", "END"
+                "NEW", "UPDATED", "DIFF", "UNCHANGED", "TRIGGER", "START", "END",
             ],
         }
-
-        for ws, headers in sheets_to_format.items():
+        for ws, headers in sheet_headers.items():
             if not ws:
                 continue
             try:
-                current_headers = ws.row_values(1)
-
-                if ws == self.profiles_ws and current_headers:
-                    meh_type_header = self._format_header_cell("MEH TYPE")
-                    if meh_type_header in current_headers:
-                        col_index = current_headers.index(meh_type_header) + 1
-                        log_msg(
-                            f"Removing obsolete Profiles column: {meh_type_header} (col {col_index})...",
-                            "WARNING"
-                        )
-                        self._perform_write_operation(ws.delete_columns, col_index)
-                        current_headers = ws.row_values(1)
-
-                formatted_headers = [self._format_header_cell(h) for h in headers]
-                if not current_headers:
-                    log_msg(f"Initializing headers for '{ws.title}' sheet...")
-                    ws.append_row(formatted_headers)
+                current = ws.row_values(1)
+                if not current:
+                    ws.append_row(headers)
                     self._apply_header_format(ws)
-
-                # If headers differ, update only the header row (do NOT clear the sheet).
-                elif (current_headers[:len(formatted_headers)] if ws == self.target_ws else current_headers) != formatted_headers:
-                    log_msg(
-                        f"Updating header row for '{ws.title}' sheet (preserving existing data)...",
-                        "WARNING"
-                    )
+                elif current != headers:
                     end_a1 = gspread.utils.rowcol_to_a1(1, len(headers))
-                    header_range = f"A1:{end_a1}"
-                    self._perform_write_operation(ws.update, header_range, [formatted_headers])
+                    self._write(ws.update, f"A1:{end_a1}", [headers])
                     self._apply_header_format(ws)
             except Exception as e:
-                log_msg(f"Header initialization for '{ws.title}' failed: {e}", "ERROR")
-
-    def _apply_row_format(self, ws, row_index):
-        """Apply 'Quantico' font to a specific data row (font-only)."""
-        try:
-            row_range = f'A{row_index}:{gspread.utils.rowcol_to_a1(row_index, ws.col_count)}'
-            self._perform_write_operation(
-                ws.format, 
-                row_range, 
-                {
-                    "textFormat": {
-                        "fontFamily": "Quantico"
-                    }
-                }
-            )
-        except Exception as e:
-            log_msg(f"Failed to apply row format for '{ws.title}' at row {row_index}: {e}", "WARNING")
-
-    def _apply_sheet_font(self, ws, max_rows=None):
-        """Apply Quantico font to a whole sheet range (fast, one call)."""
-        try:
-            if max_rows is None:
-                max_rows = ws.row_count
-            end_a1 = gspread.utils.rowcol_to_a1(max_rows, ws.col_count)
-            self._perform_write_operation(
-                ws.format,
-                f"A1:{end_a1}",
-                {"textFormat": {"fontFamily": "Quantico"}}
-            )
-        except Exception as e:
-            log_msg(f"Failed to apply sheet font for '{ws.title}': {e}", "WARNING")
-
-    def _apply_sheet_wrap(self, ws, wrap_strategy, max_rows=None):
-        try:
-            if max_rows is None:
-                max_rows = ws.row_count
-            end_a1 = gspread.utils.rowcol_to_a1(max_rows, ws.col_count)
-            self._perform_write_operation(
-                ws.format,
-                f"A1:{end_a1}",
-                {"wrapStrategy": wrap_strategy}
-            )
-        except Exception as e:
-            log_msg(f"Failed to apply wrap for '{ws.title}': {e}", "WARNING")
-
-    def finalize_formatting(self):
-        """Apply final formatting at end of run.
-
-        Speed-first: this is optional and defaults to off (Config.FINALIZE_FORMATTING).
-        """
-        if not getattr(Config, 'FINALIZE_FORMATTING', False):
-            return
-
-        max_rows = getattr(Config, 'FORMAT_MAX_ROWS', 500)
-        max_rows = None if (isinstance(max_rows, int) and max_rows <= 0) else max_rows
-
-        for ws in [self.profiles_ws, self.target_ws, self.dashboard_ws]:
-            if ws:
-                self._apply_sheet_font(ws, max_rows=max_rows)
-                self._apply_sheet_wrap(ws, "CLIP", max_rows=max_rows)
-                self._apply_header_format(ws)
+                log_msg(f"Header init failed for {ws.title}: {e}", "WARNING")
 
     def _apply_header_format(self, ws):
-        """Apply 'Quantico' font to the header row (font-only)."""
+        """Apply white Quantico font to header row."""
         try:
-            header_range = f'A1:{gspread.utils.rowcol_to_a1(1, ws.col_count)}'
-            self._perform_write_operation(
-                ws.format,
-                header_range,
-                {
-                    "textFormat": {
-                        "fontFamily": "Quantico",
-                        "foregroundColor": {"red": 1, "green": 1, "blue": 1}
-                    }
+            header_range = f"A1:{gspread.utils.rowcol_to_a1(1, ws.col_count)}"
+            self._write(ws.format, header_range, {
+                "textFormat": {
+                    "fontFamily": "Quantico",
+                    "foregroundColor": {"red": 1, "green": 1, "blue": 1},
                 }
-            )
-        except Exception as e:
-            log_msg(f"Failed to apply header format for '{ws.title}': {e}", "WARNING")
-    
-    def _load_tags(self):
-        """Loads the tag-to-nickname mappings from the 'Tags' sheet."""
-        if not self.tags_ws:
-            return
-        
-        try:
-            all_values = self.tags_ws.get_all_values()
-            if not all_values or len(all_values) < 2:
-                return
-            
-            headers = all_values[0]
-            for col_idx, header in enumerate(headers):
-                tag_name = clean_data(header)
-                if not tag_name:
-                    continue
-                
-                for row in all_values[1:]:
-                    if col_idx < len(row):
-                        nickname = row[col_idx].strip()
-                        if nickname:
-                            key = nickname.lower()
-                            if key in self.tags_mapping:
-                                if tag_name not in self.tags_mapping[key]:
-                                    self.tags_mapping[key] += f", {tag_name}"
-                            else:
-                                self.tags_mapping[key] = tag_name
-            
-            log_msg(f"Loaded {len(self.tags_mapping)} tag mappings")
-        
-        except Exception as e:
-            log_msg(f"Tags load failed: {e}")
-    
-    def _load_existing_profile_rows(self):
-        """Loads only nickname->row index mapping from the 'Profiles' sheet (fast)."""
-        try:
-            nick_idx = Config.COLUMN_ORDER.index("NICK NAME") + 1
-            col_letter = gspread.utils.rowcol_to_a1(1, nick_idx).rstrip('1')
-            values = self.profiles_ws.col_values(nick_idx)
-            # values includes header at index 0
-            rows = values[1:] if values else []
-            mapping = {}
-            for i, nickname in enumerate(rows, start=2):
-                nickname = (nickname or "").strip()
-                if nickname:
-                    mapping[nickname.lower()] = i
-
-            self._existing_profile_rows = mapping
-            log_msg(f"Loaded {len(self._existing_profile_rows)} existing profile rows")
-        
-        except Exception as e:
-            log_msg(f"Failed to load existing profile rows: {e}")
-
-    def _get_existing_profile_record(self, nickname: str):
-        """Get existing profile record, fetching row values on-demand."""
-        key = (nickname or "").strip().lower()
-        if not key:
-            return None
-
-        # In-memory full record cache
-        if key in self.existing_profiles:
-            return self.existing_profiles[key]
-
-        row_num = self._existing_profile_rows.get(key)
-        if not row_num:
-            return None
-
-        try:
-            row = self.profiles_ws.row_values(row_num)
-            rec = {'row': row_num, 'data': row}
-            self.existing_profiles[key] = rec
-            return rec
+            })
         except Exception:
-            return None
+            pass
 
-    def _move_profile_row_to_top(self, from_row: int, to_row: int = 2) -> bool:
-        """Move a row within Profiles sheet using Sheets API (faster and safer than delete+insert)."""
-        try:
-            if not from_row or from_row <= 1 or from_row == to_row:
-                return True
+    # ── Write wrapper ──────────────────────────────────────────────────────────
 
-            sheet_id = self.profiles_ws._properties.get('sheetId')
-            if sheet_id is None:
-                return False
-
-            # Google Sheets uses 0-based, endIndex is exclusive
-            body = {
-                "requests": [
-                    {
-                        "moveDimension": {
-                            "source": {
-                                "sheetId": sheet_id,
-                                "dimension": "ROWS",
-                                "startIndex": from_row - 1,
-                                "endIndex": from_row
-                            },
-                            "destinationIndex": to_row - 1
-                        }
-                    }
-                ]
-            }
-            self.spreadsheet.batch_update(body)
-            time.sleep(Config.SHEET_WRITE_DELAY)
-            return True
-        except Exception as e:
-            log_msg(f"Failed to move profile row {from_row} -> {to_row}: {e}", "WARNING")
-            return False
-    
-    # ==================== PROFILE OPERATIONS ====================
-
-    def _perform_write_operation(self, operation, *args, **kwargs):
-        """Robust wrapper for all gspread write operations with retry logic."""
+    def _write(self, operation, *args, **kwargs):
+        """Retry wrapper for all gspread write operations."""
         for attempt in range(3):
             try:
                 operation(*args, **kwargs)
@@ -504,598 +205,374 @@ class SheetsManager:
                 return True
             except APIError as e:
                 if '429' in str(e):
-                    wait_time = (attempt + 1) * 60
-                    log_msg(f"API rate limit hit. Waiting {wait_time}s before retry...", "WARNING")
-                    time.sleep(wait_time)
+                    wait = (attempt + 1) * 60
+                    log_msg(f"Rate limit hit — waiting {wait}s...", "WARNING")
+                    time.sleep(wait)
                 else:
-                    log_msg(f"API Error during write: {e}", "ERROR")
+                    log_msg(f"API error: {e}", "ERROR")
                     return False
             except Exception as e:
-                log_msg(f"An unexpected error occurred during write: {e}", "ERROR")
+                log_msg(f"Write error: {e}", "ERROR")
                 return False
-        log_msg("Failed to perform write operation after multiple retries.", "ERROR")
+        log_msg("Write failed after 3 retries", "ERROR")
         return False
 
-    def _compute_profile_state(self, profile_data):
-        """Computes a normalized profile state."""
-        skip_reason = (profile_data.get('__skip_reason') or '').lower()
-        status = (profile_data.get('STATUS') or '').strip()
+    # ── Tag loading ────────────────────────────────────────────────────────────
 
-        if any(reason in skip_reason for reason in ['timeout', 'not found', 'page timeout']):
-            return Config.PROFILE_STATE_DEAD
-        if status == 'Banned' or 'suspend' in skip_reason or 'banned' in skip_reason:
-            return Config.PROFILE_STATE_BANNED
-        if status == 'Unverified':
-            return Config.PROFILE_STATE_UNVERIFIED
-        return Config.PROFILE_STATE_ACTIVE
+    def _load_tags(self):
+        if not self.tags_ws:
+            return
+        try:
+            rows = self.tags_ws.get_all_values()
+            if not rows or len(rows) < 2:
+                return
+            headers = rows[0]
+            for col_idx, tag_name in enumerate(headers):
+                tag_name = clean_data(tag_name)
+                if not tag_name:
+                    continue
+                for row in rows[1:]:
+                    if col_idx < len(row):
+                        nick = row[col_idx].strip()
+                        if nick:
+                            key = nick.lower()
+                            self.tags_mapping[key] = (
+                                f"{self.tags_mapping[key]}, {tag_name}"
+                                if key in self.tags_mapping else tag_name
+                            )
+            log_msg(f"Loaded {len(self.tags_mapping)} tag mappings")
+        except Exception as e:
+            log_msg(f"Tags load failed: {e}", "WARNING")
 
-    def write_profile(self, profile_data, target_tag: str | None = None):
-        """
-        Writes a profile to the 'Profiles' sheet with duplicate handling.
-        FIXED: Applies Quantico font to the written row.
-        """
-        nickname = (profile_data.get("NICK NAME") or "").strip()
-        if not nickname:
-            log_msg("Profile has no nickname, skipping write.", "WARNING")
-            return {"status": "error", "error": "Missing nickname"}
+    # ── Existing profile cache ─────────────────────────────────────────────────
 
-        # Only VERIFIED profiles should be written to Profiles (per project requirement).
-        # Keep normalization consistent with existing uppercase behavior.
-        incoming_status = clean_data(profile_data.get("STATUS", ""))
-        if (incoming_status or "").strip().upper() != "VERIFIED":
-            return {"status": "skipped", "reason": "non_verified"}
+    def _load_existing_profile_rows(self):
+        """Load nickname→row mapping from Profiles sheet (nickname column only)."""
+        try:
+            nick_idx = Config.COLUMN_ORDER.index("NICK NAME") + 1
+            values   = self.profiles_ws.col_values(nick_idx)
+            mapping  = {}
+            for i, nick in enumerate(values[1:], start=2):  # skip header
+                nick = (nick or "").strip()
+                if nick:
+                    mapping[nick.lower()] = i
+            self._existing_profile_rows = mapping
+            log_msg(f"Loaded {len(mapping)} existing profile rows")
+        except Exception as e:
+            log_msg(f"Failed to load profile rows: {e}", "WARNING")
 
-        profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+    def _get_existing_record(self, nickname):
+        """Fetch a single profile record (on-demand, cached)."""
+        key = (nickname or "").strip().lower()
+        if not key:
+            return None
+        if key in self.existing_profiles:
+            return self.existing_profiles[key]
+        row_num = self._existing_profile_rows.get(key)
+        if not row_num:
+            return None
+        try:
+            data = self.profiles_ws.row_values(row_num)
+            rec  = {'row': row_num, 'data': data}
+            self.existing_profiles[key] = rec
+            return rec
+        except Exception:
+            return None
 
-        # Target mode: tag batch/list name into Profiles column J (index 9 in COLUMN_ORDER).
-        # This is optional and does not change schema; it only changes the value written.
-        if target_tag is not None:
+    def _cache_insert(self, nickname, row_data, row_num=2):
+        """Update in-memory cache after inserting a new row at row_num."""
+        key = (nickname or "").strip().lower()
+        if not key:
+            return
+        # Shift existing rows down
+        for k in list(self._existing_profile_rows):
+            if self._existing_profile_rows[k] >= row_num:
+                self._existing_profile_rows[k] += 1
+        for rec in self.existing_profiles.values():
             try:
-                col_j_idx = 9
-                if 0 <= col_j_idx < len(Config.COLUMN_ORDER):
-                    profile_data[Config.COLUMN_ORDER[col_j_idx]] = str(target_tag).strip()
+                if int(rec.get('row', 0)) >= row_num:
+                    rec['row'] += 1
             except Exception:
                 pass
-        # PROFILE_STATE column was removed from the sheet schema; keep internal state only.
-        profile_data["_PROFILE_STATE"] = self._compute_profile_state(profile_data)
-        
-        if nickname.lower() in self.tags_mapping:
-            profile_data["TAGS"] = self.tags_mapping[nickname.lower()]
+        self._existing_profile_rows[key] = row_num
+        self.existing_profiles[key] = {'row': row_num, 'data': row_data}
 
-        posts_raw = str(profile_data.get("POSTS", "") or "")
-        posts_digits = re.sub(r"\D+", "", posts_raw)
+    def _cache_move_to_top(self, nickname, from_row, to_row=2):
+        """Update cache after moving a row to the top."""
+        key = (nickname or "").strip().lower()
+        if not key or from_row == to_row:
+            return
+        if to_row == 2 and from_row > 2:
+            for k, r in list(self._existing_profile_rows.items()):
+                try:
+                    if 2 <= int(r) < from_row:
+                        self._existing_profile_rows[k] = int(r) + 1
+                except Exception:
+                    pass
+        self._existing_profile_rows[key] = to_row
+        self.existing_profiles.pop(key, None)
+
+    # ── Row movement ───────────────────────────────────────────────────────────
+
+    def _move_row_to_top(self, from_row, to_row=2):
+        """Move a Profiles row using Sheets API moveDimension (no delete/insert)."""
+        if not from_row or from_row <= 1 or from_row == to_row:
+            return True
         try:
-            posts_count = int(posts_digits) if posts_digits else None
-        except Exception:
-            posts_count = None
+            sheet_id = self.profiles_ws._properties.get('sheetId')
+            if sheet_id is None:
+                return False
+            body = {"requests": [{"moveDimension": {
+                "source": {
+                    "sheetId": sheet_id,
+                    "dimension": "ROWS",
+                    "startIndex": from_row - 1,
+                    "endIndex":   from_row,
+                },
+                "destinationIndex": to_row - 1,
+            }}]}
+            self.spreadsheet.batch_update(body)
+            time.sleep(Config.SHEET_WRITE_DELAY)
+            return True
+        except Exception as e:
+            log_msg(f"Failed to move row {from_row}→{to_row}: {e}", "WARNING")
+            return False
 
-        if posts_count is not None and posts_count < 100:
-            profile_data["PHASE 2"] = "Ready"
-        else:
-            profile_data["PHASE 2"] = "Not Eligible"
+    # ── Row data builder ───────────────────────────────────────────────────────
 
-        uppercase_cols = {
-            "CITY",
-            "GENDER",
-            "MARRIED",
-            "STATUS",
-            "JOINED",
-            "SKIP/DEL",
-            "DATETIME SCRAP",
-            "LAST POST TIME",
-            "MEH NAME",
-            "MEH DATE",
-        }
+    _UPPERCASE_COLS       = {"CITY", "GENDER", "MARRIED", "JOINED",
+                             "LIST", "RUN MODE", "DATETIME SCRAP",
+                             "LAST POST TIME", "MEH NAME", "MEH DATE"}
+    _MEHFIL_MULTILINE     = {"MEH NAME", "MEH LINK", "MEH DATE"}
+    _PRESERVE_IF_BLANK    = {"POSTS", "LAST POST", "LAST POST TIME"}
+    _IGNORE_DIFF          = {"ID", "NICK NAME", "JOINED", "DATETIME SCRAP",
+                             "LAST POST", "LAST POST TIME", "PROFILE LINK",
+                             "POST URL", "PHASE 2"}
 
-        mehfil_multiline_cols = {"MEH NAME", "MEH LINK", "MEH DATE"}
-        row_data = []
+    def _build_row(self, profile_data):
+        """Build a list of cell values aligned to Config.COLUMN_ORDER."""
+        row = []
         for col in Config.COLUMN_ORDER:
-            if col in mehfil_multiline_cols:
+            if col in self._MEHFIL_MULTILINE:
                 val = clean_data_preserve_newlines(profile_data.get(col, ""))
             else:
                 val = clean_data(profile_data.get(col, ""))
             if col == "POSTS" and val:
                 val = re.sub(r"\D+", "", str(val))
-            if col in mehfil_multiline_cols and val and ',' in val:
+            if col in self._MEHFIL_MULTILINE and val and ',' in val:
                 val = re.sub(r",\s*", "\n", str(val))
-            if col in uppercase_cols and val:
+            if col in self._UPPERCASE_COLS and val:
                 val = val.upper()
-            row_data.append(val)
-        
-        key = nickname.lower()
-        existing = self._get_existing_profile_record(nickname)
+            row.append(val)
+        return row
+
+    def _enrich_profile(self, profile_data, run_mode, list_value=None):
+        """
+        Stamp timestamp, tags, PHASE 2, LIST, and RUN MODE onto profile_data in-place.
+
+        Args:
+            profile_data: dict of scraped values
+            run_mode:     "Online" or "Target"
+            list_value:   RunList Col F value (Target mode) or None (Online mode)
+        """
+        profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+
+        # Col 9 — LIST
+        if list_value:
+            profile_data["LIST"] = str(list_value).strip()
+        else:
+            profile_data.setdefault("LIST", "")
+
+        # Col 11 — RUN MODE
+        profile_data["RUN MODE"] = run_mode
+
+        # Tags
+        nick_key = (profile_data.get("NICK NAME") or "").strip().lower()
+        if nick_key in self.tags_mapping:
+            profile_data["TAGS"] = self.tags_mapping[nick_key]
+
+        # PHASE 2 eligibility
+        posts_digits = re.sub(r"\D+", "", str(profile_data.get("POSTS", "") or ""))
+        try:
+            posts_count = int(posts_digits) if posts_digits else None
+        except Exception:
+            posts_count = None
+        profile_data["PHASE 2"] = "Ready" if (posts_count is not None and posts_count < 100) else "Not Eligible"
+
+    # ── Public write API ───────────────────────────────────────────────────────
+
+    def write_profile(self, profile_data, run_mode="Target", list_value=None):
+        """
+        Write or update a single profile immediately.
+
+        Flow:
+          1. Enrich (timestamp, tags, PHASE 2, LIST, RUN MODE)
+          2. Build row
+          3. If duplicate → move to row 2, update data
+          4. If new       → insert at row 2
+          5. Return status dict
+
+        Args:
+            profile_data: scraped profile dict
+            run_mode:     "Online" or "Target"
+            list_value:   RunList Col F value (Target mode only)
+
+        Returns:
+            dict with key 'status': 'new' | 'updated' | 'unchanged' | 'skipped' | 'error'
+        """
+        nickname = (profile_data.get("NICK NAME") or "").strip()
+        if not nickname:
+            return {"status": "error", "error": "missing nickname"}
+
+        # Only VERIFIED profiles go to the Profiles sheet
+        status_raw = clean_data(profile_data.get("STATUS", ""))
+        if status_raw.upper() != "VERIFIED":
+            return {"status": "skipped", "reason": "non_verified"}
+
+        self._enrich_profile(profile_data, run_mode, list_value)
+        row_data = self._build_row(profile_data)
+        key      = nickname.lower()
+
+        existing = self._get_existing_record(nickname)
 
         if existing:
-            old_row_num = existing['row']
-            old_data = existing['data']
-            changed_fields = []
-            updated_row = []
-            preserve_if_blank = {"POSTS", "LAST POST", "LAST POST TIME"}
-            ignore_for_diff_only = {
-                "ID",              # Col A
-                "NICK NAME",       # Col B
-                "JOINED",          # Col H
-                "DATETIME SCRAP",  # Col M
-                "LAST POST",       # Col N
-                "LAST POST TIME",  # Col O
-                "PROFILE LINK",    # Col Q
-                "POST URL",        # Col R
-                "PHASE 2",          # Col V
-            }
+            old_row   = existing['row']
+            old_data  = existing['data']
+            changed   = []
+            new_row   = []
 
             for i, col in enumerate(Config.COLUMN_ORDER):
                 old_val = old_data[i] if i < len(old_data) else ""
                 new_val = row_data[i]
-                if col in preserve_if_blank and (not new_val) and old_val:
+                # Keep old non-blank value if new scrape returned blank for these cols
+                if col in self._PRESERVE_IF_BLANK and not new_val and old_val:
                     new_val = old_val
-                if col not in {"SKIP/DEL"} and col not in ignore_for_diff_only and old_val != new_val:
-                    changed_fields.append(col)
-                updated_row.append(new_val)
+                if col not in self._IGNORE_DIFF and old_val != new_val:
+                    changed.append(col)
+                new_row.append(new_val)
 
-            # Always move scraped profile to row 2 (most recent), even if unchanged.
-            # Speed+correctness: moveDimension avoids out-of-range deletes and keeps sheet size stable.
-            if self._move_profile_row_to_top(old_row_num, to_row=2):
-                self._update_row_mapping_after_move_to_top(key, from_row=old_row_num, to_row=2)
-                end_a1 = gspread.utils.rowcol_to_a1(2, len(Config.COLUMN_ORDER))
-                if self._perform_write_operation(self.profiles_ws.update, f"A2:{end_a1}", [updated_row]):
-                    if changed_fields:
-                        log_msg(f"Updated duplicate profile {nickname} and moved to Row 2.", "OK")
-                    else:
-                        log_msg(f"Refreshed duplicate profile {nickname} and moved to Row 2.", "OK")
-                    try:
-                        excluded_note_columns = {"A", "B", "H", "L", "M", "N", "O", "Q", "R", "U", "V"}
-                        note_updates = []
+            # Always move to row 2 (most recently scraped at top)
+            if not self._move_row_to_top(old_row, to_row=2):
+                return {"status": "error", "error": "move failed"}
 
-                        for i, col in enumerate(Config.COLUMN_ORDER):
-                            old_val = old_data[i] if i < len(old_data) else ""
-                            new_val = updated_row[i]
+            self._cache_move_to_top(key, from_row=old_row, to_row=2)
+            end_a1 = gspread.utils.rowcol_to_a1(2, len(Config.COLUMN_ORDER))
 
-                            if old_val == new_val:
-                                continue
+            if not self._write(self.profiles_ws.update, f"A2:{end_a1}", [new_row]):
+                return {"status": "error", "error": "update failed"}
 
-                            col_num = i + 1
-                            col_a1 = gspread.utils.rowcol_to_a1(1, col_num)
-                            col_letter = re.sub(r"\d+", "", col_a1)
-                            if col_letter in excluded_note_columns:
-                                continue
+            self.existing_profiles[key] = {'row': 2, 'data': new_row}
+            self._existing_profile_rows[key] = 2
+            log_msg(f"{'Updated' if changed else 'Refreshed'} {nickname} → Row 2", "OK")
+            return {"status": "updated" if changed else "unchanged", "changed_fields": changed}
 
-                            note_updates.append((col_num, old_val, new_val))
-
-                        # Batch all notes into a single API call instead of one per field
-                        if note_updates:
-                            sheet_id = self.profiles_ws._properties.get('sheetId')
-                            requests = []
-                            for col_num, old_val, new_val in note_updates:
-                                requests.append({
-                                    "updateCells": {
-                                        "rows": [{"values": [{"note": f"Before: {old_val}\nAfter: {new_val}"}]}],
-                                        "fields": "note",
-                                        "start": {
-                                            "sheetId": sheet_id,
-                                            "rowIndex": 1,  # row 2 = index 1
-                                            "columnIndex": col_num - 1
-                                        }
-                                    }
-                                })
-                            try:
-                                self.spreadsheet.batch_update({"requests": requests})
-                                time.sleep(Config.SHEET_WRITE_DELAY)
-                            except Exception as e:
-                                log_msg(f"Batch note update failed: {e}", "WARNING")
-                    except Exception:
-                        pass
-                    self._update_existing_profiles_cache_after_insert(nickname, updated_row, inserted_row_num=2)
-                    self._maybe_reload_existing_profiles()
-                    if changed_fields:
-                        return {"status": "updated", "changed_fields": changed_fields}
-                    return {"status": "unchanged"}
-            return {"status": "error", "error": "Failed to update sheet"}
         else:
-            if self._perform_write_operation(self.profiles_ws.insert_row, row_data, index=2):
-                log_msg(f"New profile {nickname} added at Row 2.", "OK")
-                self._update_existing_profiles_cache_after_insert(nickname, row_data, inserted_row_num=2)
-                self._maybe_reload_existing_profiles()
-                return {"status": "new"}
-            return {"status": "error", "error": "Failed to write to sheet"}
+            if not self._write(self.profiles_ws.insert_row, row_data, index=2):
+                return {"status": "error", "error": "insert failed"}
+            self._cache_insert(nickname, row_data, row_num=2)
+            log_msg(f"New profile {nickname} → Row 2", "OK")
+            return {"status": "new"}
 
-    def get_profile(self, nickname):
-        """Fetches a single profile's data from the in-memory cache."""
-        record = self.existing_profiles.get((nickname or "").strip().lower())
-        if not record:
-            return None
-        return {col: (record['data'][i] if i < len(record['data']) else "") for i, col in enumerate(Config.COLUMN_ORDER)}
-
-    # ==================== TARGET OPERATIONS ====================
+    # ── Target / RunList helpers ───────────────────────────────────────────────
 
     def get_pending_targets(self):
-        """Retrieves all pending rows from the 'RunList' sheet."""
+        """Return list of pending target dicts from RunList sheet."""
         try:
             rows = self.target_ws.get_all_values()[1:]
-            pending_targets = []
+            result = []
             for idx, row in enumerate(rows, start=2):
                 if not row or not row[0].strip():
                     continue
-                status_text = (row[1] if len(row) > 1 else "").strip().lower()
-                if "pending" not in status_text:
+                status = (row[1] if len(row) > 1 else "").strip().lower()
+                if "pending" not in status:
                     continue
                 tag_val = (row[5] if len(row) > 5 else "").strip()
-                pending_targets.append({
+                result.append({
                     'nickname': row[0].strip(),
-                    'row': idx,
-                    'source': 'Target',
-                    'tag': tag_val
+                    'row':      idx,
+                    'source':   'Target',
+                    'tag':      tag_val,
                 })
-            return pending_targets
+            return result
         except Exception as e:
             log_msg(f"Failed to get pending targets: {e}", "ERROR")
             return []
 
-    def get_skip_nicknames(self):
-        """Returns a set of nicknames to skip based on RunList SKIP column values."""
-        skips = set()
-        try:
-            rows = self.target_ws.get_all_values()[1:]
-            for row in rows:
-                if len(row) < 4:
-                    continue
-                cell = (row[3] or "").strip()
-                if not cell:
-                    continue
-                parts = re.split(r"[\n,]+", cell)
-                for p in parts:
-                    nick = p.strip()
-                    if nick:
-                        skips.add(nick.lower())
-        except Exception:
-            pass
-        return skips
-
     def update_target_status(self, row_num, status, remarks):
-        """Updates the status and remarks for a specific target."""
-        status_map = {
-            'pending': Config.TARGET_STATUS_PENDING,
-            'done': Config.TARGET_STATUS_DONE,
-            'complete': Config.TARGET_STATUS_DONE,
-            'error': Config.TARGET_STATUS_ERROR,
+        """Update a single RunList row's status + remarks immediately."""
+        _STATUS_MAP = {
+            'pending':   Config.TARGET_STATUS_PENDING,
+            'done':      Config.TARGET_STATUS_DONE,
+            'complete':  Config.TARGET_STATUS_DONE,
+            'error':     Config.TARGET_STATUS_ERROR,
             'suspended': Config.TARGET_STATUS_ERROR,
-            'unverified': Config.TARGET_STATUS_SKIP_DEL,
-            'skip': Config.TARGET_STATUS_SKIP_DEL,
-            'del': Config.TARGET_STATUS_SKIP_DEL,
-            'skip/del': Config.TARGET_STATUS_SKIP_DEL
+            'unverified':Config.TARGET_STATUS_SKIP_DEL,
+            'skip':      Config.TARGET_STATUS_SKIP_DEL,
+            'del':       Config.TARGET_STATUS_SKIP_DEL,
         }
-        normalized_status = status_map.get((status or "").lower().strip(), status)
-        self._perform_write_operation(self.target_ws.update, f"B{row_num}:C{row_num}", [[normalized_status, remarks]])
+        norm = _STATUS_MAP.get((status or "").lower().strip(), status)
+        self._write(self.target_ws.update, f"B{row_num}:C{row_num}", [[norm, remarks]])
 
-    def bulk_update_target_statuses(self, updates: list):
-        """
-        Update multiple RunList rows in a single API call.
-
-        Args:
-            updates: list of dicts with keys: row_num, status, remarks
-        """
-        if not updates:
-            return
-
-        status_map = {
-            'pending': Config.TARGET_STATUS_PENDING,
-            'done': Config.TARGET_STATUS_DONE,
-            'complete': Config.TARGET_STATUS_DONE,
-            'error': Config.TARGET_STATUS_ERROR,
-            'suspended': Config.TARGET_STATUS_ERROR,
-            'unverified': Config.TARGET_STATUS_SKIP_DEL,
-            'skip': Config.TARGET_STATUS_SKIP_DEL,
-            'del': Config.TARGET_STATUS_SKIP_DEL,
-            'skip/del': Config.TARGET_STATUS_SKIP_DEL
-        }
-
-        sheet_id = self.target_ws._properties.get('sheetId')
-        requests = []
-        for u in updates:
-            row_num = u.get('row_num')
-            if not row_num:
-                continue
-            raw_status = (u.get('status') or '').lower().strip()
-            norm_status = status_map.get(raw_status, u.get('status', ''))
-            remarks = u.get('remarks', '')
-            # Columns B (index 1) and C (index 2) — 0-based
-            requests.append({
-                "updateCells": {
-                    "rows": [{"values": [
-                        {"userEnteredValue": {"stringValue": norm_status}},
-                        {"userEnteredValue": {"stringValue": str(remarks)}}
-                    ]}],
-                    "fields": "userEnteredValue",
-                    "start": {"sheetId": sheet_id, "rowIndex": row_num - 1, "columnIndex": 1}
-                }
-            })
-
-        if not requests:
-            return
-
-        try:
-            self.spreadsheet.batch_update({"requests": requests})
-            time.sleep(Config.SHEET_WRITE_DELAY)
-            log_msg(f"Bulk updated {len(requests)} RunList statuses in 1 API call.", "OK")
-        except Exception as e:
-            log_msg(f"Bulk target status update failed: {e}", "ERROR")
-            # Fallback: update one by one
-            for u in updates:
-                if u.get('row_num'):
-                    self.update_target_status(u['row_num'], u.get('status', ''), u.get('remarks', ''))
-
-    def bulk_write_profiles(self, profiles_with_tags: list) -> dict:
-        """
-        Write ALL scraped profiles in bulk — one API call for new rows,
-        one batch_update for existing rows + notes.
-
-        Args:
-            profiles_with_tags: list of (profile_data, target_tag) tuples
-
-        Returns:
-            dict mapping nickname -> write result {status, ...}
-        """
-        results = {}
-        new_rows = []           # rows to insert_rows in one call
-        update_requests = []    # batchUpdate requests for existing profiles
-        note_requests = []      # batchUpdate requests for notes
-
-        ts = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
-        sheet_id = self.profiles_ws._properties.get('sheetId')
-
-        uppercase_cols = {
-            "CITY", "GENDER", "MARRIED", "STATUS", "JOINED",
-            "SKIP/DEL", "DATETIME SCRAP", "LAST POST TIME", "MEH NAME", "MEH DATE",
-        }
-        mehfil_multiline_cols = {"MEH NAME", "MEH LINK", "MEH DATE"}
-        preserve_if_blank = {"POSTS", "LAST POST", "LAST POST TIME"}
-        ignore_for_diff_only = {
-            "ID", "NICK NAME", "JOINED", "DATETIME SCRAP", "LAST POST",
-            "LAST POST TIME", "PROFILE LINK", "POST URL", "PHASE 2",
-        }
-        excluded_note_col_letters = {"A", "B", "H", "L", "M", "N", "O", "Q", "R", "U", "V"}
-
-        for profile_data, target_tag in profiles_with_tags:
-            nickname = (profile_data.get("NICK NAME") or "").strip()
-            if not nickname:
-                continue
-
-            incoming_status = clean_data(profile_data.get("STATUS", ""))
-            if (incoming_status or "").strip().upper() != "VERIFIED":
-                results[nickname] = {"status": "skipped", "reason": "non_verified"}
-                continue
-
-            profile_data["DATETIME SCRAP"] = ts
-
-            if target_tag is not None:
-                try:
-                    profile_data[Config.COLUMN_ORDER[9]] = str(target_tag).strip()
-                except Exception:
-                    pass
-
-            profile_data["_PROFILE_STATE"] = self._compute_profile_state(profile_data)
-
-            if nickname.lower() in self.tags_mapping:
-                profile_data["TAGS"] = self.tags_mapping[nickname.lower()]
-
-            posts_raw = str(profile_data.get("POSTS", "") or "")
-            posts_digits = re.sub(r"\D+", "", posts_raw)
-            try:
-                posts_count = int(posts_digits) if posts_digits else None
-            except Exception:
-                posts_count = None
-            profile_data["PHASE 2"] = "Ready" if (posts_count is not None and posts_count < 100) else "Not Eligible"
-
-            # Build row_data
-            row_data = []
-            for col in Config.COLUMN_ORDER:
-                if col in mehfil_multiline_cols:
-                    val = clean_data_preserve_newlines(profile_data.get(col, ""))
-                else:
-                    val = clean_data(profile_data.get(col, ""))
-                if col == "POSTS" and val:
-                    val = re.sub(r"\D+", "", str(val))
-                if col in mehfil_multiline_cols and val and ',' in val:
-                    val = re.sub(r",\s*", "\n", str(val))
-                if col in uppercase_cols and val:
-                    val = val.upper()
-                row_data.append(val)
-
-            existing = self._get_existing_profile_record(nickname)
-
-            if existing:
-                old_row_num = existing['row']
-                old_data = existing['data']
-                changed_fields = []
-                updated_row = []
-
-                for i, col in enumerate(Config.COLUMN_ORDER):
-                    old_val = old_data[i] if i < len(old_data) else ""
-                    new_val = row_data[i]
-                    if col in preserve_if_blank and (not new_val) and old_val:
-                        new_val = old_val
-                    if col not in {"SKIP/DEL"} and col not in ignore_for_diff_only and old_val != new_val:
-                        changed_fields.append(col)
-                    updated_row.append(new_val)
-
-                # Queue a moveDimension + updateCells as batch requests
-                # moveDimension must be done separately (changes row indices), so we
-                # fall back to individual move then queue the data update.
-                update_requests.append({
-                    '_nickname': nickname,
-                    '_old_row': old_row_num,
-                    '_updated_row': updated_row,
-                    '_old_data': old_data,
-                    '_changed_fields': changed_fields,
-                })
-
-                # Queue notes
-                for i, col in enumerate(Config.COLUMN_ORDER):
-                    old_val = old_data[i] if i < len(old_data) else ""
-                    new_val = updated_row[i]
-                    if old_val == new_val:
-                        continue
-                    col_num = i + 1
-                    col_a1 = gspread.utils.rowcol_to_a1(1, col_num)
-                    col_letter = re.sub(r"\d+", "", col_a1)
-                    if col_letter in excluded_note_col_letters:
-                        continue
-                    note_requests.append((col_num, old_val, new_val))
-
-                status = "updated" if changed_fields else "unchanged"
-                results[nickname] = {"status": status, "changed_fields": changed_fields}
-            else:
-                new_rows.append((nickname, row_data))
-                results[nickname] = {"status": "new"}
-
-        # ── PHASE 1: Move existing profiles to top + update data ──
-        # moveDimension changes row indices so we must do them one at a time,
-        # but we batch the data writes right after each move.
-        for req in update_requests:
-            nick = req['_nickname']
-            old_row = req['_old_row']
-            updated_row = req['_updated_row']
-            key = nick.lower()
-
-            if self._move_profile_row_to_top(old_row, to_row=2):
-                self._update_row_mapping_after_move_to_top(key, from_row=old_row, to_row=2)
-                end_a1 = gspread.utils.rowcol_to_a1(2, len(Config.COLUMN_ORDER))
-                self._perform_write_operation(self.profiles_ws.update, f"A2:{end_a1}", [updated_row])
-                self._update_existing_profiles_cache_after_insert(nick, updated_row, inserted_row_num=2)
-                log_msg(f"Updated {nick} → Row 2", "OK")
-            else:
-                results[nick] = {"status": "error", "error": "move failed"}
-
-        # ── PHASE 2: Insert ALL new profiles in one call ──
-        if new_rows:
-            rows_to_insert = [r for _, r in new_rows]
-            try:
-                self.profiles_ws.insert_rows(rows_to_insert, row=2)
-                time.sleep(Config.SHEET_WRITE_DELAY)
-                log_msg(f"Bulk inserted {len(new_rows)} new profiles in 1 API call.", "OK")
-                # Update cache: all existing rows shift down by len(new_rows)
-                shift = len(new_rows)
-                for k in list(self._existing_profile_rows.keys()):
-                    self._existing_profile_rows[k] = self._existing_profile_rows[k] + shift
-                for rec in self.existing_profiles.values():
-                    try:
-                        rec['row'] = int(rec.get('row') or 0) + shift
-                    except Exception:
-                        pass
-                for idx, (nick, row_data) in enumerate(new_rows):
-                    inserted_row = 2 + idx
-                    self._existing_profile_rows[nick.lower()] = inserted_row
-                    self.existing_profiles[nick.lower()] = {'row': inserted_row, 'data': row_data}
-            except Exception as e:
-                log_msg(f"Bulk insert failed: {e}", "ERROR")
-                # Fallback: insert one by one
-                for nick, row_data in new_rows:
-                    if self._perform_write_operation(self.profiles_ws.insert_row, row_data, index=2):
-                        self._update_existing_profiles_cache_after_insert(nick, row_data, inserted_row_num=2)
-                    else:
-                        results[nick] = {"status": "error", "error": "insert failed"}
-
-        # ── PHASE 3: Write all notes in ONE batch_update call ──
-        if note_requests and sheet_id:
-            batch_note_reqs = []
-            for col_num, old_val, new_val in note_requests:
-                batch_note_reqs.append({
-                    "updateCells": {
-                        "rows": [{"values": [{"note": f"Before: {old_val}\nAfter: {new_val}"}]}],
-                        "fields": "note",
-                        "start": {
-                            "sheetId": sheet_id,
-                            "rowIndex": 1,  # row 2 = index 1
-                            "columnIndex": col_num - 1
-                        }
-                    }
-                })
-            try:
-                self.spreadsheet.batch_update({"requests": batch_note_reqs})
-                time.sleep(Config.SHEET_WRITE_DELAY)
-                log_msg(f"Bulk wrote {len(batch_note_reqs)} notes in 1 API call.", "OK")
-            except Exception as e:
-                log_msg(f"Bulk note update failed: {e}", "WARNING")
-
-        self._maybe_reload_existing_profiles(force=True)
-        return results
-
-    # ==================== DASHBOARD OPERATIONS ====================
+    # ── Dashboard ─────────────────────────────────────────────────────────────
 
     def update_dashboard(self, metrics):
-        """
-        Inserts a summary at Row 2 in the 'Dashboard' sheet.
-        FIXED: Simplified columns (removed state counts L, M, N, O).
-        """
+        """Insert one summary row at Row 2 of Dashboard sheet."""
         start_val = metrics.get("Start", "")
-        end_val = metrics.get("End", "")
-        diff_min = ""
+        end_val   = metrics.get("End",   "")
+        diff_min  = ""
         try:
             if start_val and end_val:
-                start_dt = datetime.strptime(start_val, "%d-%b-%y %I:%M %p")
-                end_dt = datetime.strptime(end_val, "%d-%b-%y %I:%M %p")
-                diff_min = str(int(round((end_dt - start_dt).total_seconds() / 60.0)))
+                s = datetime.strptime(start_val, "%d-%b-%y %I:%M %p")
+                e = datetime.strptime(end_val,   "%d-%b-%y %I:%M %p")
+                diff_min = str(int(round((e - s).total_seconds() / 60)))
         except Exception:
-            diff_min = ""
+            pass
 
         row = [
-            metrics.get("Run Number", 1),
+            metrics.get("Run Number",          1),
             metrics.get("Last Run", get_pkt_time().strftime("%d-%b-%y %I:%M %p")),
-            metrics.get("Profiles Processed", 0),
-            metrics.get("Success", 0),
-            metrics.get("Failed", 0),
-            metrics.get("New Profiles", 0),
-            metrics.get("Updated Profiles", 0),
+            metrics.get("Profiles Processed",   0),
+            metrics.get("Success",              0),
+            metrics.get("Failed",               0),
+            metrics.get("New Profiles",         0),
+            metrics.get("Updated Profiles",     0),
             diff_min,
-            metrics.get("Unchanged Profiles", 0),
-            metrics.get("Trigger", "manual"),
+            metrics.get("Unchanged Profiles",   0),
+            metrics.get("Trigger",        "manual"),
             start_val,
             end_val,
         ]
-        if self._perform_write_operation(self.dashboard_ws.insert_row, row, index=2):
-            log_msg("Dashboard updated successfully.", "OK")
+        if self._write(self.dashboard_ws.insert_row, row, index=2):
+            log_msg("Dashboard updated", "OK")
 
-    # ==================== HELPERS ====================
+    # ── Sort ──────────────────────────────────────────────────────────────────
 
     def sort_profiles_by_date(self):
-        """Sorts the 'Profiles' sheet by 'DATETIME SCRAP' descending."""
-        if not getattr(Config, 'SORT_PROFILES_BY_DATE', True):
-            return
-        if self._sorted_profiles_this_run:
+        """Sort Profiles sheet by DATETIME SCRAP (col 12) descending — one API call."""
+        if not Config.SORT_PROFILES_BY_DATE or self._sorted_profiles_this_run:
             return
         log_msg("Sorting profiles by date...")
         try:
             date_idx = Config.COLUMN_ORDER.index("DATETIME SCRAP")
-
             sheet_id = self.profiles_ws._properties.get('sheetId')
             if sheet_id is None:
                 return
-
-            # sortRange is performed server-side; far faster than reading+rewriting all rows.
-            body = {
-                "requests": [
-                    {
-                        "sortRange": {
-                            "range": {
-                                "sheetId": sheet_id,
-                                "startRowIndex": 1,
-                                "startColumnIndex": 0,
-                                "endColumnIndex": self.profiles_ws.col_count
-                            },
-                            "sortSpecs": [
-                                {
-                                    "dimensionIndex": date_idx,
-                                    "sortOrder": "DESCENDING"
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
+            body = {"requests": [{"sortRange": {
+                "range": {
+                    "sheetId":         sheet_id,
+                    "startRowIndex":   1,
+                    "startColumnIndex":0,
+                    "endColumnIndex":  self.profiles_ws.col_count,
+                },
+                "sortSpecs": [{"dimensionIndex": date_idx, "sortOrder": "DESCENDING"}],
+            }}]}
             self.spreadsheet.batch_update(body)
             time.sleep(Config.SHEET_WRITE_DELAY)
             self._apply_header_format(self.profiles_ws)
-            self._maybe_reload_existing_profiles(force=True)
-            log_msg("Profiles sorted by date.", "OK")
+            # Reload cache since row numbers changed
+            self._load_existing_profile_rows()
+            self.existing_profiles = {}
             self._sorted_profiles_this_run = True
-        except (ValueError, APIError) as e:
-            log_msg(f"Failed to sort profiles by date: {e}", "ERROR")
+            log_msg("Profiles sorted by date", "OK")
+        except Exception as e:
+            log_msg(f"Sort failed: {e}", "ERROR")

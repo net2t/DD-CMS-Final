@@ -1,87 +1,14 @@
-# ============ CREDENTIALS & SECRETS ============
 .env
-.env.local
 credentials.json
-*.key
-!.env.sample
-
-# ============ PYTHON ============
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
-.venv/
-build/
-dist/
-*.egg-info/
-
-# ============ SESSION & CACHE ============
 damadam_cookies.pkl
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# ============ IDE & EDITOR ============
-.vscode/
-.idea/
-.windsurf/
-*.swp
-*.swo
-*~
+.Python
+logs/*.log
+logs/*.json
+*.egg-info/
+dist/
+build/
 .DS_Store
-Thumbs.db
-
-# ============ DATA FILES ============
-*.xlsx
-*.xls
-*.csv
-output/
-
-# ============ LOGS & TEMP ============
-*.log
-logs/
-tmp/
-temp/
-
-# ============ LOCAL TRACKING (NOT FOR GITHUB) ============
-Issue-1.md
-issue-1.md
-
-# ============ BROWSER ============
-chromedriver.exe
-chromedriver
-
-# ============ BROWSER PROFILE ============
-user-data/
-downloads/
-screenshots/
-*.png
-*.jpg
-
-# ============ PICKLE FILES ============
-*.pkl
-
-docs/private/
-
-# Local development
-.vscode/
-*__pycache__/
-*.py[cod]
-*.class
-
-# Logs
-logs/
-*.log
-
-# Environment files
-.env
-!.env.sample
-
-# Credentials
-credentials.json
-damadam_cookies.pkl
-ref.py
