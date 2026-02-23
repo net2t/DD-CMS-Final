@@ -72,12 +72,18 @@ def create_gsheets_client(credentials_json=None, credentials_path=None):
 
         if json_src:
             log_msg("Using credentials from JSON env var")
-            data = json.loads(json_src)
-            pk = data.get("private_key")
-            if isinstance(pk, str) and "\\n" in pk:
-                data["private_key"] = pk.replace("\\n", "\n")
-            creds = Credentials.from_service_account_info(data, scopes=scope)
-            return gspread.authorize(creds)
+            try:
+                data = json.loads(json_src)
+            except Exception as e:
+                log_msg(f"Invalid GOOGLE_CREDENTIALS_JSON (will try credentials file instead): {e}", "WARNING")
+                data = None
+
+            if isinstance(data, dict) and data:
+                pk = data.get("private_key")
+                if isinstance(pk, str) and "\\n" in pk:
+                    data["private_key"] = pk.replace("\\n", "\n")
+                creds = Credentials.from_service_account_info(data, scopes=scope)
+                return gspread.authorize(creds)
 
         if path_src and Path(path_src).exists():
             log_msg(f"Using credentials file: {path_src}")

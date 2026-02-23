@@ -240,6 +240,102 @@ def run_scheduler(max_profiles: int = 0):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  Interactive menu (no-arg run)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _prompt_int(label: str, default: int = 0, min_value: int = 0) -> int:
+    while True:
+        raw = input(f"{label} [{default}]: ").strip()
+        if not raw:
+            return default
+        try:
+            val = int(raw)
+            if val < min_value:
+                print(f"Value must be >= {min_value}")
+                continue
+            return val
+        except Exception:
+            print("Enter a valid integer")
+
+
+def _prompt_float(label: str, default: float = 0.0, min_value: float = 0.0) -> float:
+    while True:
+        raw = input(f"{label} [{default}]: ").strip()
+        if not raw:
+            return default
+        try:
+            val = float(raw)
+            if val < min_value:
+                print(f"Value must be >= {min_value}")
+                continue
+            return val
+        except Exception:
+            print("Enter a valid number")
+
+
+def _apply_runtime_overrides(*, batch_size=None, min_delay=None, max_delay=None,
+                             page_load_timeout=None, sheet_write_delay=None):
+    if batch_size is not None:
+        Config.BATCH_SIZE = int(batch_size)
+    if min_delay is not None:
+        Config.MIN_DELAY = float(min_delay)
+    if max_delay is not None:
+        Config.MAX_DELAY = float(max_delay)
+    if page_load_timeout is not None:
+        Config.PAGE_LOAD_TIMEOUT = int(page_load_timeout)
+    if sheet_write_delay is not None:
+        Config.SHEET_WRITE_DELAY = float(sheet_write_delay)
+
+
+def interactive_menu():
+    print("\nSelect Mode:")
+    print("  1) Online")
+    print("  2) Target")
+    print("  3) Scheduler (Online every 15 min)")
+    print("  0) Exit")
+
+    choice = input("Enter choice [1]: ").strip() or "1"
+    if choice == "0":
+        return
+    if choice == "1":
+        mode = "online"
+    elif choice == "2":
+        mode = "target"
+    elif choice == "3":
+        mode = "scheduler"
+    else:
+        print("Invalid choice")
+        return
+
+    print("\nOptions (press Enter to keep default):")
+    limit = _prompt_int("How many profiles to run (0 = unlimited)", default=Config.MAX_PROFILES_PER_RUN, min_value=0)
+
+    print("\nMore options:")
+    batch_size = _prompt_int("Batch size", default=Config.BATCH_SIZE, min_value=1)
+    min_delay = _prompt_float("Min delay (seconds)", default=Config.MIN_DELAY, min_value=0.0)
+    max_delay = _prompt_float("Max delay (seconds)", default=Config.MAX_DELAY, min_value=0.0)
+    page_load_timeout = _prompt_int("Page load timeout (seconds)", default=Config.PAGE_LOAD_TIMEOUT, min_value=1)
+    sheet_write_delay = _prompt_float("Sheet write delay (seconds)", default=Config.SHEET_WRITE_DELAY, min_value=0.0)
+
+    if max_delay < min_delay:
+        print("Max delay cannot be less than min delay. Swapping values.")
+        min_delay, max_delay = max_delay, min_delay
+
+    _apply_runtime_overrides(
+        batch_size=batch_size,
+        min_delay=min_delay,
+        max_delay=max_delay,
+        page_load_timeout=page_load_timeout,
+        sheet_write_delay=sheet_write_delay,
+    )
+
+    if mode == "scheduler":
+        run_scheduler(max_profiles=limit)
+    else:
+        run_once(mode=mode, max_profiles=limit)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  CLI parser
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -278,10 +374,13 @@ Examples:
 # ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    parser = _build_parser()
-    args   = parser.parse_args()
-
-    if args.mode == "scheduler":
-        run_scheduler(max_profiles=args.limit)
+    if len(sys.argv) == 1:
+        interactive_menu()
     else:
-        run_once(mode=args.mode, max_profiles=args.limit)
+        parser = _build_parser()
+        args   = parser.parse_args()
+
+        if args.mode == "scheduler":
+            run_scheduler(max_profiles=args.limit)
+        else:
+            run_once(mode=args.mode, max_profiles=args.limit)
