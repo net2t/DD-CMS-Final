@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DD-CMS · Profiles</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #f0f4ff;
+      --surface:  #ffffff;
+      --card:     #ffffff;
+      --border:   #e2e8f8;
+      --border2:  #c7d2f0;
+      --accent:   #4361ee;
+      --accent2:  #e63980;
+      --green:    #10b981;
+      --yellow:   #f59e0b;
+      --purple:   #7c3aed;
+      --orange:   #f97316;
+      --text:     #1e293b;
+      --text2:    #475569;
+      --dim:      #94a3b8;
+      --dim2:     #64748b;
+      --mono:     'JetBrains Mono', monospace;
+      --ui:       'Inter', sans-serif;
+      --shadow:   0 1px 4px rgba(67,97,238,0.08), 0 4px 16px rgba(67,97,238,0.06);
+      --shadow-lg:0 4px 24px rgba(67,97,238,0.14);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--ui);
+      min-height: 100vh;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px;
+      gap: 16px;
+      box-shadow: 0 2px 12px rgba(67,97,238,0.07);
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .brand-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), #7048ee);
+      border-radius: 10px;
+      display: grid; place-items: center;
+      font-family: var(--mono); font-size: 13px; font-weight: 700; color: #fff;
+      box-shadow: 0 4px 12px rgba(67,97,238,0.35);
+    }
+    .brand-name {
+      font-size: 17px; font-weight: 800; letter-spacing: 1px; color: var(--text);
+    }
+    .brand-ver {
+      font-family: var(--mono); font-size: 9px; color: var(--dim); letter-spacing: 1px; margin-top: 1px;
+    }
+
+    .topbar-center { flex: 1; max-width: 440px; }
+
+    .search-wrap { position: relative; }
+    .search-wrap input {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid var(--border2);
+      border-radius: 10px;
+      padding: 9px 14px 9px 38px;
+      font-family: var(--ui); font-size: 13px;
+      color: var(--text); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(67,97,238,0.12);
+      background: #fff;
+    }
+    .search-wrap input::placeholder { color: var(--dim); }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--dim); font-size: 15px; pointer-events: none;
+    }
+
+    .topbar-right {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+
+    .live-pill {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--green);
+      background: rgba(16,185,129,0.10); border: 1.5px solid rgba(16,185,129,0.3);
+      border-radius: 20px; padding: 5px 12px;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 6px var(--green);
+      animation: blink 1.4s step-start infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.25; } }
+
+    .btn {
+      font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+      padding: 8px 16px; border-radius: 8px;
+      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+      transition: all 0.18s; border: none;
+    }
+    .btn-ghost {
+      background: transparent; border: 1.5px solid var(--border2); color: var(--dim2);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: rgba(67,97,238,0.05); }
+    .btn-accent {
+      background: linear-gradient(135deg, var(--accent), #7048ee);
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(67,97,238,0.30);
+    }
+    .btn-accent:hover { box-shadow: 0 4px 16px rgba(67,97,238,0.42); transform: translateY(-1px); }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat {
+      padding: 20px 24px;
+      border-right: 1px solid var(--border);
+      position: relative;
+    }
+    .stat:last-child { border-right: none; }
+    .stat-label {
+      font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
+      color: var(--dim); text-transform: uppercase; margin-bottom: 6px;
+    }
+    .stat-val {
+      font-size: 28px; font-weight: 800; line-height: 1; color: var(--text); letter-spacing: -1px;
+    }
+    .stat-sub { font-family: var(--mono); font-size: 9px; color: var(--dim); margin-top: 5px; }
+
+    /* accent bars on stats */
+    .stat::after {
+      content: '';
+      position: absolute; bottom: 0; left: 24px; right: 24px; height: 3px;
+      border-radius: 2px 2px 0 0;
+      background: var(--stat-color, transparent);
+    }
+
+    /* ── FILTERS ── */
+    .filters {
+      padding: 12px 24px;
+      display: flex; align-items: center; gap: 8px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      flex-wrap: wrap;
+    }
+    .filter-label {
+      font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 1px; flex-shrink: 0;
+    }
+
+    .filter-btn {
+      font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+      padding: 5px 13px; border-radius: 20px; cursor: pointer; transition: all 0.15s;
+      border: 1.5px solid var(--border2); background: var(--bg); color: var(--dim2);
+      flex-shrink: 0;
+    }
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(67,97,238,0.06); }
+    .filter-btn.active { border-color: var(--accent); color: #fff; background: var(--accent); box-shadow: 0 2px 8px rgba(67,97,238,0.25); }
+    .filter-btn.f-female.active { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 2px 8px rgba(230,57,128,0.25); }
+    .filter-btn.f-male.active   { background: #0ea5e9;        border-color: #0ea5e9;        box-shadow: 0 2px 8px rgba(14,165,233,0.25); }
+
+    .sort-select {
+      font-family: var(--ui); font-size: 11px; font-weight: 500;
+      background: var(--bg); border: 1.5px solid var(--border2); color: var(--dim2);
+      border-radius: 8px; padding: 5px 10px; cursor: pointer; outline: none;
+      margin-left: auto; flex-shrink: 0;
+    }
+    .sort-select:focus { border-color: var(--accent); }
+
+    /* ── MAIN ── */
+    .main { padding: 20px 20px; }
+
+    /* ── PROFILE GRID ── */
+    #profile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 16px;
+    }
+
+    .profile-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px;
+      cursor: pointer;
+      transition: transform 0.18s, box-shadow 0.18s;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1.5px solid var(--border);
+    }
+    .profile-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--border2);
+    }
+
+    /* top color accent strip */
+    .profile-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--card-top, var(--accent));
+      border-radius: 14px 14px 0 0;
+    }
+
+    .card-top {
+      display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px;
+    }
+
+    .avatar {
+      width: 48px; height: 48px; border-radius: 10px;
+      object-fit: cover; flex-shrink: 0;
+      background: var(--bg); border: 2px solid var(--border);
+    }
+    .avatar-placeholder {
+      width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, #e8ecff, #dde3ff);
+      border: 2px solid var(--border2);
+      display: grid; place-items: center;
+      font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--accent);
+    }
+
+    .card-info { flex: 1; min-width: 0; }
+    .card-nick {
+      font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-city {
+      font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 0.5px; margin-top: 3px;
+    }
+
+    .card-badge {
+      font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 1px;
+      padding: 3px 8px; border-radius: 6px; text-transform: uppercase; flex-shrink: 0;
+    }
+    .badge-f { background: rgba(230,57,128,0.10); color: var(--accent2); border: 1.5px solid rgba(230,57,128,0.25); }
+    .badge-m { background: rgba(14,165,233,0.10);  color: #0ea5e9;       border: 1.5px solid rgba(14,165,233,0.25); }
+    .badge-u { background: var(--bg);               color: var(--dim);    border: 1.5px solid var(--border2); }
+
+    .card-stats {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+      background: var(--bg); border-radius: 10px; padding: 10px 8px;
+    }
+    .cs { text-align: center; }
+    .cs-val { font-size: 14px; font-weight: 700; color: var(--text); }
+    .cs-key { font-family: var(--mono); font-size: 9px; color: var(--dim); letter-spacing: 0.5px; margin-top: 2px; }
+
+    .card-footer {
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-ts { font-family: var(--mono); font-size: 9px; color: var(--dim); }
+    .card-phase {
+      font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 1px; padding: 3px 8px; border-radius: 6px;
+    }
+    .phase-ready { background: rgba(16,185,129,0.10); color: var(--green); border: 1.5px solid rgba(16,185,129,0.25); }
+
+    .rank-star { height: 14px; vertical-align: middle; margin-right: 4px; }
+
+    /* ── EMPTY / LOADING ── */
+    #loading-state {
+      padding: 80px 24px; text-align: center;
+    }
+    .spinner {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 3px solid var(--border); border-top-color: var(--accent);
+      animation: spin 0.75s linear infinite; margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 2px; }
+
+    #error-state {
+      padding: 60px 24px; text-align: center; display: none;
+    }
+    .error-icon { font-size: 36px; margin-bottom: 12px; }
+    .error-title { font-size: 20px; font-weight: 700; color: var(--accent2); margin-bottom: 8px; }
+    .error-msg {
+      font-family: var(--mono); font-size: 11px; color: var(--dim2);
+      max-width: 480px; margin: 0 auto 20px; line-height: 1.8;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: left;
+    }
+
+    #empty-state { padding: 60px 24px; text-align: center; display: none; }
+    .empty-text { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+
+    /* ── DETAIL DRAWER ── */
+    .drawer-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(30,41,59,0.4); backdrop-filter: blur(4px);
+      display: none; align-items: flex-start; justify-content: flex-end;
+    }
+    .drawer-overlay.open { display: flex; }
+
+    .drawer {
+      width: 420px; max-width: 100vw; height: 100vh;
+      background: var(--surface); border-left: 1.5px solid var(--border);
+      overflow-y: auto; padding: 0;
+      animation: slide-in 0.22s cubic-bezier(0.16,1,0.3,1);
+      box-shadow: -8px 0 40px rgba(67,97,238,0.12);
+    }
+    @keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+    .drawer-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; background: var(--surface); z-index: 1;
+    }
+    .drawer-nick { font-size: 20px; font-weight: 800; color: var(--text); }
+    .drawer-close {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--bg); border: 1.5px solid var(--border);
+      color: var(--dim2); cursor: pointer; display: grid; place-items: center;
+      font-size: 16px; transition: all 0.15s;
+    }
+    .drawer-close:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(230,57,128,0.06); }
+
+    .drawer-avatar-row {
+      padding: 20px; display: flex; align-items: center; gap: 16px;
+      background: linear-gradient(135deg, #f5f7ff, #eef0ff);
+      border-bottom: 1px solid var(--border);
+    }
+    .drawer-avatar {
+      width: 76px; height: 76px; border-radius: 12px; object-fit: cover;
+      border: 2.5px solid var(--border2); background: var(--bg); flex-shrink: 0;
+    }
+    .drawer-avatar-ph {
+      width: 76px; height: 76px; border-radius: 12px; flex-shrink: 0;
+      background: linear-gradient(135deg, #dde3ff, #c7cff8);
+      border: 2.5px solid var(--border2);
+      display: grid; place-items: center; font-size: 30px; font-weight: 800; color: var(--accent);
+    }
+
+    .drawer-section { padding: 16px 20px; }
+    .drawer-section-title {
+      font-family: var(--mono); font-size: 9px; letter-spacing: 2.5px; color: var(--dim);
+      text-transform: uppercase; margin-bottom: 12px;
+      padding-bottom: 6px; border-bottom: 1.5px solid var(--border);
+    }
+
+    .drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .drawer-field { }
+    .df-key { font-family: var(--mono); font-size: 9px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+    .df-val { font-size: 13px; font-weight: 600; color: var(--text); word-break: break-all; }
+    .df-val a { color: var(--accent); text-decoration: none; }
+    .df-val a:hover { text-decoration: underline; }
+    .df-val.full { grid-column: 1/-1; }
+
+    .drawer-actions {
+      padding: 16px 20px; display: flex; gap: 10px;
+      border-top: 1px solid var(--border);
+      position: sticky; bottom: 0; background: var(--surface);
+    }
+
+    /* ── FOOTER ── */
+    .table-footer {
+      padding: 14px 0 4px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: var(--mono); font-size: 11px; color: var(--dim);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 700px) {
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+      .stat:nth-child(4), .stat:nth-child(5) { border-top: 1px solid var(--border); }
+      .topbar-center { display: none; }
+      #profile-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 440px) {
+      #profile-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">DD</div>
+    <div>
+      <div class="brand-name">DD-CMS</div>
+      <div class="brand-ver">PROFILES DASHBOARD</div>
+    </div>
+  </div>
+  <div class="topbar-center">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="search-input" placeholder="Search nickname, city, tags...">
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="live-pill"><div class="live-dot"></div> LIVE</div>
+    <a href="https://github.com/net2t/DD-CMS-Final" target="_blank" class="btn btn-ghost">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      GitHub
+    </a>
+    <button class="btn btn-accent" onclick="loadData()">↺ Refresh</button>
+  </div>
+</div>
+
+<!-- STATS ROW -->
+<div class="stats-row">
+  <div class="stat" style="--stat-color:var(--accent)">
+    <div class="stat-label">Total Profiles</div>
+    <div class="stat-val" id="s-total" style="color:var(--accent)">—</div>
+    <div class="stat-sub">in Profiles sheet</div>
+  </div>
+  <div class="stat" style="--stat-color:var(--accent2)">
+    <div class="stat-label">Female</div>
+    <div class="stat-val" id="s-female" style="color:var(--accent2)">—</div>
+    <div class="stat-sub" id="s-female-pct"></div>
+  </div>
+  <div class="stat" style="--stat-color:#0ea5e9">
+    <div class="stat-label">Male</div>
+    <div class="stat-val" id="s-male" style="color:#0ea5e9">—</div>
+    <div class="stat-sub" id="s-male-pct"></div>
+  </div>
+  <div class="stat" style="--stat-color:var(--green)">
+    <div class="stat-label">Phase 2 Ready</div>
+    <div class="stat-val" id="s-phase2" style="color:var(--green)">—</div>
+    <div class="stat-sub">posts &lt; 100</div>
+  </div>
+  <div class="stat" style="--stat-color:var(--yellow)">
+    <div class="stat-label">Last Scraped</div>
+    <div class="stat-val" id="s-last" style="font-size:14px; padding-top:6px; color:var(--text2)">—</div>
+    <div class="stat-sub" id="s-last-nick"></div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters">
+  <span class="filter-label">FILTER:</span>
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn f-female" data-filter="female">Female</button>
+  <button class="filter-btn f-male"   data-filter="male">Male</button>
+  <button class="filter-btn" data-filter="phase2">Phase 2 Ready</button>
+  <button class="filter-btn" data-filter="karachi">Karachi</button>
+  <button class="filter-btn" data-filter="lahore">Lahore</button>
+  <button class="filter-btn" data-filter="islamabad">Islamabad</button>
+  <select class="sort-select" id="sort-select">
+    <option value="date">Sort: Recent First</option>
+    <option value="followers">Sort: Followers</option>
+    <option value="posts">Sort: Posts</option>
+    <option value="nick">Sort: A–Z</option>
+  </select>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div id="loading-state">
+    <div class="spinner"></div>
+    <div class="loading-text">FETCHING SHEET DATA...</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:10px;" id="loading-hint"></div>
+  </div>
+
+  <div id="error-state">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title">Cannot Load Sheet</div>
+    <div class="error-msg" id="error-msg"></div>
+    <button class="btn btn-accent" onclick="loadData()">Try Again</button>
+  </div>
+
+  <div id="empty-state">
+    <div class="empty-text">NO PROFILES MATCH YOUR FILTER</div>
+  </div>
+
+  <div id="profile-grid"></div>
+
+  <div class="table-footer" id="table-footer" style="display:none">
+    <span id="footer-count"></span>
+    <span id="footer-updated"></span>
+  </div>
+</div>
+
+<!-- DETAIL DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer(event)">
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-nick" id="d-nick">—</div>
+      <button class="drawer-close" onclick="closeDrawerDirect()">✕</button>
+    </div>
+    <div class="drawer-avatar-row">
+      <div id="d-avatar-wrap"></div>
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1.5px;margin-bottom:4px;text-transform:uppercase">Status</div>
+        <div id="d-status" style="font-size:15px;font-weight:700;color:var(--green)"></div>
+        <div id="d-tags" style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--purple)"></div>
+      </div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Profile Info</div>
+      <div class="drawer-grid" id="d-info"></div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Stats</div>
+      <div class="drawer-grid" id="d-stats"></div>
+    </div>
+    <div class="drawer-section" id="d-meh-section">
+      <div class="drawer-section-title">Mehfils</div>
+      <div id="d-meh"></div>
+    </div>
+    <div class="drawer-actions">
+      <a id="d-link-profile" href="#" target="_blank" class="btn btn-accent" style="flex:1;justify-content:center">View Profile</a>
+      <a id="d-link-posts"   href="#" target="_blank" class="btn btn-ghost"  style="flex:1;justify-content:center">View Posts</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const SHEET_ID  = '1R4UDRy0aHlQ1zkj-0lwkKmS6aMSgkBn40oCQS7FksnQ';
+const SHEET_TAB = 'Profiles';
+
+// Column indices (0-based) — matches COLUMN_ORDER in config_common.py
+const C = {
+  ID:         0,  NICK:    1,  TAGS:     2,  CITY:      3,
+  GENDER:     4,  MARRIED: 5,  AGE:      6,  JOINED:    7,
+  FOLLOWERS:  8,  STATUS:  9,  POSTS:   10,  SKIP:     11,
+  DATETIME:  12,  LASTPOST:13, LASTTIME:14,  IMAGE:    15,
+  PROFILELINK:16, POSTURL: 17, RURL:    18,  MEHNAME:  19,
+  MEHLINK:   20,  MEHDATE: 21, PHASE2:  22
+};
+
+// ── STATE ──
+let allProfiles = [];
+let filtered    = [];
+let activeFilter = 'all';
+let searchQuery  = '';
+let sortBy       = 'date';
+let lastFetch    = null;
+
+// ── FETCH ──
+async function loadData() {
+  show('loading-state');
+  hide('error-state'); hide('empty-state'); hide('table-footer');
+  document.getElementById('profile-grid').innerHTML = '';
+  document.getElementById('loading-hint').textContent =
+    'Make sure your Google Sheet is set to "Anyone with link → Viewer"';
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_TAB)}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+
+    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+
+    if (json.status === 'error') {
+      throw new Error(json.errors?.[0]?.detailed_message || 'Sheet API error');
+    }
+
+    const rows = json.table?.rows || [];
+    allProfiles = rows
+      .slice(1)
+      .map(r => (r.c || []).map(c => c ? (c.v ?? c.f ?? '') : ''))
+      .filter(r => r[C.NICK] && String(r[C.NICK]).trim());
+
+    lastFetch = new Date();
+    buildStats();
+    applyFilters();
+    hide('loading-state');
+    show('table-footer');
+
+  } catch (err) {
+    showError(
+      `Failed to load sheet data.\n\nError: ${err.message}\n\n` +
+      `Make sure:\n1. Your sheet is public (Share → Anyone with link → Viewer)\n` +
+      `2. The tab is named exactly "Profiles"`
+    );
+  }
+}
+
+// ── STATS ──
+function buildStats() {
+  const total   = allProfiles.length;
+  const females = allProfiles.filter(r => String(r[C.GENDER]).toUpperCase() === 'FEMALE').length;
+  const males   = allProfiles.filter(r => String(r[C.GENDER]).toUpperCase() === 'MALE').length;
+  const phase2  = allProfiles.filter(r => String(r[C.PHASE2]).toLowerCase().includes('ready')).length;
+  const last    = allProfiles[0];
+
+  document.getElementById('s-total').textContent  = total.toLocaleString();
+  document.getElementById('s-female').textContent = females.toLocaleString();
+  document.getElementById('s-male').textContent   = males.toLocaleString();
+  document.getElementById('s-phase2').textContent = phase2.toLocaleString();
+  document.getElementById('s-female-pct').textContent = total ? Math.round(females/total*100)+'%' : '';
+  document.getElementById('s-male-pct').textContent   = total ? Math.round(males/total*100)+'%' : '';
+
+  if (last) {
+    document.getElementById('s-last').textContent      = String(last[C.DATETIME]).split(' ').slice(0,2).join(' ');
+    document.getElementById('s-last-nick').textContent = String(last[C.NICK]);
+  }
+}
+
+// ── FILTER + SORT ──
+function applyFilters() {
+  const q = searchQuery.toLowerCase();
+
+  filtered = allProfiles.filter(r => {
+    const nick   = String(r[C.NICK]  || '').toLowerCase();
+    const city   = String(r[C.CITY]  || '').toLowerCase();
+    const tags   = String(r[C.TAGS]  || '').toLowerCase();
+    const gender = String(r[C.GENDER]|| '').toUpperCase();
+    const phase  = String(r[C.PHASE2]|| '').toLowerCase();
+
+    if (q && !nick.includes(q) && !city.includes(q) && !tags.includes(q)) return false;
+
+    if (activeFilter === 'female'    && gender !== 'FEMALE')             return false;
+    if (activeFilter === 'male'      && gender !== 'MALE')               return false;
+    if (activeFilter === 'phase2'    && !phase.includes('ready'))        return false;
+    if (activeFilter === 'karachi'   && !city.includes('karachi'))       return false;
+    if (activeFilter === 'lahore'    && !city.includes('lahore'))        return false;
+    if (activeFilter === 'islamabad' && !city.includes('islamabad'))     return false;
+
+    return true;
+  });
+
+  filtered.sort((a, b) => {
+    if (sortBy === 'followers') return (parseInt(b[C.FOLLOWERS])||0) - (parseInt(a[C.FOLLOWERS])||0);
+    if (sortBy === 'posts')     return (parseInt(b[C.POSTS]    )||0) - (parseInt(a[C.POSTS]    )||0);
+    if (sortBy === 'nick')      return String(a[C.NICK]).localeCompare(String(b[C.NICK]));
+    return 0;
+  });
+
+  renderGrid();
+}
+
+// ── RENDER ──
+function renderGrid() {
+  const grid = document.getElementById('profile-grid');
+  grid.innerHTML = '';
+
+  if (!filtered.length) { show('empty-state'); return; }
+  hide('empty-state');
+
+  const frag = document.createDocumentFragment();
+  filtered.forEach((r, i) => frag.appendChild(makeCard(r, i)));
+  grid.appendChild(frag);
+
+  document.getElementById('footer-count').textContent =
+    `Showing ${filtered.length.toLocaleString()} of ${allProfiles.length.toLocaleString()} profiles`;
+  document.getElementById('footer-updated').textContent =
+    lastFetch ? `Last fetched: ${lastFetch.toLocaleTimeString()}` : '';
+}
+
+function makeCard(r, idx) {
+  const div   = document.createElement('div');
+  const nick  = String(r[C.NICK]  || '—');
+  const city  = String(r[C.CITY]  || '');
+  const gender= String(r[C.GENDER]|| '').toUpperCase();
+  const age   = String(r[C.AGE]   || '');
+  const followers = fmt(r[C.FOLLOWERS]);
+  const posts     = fmt(r[C.POSTS]);
+  const phase2    = String(r[C.PHASE2]|| '');
+  const dt        = String(r[C.DATETIME]|| '');
+  const img       = String(r[C.IMAGE]  || '');
+  const rurl      = String(r[C.RURL]   || '');
+
+  const genderBadge = gender === 'FEMALE'
+    ? '<span class="card-badge badge-f">F</span>'
+    : gender === 'MALE'
+    ? '<span class="card-badge badge-m">M</span>'
+    : '<span class="card-badge badge-u">?</span>';
+
+  const topColor = gender === 'FEMALE'
+    ? 'linear-gradient(90deg,var(--accent2),#f97fb0)'
+    : gender === 'MALE'
+    ? 'linear-gradient(90deg,#0ea5e9,#38bdf8)'
+    : 'linear-gradient(90deg,var(--accent),#7048ee)';
+
+  const avatarHtml = img
+    ? `<img class="avatar" src="${escHtml(img)}" alt="${escHtml(nick)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`
+      + `<div class="avatar-placeholder" style="display:none">${nick[0]?.toUpperCase()||'?'}</div>`
+    : `<div class="avatar-placeholder">${nick[0]?.toUpperCase()||'?'}</div>`;
+
+  const rankImg = rurl
+    ? `<img class="rank-star" src="${escHtml(rurl)}" alt="rank" onerror="this.style.display='none'">` : '';
+
+  const phaseHtml = phase2.toLowerCase().includes('ready')
+    ? '<span class="card-phase phase-ready">P2 Ready</span>'
+    : '';
+
+  div.className = 'profile-card';
+  div.style.setProperty('--card-top', topColor);
+  div.innerHTML = `
+    <div class="card-top">
+      <div style="position:relative;flex-shrink:0">${avatarHtml}</div>
+      <div class="card-info">
+        <div class="card-nick">${rankImg}${escHtml(nick)}</div>
+        <div class="card-city">${escHtml(city) || '&nbsp;'}${age ? ' · ' + escHtml(age) + 'y' : ''}</div>
+      </div>
+      ${genderBadge}
+    </div>
+    <div class="card-stats">
+      <div class="cs"><div class="cs-val">${followers}</div><div class="cs-key">Followers</div></div>
+      <div class="cs"><div class="cs-val">${posts}</div><div class="cs-key">Posts</div></div>
+      <div class="cs"><div class="cs-val">${String(r[C.MARRIED]||'—')}</div><div class="cs-key">Married</div></div>
+    </div>
+    <div class="card-footer">
+      <div class="card-ts">${dt.split(' ').slice(0,2).join(' ')}</div>
+      ${phaseHtml}
+    </div>
+  `;
+  div.addEventListener('click', () => openDrawer(r));
+  return div;
+}
+
+// ── DRAWER ──
+function openDrawer(r) {
+  const nick     = String(r[C.NICK]   || '—');
+  const img      = String(r[C.IMAGE]  || '');
+  const status   = String(r[C.STATUS] || '');
+  const tags     = String(r[C.TAGS]   || '');
+  const profLink = String(r[C.PROFILELINK]|| '');
+  const postUrl  = String(r[C.POSTURL]    || '');
+  const mehName  = String(r[C.MEHNAME]    || '');
+  const mehLink  = String(r[C.MEHLINK]    || '');
+  const mehDate  = String(r[C.MEHDATE]    || '');
+  const rurl     = String(r[C.RURL]       || '');
+
+  document.getElementById('d-nick').textContent = nick;
+  document.getElementById('d-status').textContent = status || '—';
+  document.getElementById('d-tags').textContent = tags ? '# ' + tags : '';
+
+  const avatarWrap = document.getElementById('d-avatar-wrap');
+  avatarWrap.innerHTML = img
+    ? `<img class="drawer-avatar" src="${escHtml(img)}" alt="${escHtml(nick)}" onerror="this.outerHTML='<div class=drawer-avatar-ph>${nick[0]?.toUpperCase()||'?'}</div>'">`
+    : `<div class="drawer-avatar-ph">${nick[0]?.toUpperCase()||'?'}</div>`;
+
+  document.getElementById('d-info').innerHTML = field('City',    r[C.CITY])
+    + field('Gender',  r[C.GENDER]) + field('Age', r[C.AGE])
+    + field('Married', r[C.MARRIED])+ field('Joined', r[C.JOINED])
+    + field('Mode',    r[C.SKIP])   + field('Scraped', r[C.DATETIME], true)
+    + (rurl ? `<div class="drawer-field"><div class="df-key">Rank</div><div class="df-val"><img src="${escHtml(rurl)}" style="height:16px" alt="rank"></div></div>` : '');
+
+  document.getElementById('d-stats').innerHTML =
+    field('Followers', r[C.FOLLOWERS]) + field('Posts', r[C.POSTS])
+    + field('Phase 2',  r[C.PHASE2])   + field('Last Post', r[C.LASTTIME])
+    + (r[C.LASTPOST] ? `<div class="drawer-field df-val full"><div class="df-key">Last Post URL</div><div class="df-val"><a href="${escHtml(String(r[C.LASTPOST]))}" target="_blank">View Post ↗</a></div></div>` : '');
+
+  const mehSection = document.getElementById('d-meh-section');
+  const mehDiv     = document.getElementById('d-meh');
+  if (mehName) {
+    mehSection.style.display = '';
+    const names = mehName.split('\n');
+    const links = mehLink.split('\n');
+    const dates = mehDate.split('\n');
+    mehDiv.innerHTML = names.map((n, i) => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)">
+        ${links[i] ? `<a href="${escHtml(links[i])}" target="_blank" style="color:var(--accent);text-decoration:none">${escHtml(n)}</a>` : escHtml(n)}
+        ${dates[i] ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-left:8px">${escHtml(dates[i])}</span>` : ''}
+      </div>`).join('');
+  } else {
+    mehSection.style.display = 'none';
+  }
+
+  document.getElementById('d-link-profile').href = profLink || '#';
+  document.getElementById('d-link-posts').href   = postUrl  || '#';
+  document.getElementById('drawer-overlay').classList.add('open');
+}
+
+function field(key, val, full) {
+  val = String(val || '—');
+  return `<div class="drawer-field${full?' df-val full':''}">
+    <div class="df-key">${key}</div>
+    <div class="df-val">${escHtml(val)}</div>
+  </div>`;
+}
+
+function closeDrawer(e) {
+  if (e.target === document.getElementById('drawer-overlay')) closeDrawerDirect();
+}
+function closeDrawerDirect() {
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+// ── HELPERS ──
+function show(id) { document.getElementById(id).style.display = ''; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmt(v) {
+  const n = parseInt(String(v || '').replace(/\D/g, ''));
+  if (isNaN(n)) return '—';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+  return String(n);
+}
+function showError(msg) {
+  hide('loading-state');
+  document.getElementById('error-msg').innerText = msg;
+  show('error-state');
+}
+
+// ── EVENTS ──
+document.getElementById('search-input').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  applyFilters();
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    applyFilters();
+  });
+});
+
+document.getElementById('sort-select').addEventListener('change', e => {
+  sortBy = e.target.value;
+  applyFilters();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDrawerDirect();
+});
+
+// ── INIT ──
+loadData();
+</script>
+</body>
+</html>
