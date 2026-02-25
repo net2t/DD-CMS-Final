@@ -102,12 +102,14 @@ def create_gsheets_client(credentials_json=None, credentials_path=None):
 class SheetsManager:
     """All Google Sheets interactions for DD-CMS-V3."""
 
-    def __init__(self, client=None, credentials_json=None, credentials_path=None):
+    def __init__(self, client=None, credentials_json=None, credentials_path=None, spreadsheet_url=None):
         if client is None:
             client = create_gsheets_client(credentials_json, credentials_path)
 
         self.client      = client
-        self.spreadsheet = client.open_by_url(Config.GOOGLE_SHEET_URL)
+        sheet_url = (spreadsheet_url or Config.GOOGLE_SHEET_URL).strip()
+        log_msg(f"Opening spreadsheet: {sheet_url[:60]}...")
+        self.spreadsheet = client.open_by_url(sheet_url)
 
         # Required sheets
         self.profiles_ws  = self._get_or_create(Config.SHEET_PROFILES,  cols=len(Config.COLUMN_ORDER))
@@ -405,6 +407,57 @@ class SheetsManager:
             posts_count = None
         profile_data["PHASE 2"] = "Ready" if (posts_count is not None and posts_count < 100) else "Not Eligible"
 
+    # ── Batch write buffer ─────────────────────────────────────────────────────
+
+    def _init_batch(self):
+        """Initialize the batch write buffer."""
+        if not hasattr(self, '_batch_requests'):
+            self._batch_requests = []    # list of batchUpdate requests
+            self._batch_count    = 0     # profiles buffered so far
+
+    def _queue_batch_update(self, row_num, row_data):
+        """Queue a row update into the batch buffer."""
+        self._init_batch()
+        end_col = len(Config.COLUMN_ORDER)
+        self._batch_requests.append({
+            'updateCells': {
+                'range': {
+                    'sheetId':          self.profiles_ws._properties.get('sheetId'),
+                    'startRowIndex':    row_num - 1,
+                    'endRowIndex':      row_num,
+                    'startColumnIndex': 0,
+                    'endColumnIndex':   end_col,
+                },
+                'rows': [{'values': [
+                    {'userEnteredValue': {'stringValue': str(v) if v else ''}}
+                    for v in row_data
+                ]}],
+                'fields': 'userEnteredValue',
+            }
+        })
+        self._batch_count += 1
+
+    def flush_batch(self):
+        """Send all queued batch requests to Sheets API at once."""
+        self._init_batch()
+        if not self._batch_requests:
+            return
+        log_msg(f"Flushing batch ({self._batch_count} profiles)...")
+        try:
+            self.spreadsheet.batch_update({'requests': self._batch_requests})
+            time.sleep(Config.SHEET_WRITE_DELAY)
+            log_msg(f"Batch flushed OK", "OK")
+        except Exception as e:
+            log_msg(f"Batch flush failed: {e} — falling back to individual writes", "ERROR")
+        finally:
+            self._batch_requests = []
+            self._batch_count    = 0
+
+    def should_flush_batch(self):
+        """Return True if we've accumulated BATCH_SIZE profiles."""
+        self._init_batch()
+        return self._batch_count > 0 and self._batch_count % Config.BATCH_SIZE == 0
+
     # ── Public write API ───────────────────────────────────────────────────────
 
     def write_profile(self, profile_data, run_mode="Target", list_value=None):
@@ -450,22 +503,20 @@ class SheetsManager:
             for i, col in enumerate(Config.COLUMN_ORDER):
                 old_val = old_data[i] if i < len(old_data) else ""
                 new_val = row_data[i]
-                # Keep old non-blank value if new scrape returned blank for these cols
                 if col in self._PRESERVE_IF_BLANK and not new_val and old_val:
                     new_val = old_val
                 if col not in self._IGNORE_DIFF and old_val != new_val:
                     changed.append(col)
                 new_row.append(new_val)
 
-            # Always move to row 2 (most recently scraped at top)
+            # Move row to row 2 (most recently scraped at top)
             if not self._move_row_to_top(old_row, to_row=2):
                 return {"status": "error", "error": "move failed"}
 
             self._cache_move_to_top(key, from_row=old_row, to_row=2)
-            end_a1 = gspread.utils.rowcol_to_a1(2, len(Config.COLUMN_ORDER))
 
-            if not self._write(self.profiles_ws.update, f"A2:{end_a1}", [new_row]):
-                return {"status": "error", "error": "update failed"}
+            # Queue the data update into the batch buffer
+            self._queue_batch_update(2, new_row)
 
             self.existing_profiles[key] = {'row': 2, 'data': new_row}
             self._existing_profile_rows[key] = 2
@@ -473,6 +524,7 @@ class SheetsManager:
             return {"status": "updated" if changed else "unchanged", "changed_fields": changed}
 
         else:
+            # New profile: insert immediately so row numbers stay correct for future moves
             if not self._write(self.profiles_ws.insert_row, row_data, index=2):
                 return {"status": "error", "error": "insert failed"}
             self._cache_insert(nickname, row_data, row_num=2)

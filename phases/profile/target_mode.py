@@ -561,8 +561,15 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
         stats["processed"] += 1
 
+        # ── Flush batch every BATCH_SIZE profiles ───────────────────────────────────
+        if sheets.should_flush_batch():
+            sheets.flush_batch()
+
         if i < len(targets):
             time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
+
+    # Flush any remaining buffered writes at the end of the run
+    sheets.flush_batch()
 
     log_msg(f"=== {label} MODE COMPLETED — "
             f"success={stats['success']} failed={stats['failed']} skipped={stats['skipped']} ===")

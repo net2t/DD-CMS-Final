@@ -30,6 +30,9 @@ import threading
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
+# How old a lock must be (minutes) before we consider it stale from a crash
+LOCK_STALE_MINUTES = 60
+
 # ── Add project root to sys.path ──────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).parent.absolute()
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -51,9 +54,54 @@ _run_count  = 0         # tracks how many automated runs have happened this sess
 #  Lock helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _is_stale_lock() -> bool:
+    """
+    Return True if the lock file is stale (process dead or too old).
+    Auto-deletes the stale lock file.
+    """
+    if not LOCK_FILE.exists():
+        return False
+    try:
+        content = LOCK_FILE.read_text(encoding="utf-8").strip()
+
+        # Check PID still alive
+        import re as _re
+        pid_match = _re.search(r'pid=(\d+)', content)
+        if pid_match:
+            pid = int(pid_match.group(1))
+            try:
+                os.kill(pid, 0)   # signal 0 = check existence only
+            except (ProcessLookupError, PermissionError):
+                # PID doesn't exist → stale
+                log_msg(f"Stale lock detected (PID {pid} not running) — auto-removing", "WARNING")
+                LOCK_FILE.unlink(missing_ok=True)
+                return True
+
+        # Check lock age
+        mtime = LOCK_FILE.stat().st_mtime
+        age_minutes = (time.time() - mtime) / 60
+        if age_minutes > LOCK_STALE_MINUTES:
+            log_msg(f"Stale lock detected ({age_minutes:.0f} min old > {LOCK_STALE_MINUTES} min) — auto-removing", "WARNING")
+            LOCK_FILE.unlink(missing_ok=True)
+            return True
+
+    except Exception as e:
+        log_msg(f"Lock check error: {e} — treating as stale", "WARNING")
+        try:
+            LOCK_FILE.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return True
+    return False
+
+
 def _is_locked() -> bool:
-    """Return True if a run is already in progress."""
-    return LOCK_FILE.exists()
+    """Return True if a LIVE (non-stale) run is in progress."""
+    if not LOCK_FILE.exists():
+        return False
+    if _is_stale_lock():
+        return False   # stale was removed, we can proceed
+    return True
 
 
 def _acquire_lock(mode: str) -> bool:

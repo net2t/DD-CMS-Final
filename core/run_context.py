@@ -33,10 +33,11 @@ class RunContext:
             self.login_manager = LoginManager(driver)
         return self.login_manager.login()
 
-    def get_sheets_manager(self, credentials_json=None, credentials_path=None):
+    def get_sheets_manager(self, credentials_json=None, credentials_path=None, **kwargs):
         return SheetsManager(
             credentials_json=credentials_json,
-            credentials_path=credentials_path
+            credentials_path=credentials_path,
+            **kwargs
         )
 
     def close(self):

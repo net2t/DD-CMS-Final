@@ -28,6 +28,7 @@ def run(context, mode, max_profiles=0):
         sheets = context.get_sheets_manager(
             credentials_json=OnlinePhaseConfig.CREDENTIALS_JSON,
             credentials_path=OnlinePhaseConfig.CREDENTIALS_PATH,
+            spreadsheet_url=OnlinePhaseConfig.SPREADSHEET_URL,
         )
         stats = run_online_mode(driver=context.driver, sheets=sheets, max_profiles=max_profiles)
         return stats, sheets
@@ -37,6 +38,7 @@ def run(context, mode, max_profiles=0):
         sheets = context.get_sheets_manager(
             credentials_json=TargetPhaseConfig.CREDENTIALS_JSON,
             credentials_path=TargetPhaseConfig.CREDENTIALS_PATH,
+            spreadsheet_url=TargetPhaseConfig.SPREADSHEET_URL,
         )
         stats = run_target_mode(driver=context.driver, sheets=sheets, max_profiles=max_profiles)
         return stats, sheets
