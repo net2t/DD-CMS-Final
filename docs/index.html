@@ -536,12 +536,12 @@ const SHEET_TAB = 'Profiles';
 
 // Column indices (0-based) — matches COLUMN_ORDER in config_common.py
 const C = {
-  ID:         0,  NICK:    1,  TAGS:     2,  CITY:      3,
-  GENDER:     4,  MARRIED: 5,  AGE:      6,  JOINED:    7,
-  FOLLOWERS:  8,  STATUS:  9,  POSTS:   10,  SKIP:     11,
-  DATETIME:  12,  LASTPOST:13, LASTTIME:14,  IMAGE:    15,
-  PROFILELINK:16, POSTURL: 17, RURL:    18,  MEHNAME:  19,
-  MEHLINK:   20,  MEHDATE: 21, PHASE2:  22
+ID:         0,  NICK:    1,  TAGS:     2,  CITY:      3,
+GENDER:     4,  MARRIED: 5,  AGE:      6,  JOINED:    7,
+FOLLOWERS:  8,  LIST:    9,  POSTS:   10,  RUN_MODE: 11,
+DATETIME:  12,  LASTPOST:13, LASTTIME:14,  IMAGE:    15,
+PROFILELINK:16, POSTURL: 17, RURL:    18,  MEHNAME:  19,
+MEHLINK:   20,  MEHDATE: 21, PHASE2:  22
 };
 
 // ── STATE ──
@@ -732,7 +732,7 @@ function makeCard(r, idx) {
 function openDrawer(r) {
   const nick     = String(r[C.NICK]   || '—');
   const img      = String(r[C.IMAGE]  || '');
-  const status   = String(r[C.STATUS] || '');
+  const status   = String(r[C.RUN_MODE] || '');
   const tags     = String(r[C.TAGS]   || '');
   const profLink = String(r[C.PROFILELINK]|| '');
   const postUrl  = String(r[C.POSTURL]    || '');
@@ -742,7 +742,7 @@ function openDrawer(r) {
   const rurl     = String(r[C.RURL]       || '');
 
   document.getElementById('d-nick').textContent = nick;
-  document.getElementById('d-status').textContent = status || '—';
+  document.getElementById('d-status').textContent = String(r[C.RUN_MODE] || '—');
   document.getElementById('d-tags').textContent = tags ? '# ' + tags : '';
 
   const avatarWrap = document.getElementById('d-avatar-wrap');
@@ -753,7 +753,8 @@ function openDrawer(r) {
   document.getElementById('d-info').innerHTML = field('City',    r[C.CITY])
     + field('Gender',  r[C.GENDER]) + field('Age', r[C.AGE])
     + field('Married', r[C.MARRIED])+ field('Joined', r[C.JOINED])
-    + field('Mode',    r[C.SKIP])   + field('Scraped', r[C.DATETIME], true)
+    + field('List',    r[C.LIST])   + field('Run Mode', r[C.RUN_MODE])
+    + field('Scraped', r[C.DATETIME], true)
     + (rurl ? `<div class="drawer-field"><div class="df-key">Rank</div><div class="df-val"><img src="${escHtml(rurl)}" style="height:16px" alt="rank"></div></div>` : '');
 
   document.getElementById('d-stats').innerHTML =
