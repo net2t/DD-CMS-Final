@@ -4,7 +4,8 @@ Google Sheets Manager — DD-CMS-V3
 Key changes from V2:
 - No OnlineLog sheet (removed completely)
 - Dashboard kept for run summaries only
-- write_profile() updates RunList IMMEDIATELY after each profile (no batch queue)
+- write_profile() writes EVERY profile immediately (no batch buffer for data writes)
+- Row movement (moveDimension) + data write both happen in the same profile step
 - Col 9  = LIST     → RunList Col F value
 - Col 11 = RUN MODE → "Online" / "Target"
 - sort_profiles_by_date() called once at end of run
@@ -515,8 +516,13 @@ class SheetsManager:
 
             self._cache_move_to_top(key, from_row=old_row, to_row=2)
 
-            # Queue the data update into the batch buffer
-            self._queue_batch_update(2, new_row)
+            # Write the updated data IMMEDIATELY to row 2 (after the move)
+            end_col_a1 = gspread.utils.rowcol_to_a1(2, len(Config.COLUMN_ORDER))
+            if not self._write(self.profiles_ws.update, f"A2:{end_col_a1}", [new_row]):
+                log_msg(f"Immediate write failed for {nickname} — retrying once...", "WARNING")
+                time.sleep(2)
+                if not self._write(self.profiles_ws.update, f"A2:{end_col_a1}", [new_row]):
+                    return {"status": "error", "error": "immediate write failed"}
 
             self.existing_profiles[key] = {'row': 2, 'data': new_row}
             self._existing_profile_rows[key] = 2
