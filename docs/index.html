@@ -1,846 +1,641 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DD-CMS · Profiles</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg:       #f0f4ff;
-      --surface:  #ffffff;
-      --card:     #ffffff;
-      --border:   #e2e8f8;
-      --border2:  #c7d2f0;
-      --accent:   #4361ee;
-      --accent2:  #e63980;
-      --green:    #10b981;
-      --yellow:   #f59e0b;
-      --purple:   #7c3aed;
-      --orange:   #f97316;
-      --text:     #1e293b;
-      --text2:    #475569;
-      --dim:      #94a3b8;
-      --dim2:     #64748b;
-      --mono:     'JetBrains Mono', monospace;
-      --ui:       'Inter', sans-serif;
-      --shadow:   0 1px 4px rgba(67,97,238,0.08), 0 4px 16px rgba(67,97,238,0.06);
-      --shadow-lg:0 4px 24px rgba(67,97,238,0.14);
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DD-CMS · Profiles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════ */
+:root {
+  --ink:     #0a0a0a;
+  --ink2:    #2d2d2d;
+  --ink3:    #6b6b6b;
+  --ink4:    #a8a8a8;
+  --paper:   #f7f5f0;
+  --paper2:  #eeeae2;
+  --paper3:  #e4dfd5;
+  --white:   #ffffff;
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--ui);
-      min-height: 100vh;
-    }
+  --red:     #e8321a;
+  --teal:    #0d8a6e;
+  --gold:    #c9890a;
+  --blue:    #1a5de8;
 
-    /* ── TOP BAR ── */
-    .topbar {
-      position: sticky; top: 0; z-index: 50;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      display: flex; align-items: center; justify-content: space-between;
-      height: 60px;
-      gap: 16px;
-      box-shadow: 0 2px 12px rgba(67,97,238,0.07);
-    }
+  --ff-disp: 'Bebas Neue', sans-serif;
+  --ff-body: 'Instrument Sans', sans-serif;
+  --ff-mono: 'Fira Code', monospace;
 
-    .brand {
-      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
-    }
-    .brand-icon {
-      width: 38px; height: 38px;
-      background: linear-gradient(135deg, var(--accent), #7048ee);
-      border-radius: 10px;
-      display: grid; place-items: center;
-      font-family: var(--mono); font-size: 13px; font-weight: 700; color: #fff;
-      box-shadow: 0 4px 12px rgba(67,97,238,0.35);
-    }
-    .brand-name {
-      font-size: 17px; font-weight: 800; letter-spacing: 1px; color: var(--text);
-    }
-    .brand-ver {
-      font-family: var(--mono); font-size: 9px; color: var(--dim); letter-spacing: 1px; margin-top: 1px;
-    }
+  --r:       6px;
+  --r2:      10px;
+}
 
-    .topbar-center { flex: 1; max-width: 440px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 
-    .search-wrap { position: relative; }
-    .search-wrap input {
-      width: 100%;
-      background: var(--bg);
-      border: 1.5px solid var(--border2);
-      border-radius: 10px;
-      padding: 9px 14px 9px 38px;
-      font-family: var(--ui); font-size: 13px;
-      color: var(--text); outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .search-wrap input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(67,97,238,0.12);
-      background: #fff;
-    }
-    .search-wrap input::placeholder { color: var(--dim); }
-    .search-icon {
-      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-      color: var(--dim); font-size: 15px; pointer-events: none;
-    }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-    .topbar-right {
-      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-    }
+/* halftone dot pattern */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
 
-    .live-pill {
-      display: flex; align-items: center; gap: 6px;
-      font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--green);
-      background: rgba(16,185,129,0.10); border: 1.5px solid rgba(16,185,129,0.3);
-      border-radius: 20px; padding: 5px 12px;
-    }
-    .live-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--green); box-shadow: 0 0 6px var(--green);
-      animation: blink 1.4s step-start infinite;
-    }
-    @keyframes blink { 50% { opacity: 0.25; } }
+/* ══════════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════════ */
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  background: var(--ink);
+  display: flex; align-items: center;
+  padding: 0 28px; height: 56px; gap: 20px;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+}
 
-    .btn {
-      font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
-      padding: 8px 16px; border-radius: 8px;
-      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-      transition: all 0.18s; border: none;
-    }
-    .btn-ghost {
-      background: transparent; border: 1.5px solid var(--border2); color: var(--dim2);
-    }
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: rgba(67,97,238,0.05); }
-    .btn-accent {
-      background: linear-gradient(135deg, var(--accent), #7048ee);
-      color: #fff;
-      box-shadow: 0 3px 10px rgba(67,97,238,0.30);
-    }
-    .btn-accent:hover { box-shadow: 0 4px 16px rgba(67,97,238,0.42); transform: translateY(-1px); }
+.logo-block { display: flex; align-items: center; gap: 0; flex-shrink: 0; text-decoration: none; }
+.logo-dd    { font-family: var(--ff-disp); font-size: 28px; color: var(--red); letter-spacing: 1px; line-height: 1; }
+.logo-sep   { width: 1px; height: 22px; background: rgba(255,255,255,0.2); margin: 0 10px; }
+.logo-cms   { display: flex; flex-direction: column; gap: 0; }
+.logo-cms-main { font-family: var(--ff-body); font-size: 12px; font-weight: 700; letter-spacing: 3px; color: #fff; text-transform: uppercase; line-height: 1; }
+.logo-cms-sub  { font-family: var(--ff-mono); font-size: 8px; color: rgba(255,255,255,0.35); letter-spacing: 2px; margin-top: 2px; }
 
-    /* ── STATS ROW ── */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 0;
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-    }
-    .stat {
-      padding: 20px 24px;
-      border-right: 1px solid var(--border);
-      position: relative;
-    }
-    .stat:last-child { border-right: none; }
-    .stat-label {
-      font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
-      color: var(--dim); text-transform: uppercase; margin-bottom: 6px;
-    }
-    .stat-val {
-      font-size: 28px; font-weight: 800; line-height: 1; color: var(--text); letter-spacing: -1px;
-    }
-    .stat-sub { font-family: var(--mono); font-size: 9px; color: var(--dim); margin-top: 5px; }
+.topbar-search { flex: 1; max-width: 400px; position: relative; }
+.topbar-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); pointer-events: none; }
+.topbar-search input {
+  width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--r); padding: 8px 12px 8px 36px;
+  font-family: var(--ff-body); font-size: 13px; font-weight: 500; color: #fff; outline: none;
+  transition: background .2s, border-color .2s;
+}
+.topbar-search input::placeholder { color: rgba(255,255,255,0.3); }
+.topbar-search input:focus { background: rgba(255,255,255,0.13); border-color: var(--red); }
 
-    /* accent bars on stats */
-    .stat::after {
-      content: '';
-      position: absolute; bottom: 0; left: 24px; right: 24px; height: 3px;
-      border-radius: 2px 2px 0 0;
-      background: var(--stat-color, transparent);
-    }
+.topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-left: auto; }
 
-    /* ── FILTERS ── */
-    .filters {
-      padding: 12px 24px;
-      display: flex; align-items: center; gap: 8px;
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      overflow-x: auto;
-      flex-wrap: wrap;
-    }
-    .filter-label {
-      font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 1px; flex-shrink: 0;
-    }
+.live-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--ff-mono); font-size: 9px; letter-spacing: 2px; color: #5eed8a;
+  background: rgba(94,237,138,0.1); border: 1px solid rgba(94,237,138,0.25); border-radius: 4px; padding: 5px 10px;
+}
+.live-dot { width: 5px; height: 5px; border-radius: 50%; background: #5eed8a; box-shadow: 0 0 6px #5eed8a; animation: blink 1.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-    .filter-btn {
-      font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
-      padding: 5px 13px; border-radius: 20px; cursor: pointer; transition: all 0.15s;
-      border: 1.5px solid var(--border2); background: var(--bg); color: var(--dim2);
-      flex-shrink: 0;
-    }
-    .filter-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(67,97,238,0.06); }
-    .filter-btn.active { border-color: var(--accent); color: #fff; background: var(--accent); box-shadow: 0 2px 8px rgba(67,97,238,0.25); }
-    .filter-btn.f-female.active { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 2px 8px rgba(230,57,128,0.25); }
-    .filter-btn.f-male.active   { background: #0ea5e9;        border-color: #0ea5e9;        box-shadow: 0 2px 8px rgba(14,165,233,0.25); }
+.tbtn { font-family: var(--ff-body); font-size: 12px; font-weight: 700; letter-spacing: .5px; padding: 8px 16px; border-radius: var(--r); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; border: none; }
+.tbtn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); }
+.tbtn-ghost:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+.tbtn-red { background: var(--red); color: #fff; box-shadow: 0 2px 10px rgba(232,50,26,0.4); }
+.tbtn-red:hover { background: #c42b15; box-shadow: 0 4px 16px rgba(232,50,26,0.5); }
 
-    .sort-select {
-      font-family: var(--ui); font-size: 11px; font-weight: 500;
-      background: var(--bg); border: 1.5px solid var(--border2); color: var(--dim2);
-      border-radius: 8px; padding: 5px 10px; cursor: pointer; outline: none;
-      margin-left: auto; flex-shrink: 0;
-    }
-    .sort-select:focus { border-color: var(--accent); }
+/* ══════════════════════════════════════════
+   STATS ROW
+══════════════════════════════════════════ */
+.stats-row {
+  display: grid; grid-template-columns: repeat(5,1fr);
+  background: var(--white);
+  border-bottom: 2px solid var(--ink);
+  position: relative; z-index: 1;
+}
+.stat-block {
+  padding: 20px 24px; border-right: 1px solid var(--paper3); position: relative;
+}
+.stat-block:last-child { border-right: none; }
+.stat-block::before {
+  content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 3px;
+  background: var(--sb-color, var(--ink)); border-radius: 0 2px 2px 0;
+}
+.sb-lbl  { font-family: var(--ff-mono); font-size: 8px; letter-spacing: 2.5px; color: var(--ink3); text-transform: uppercase; margin-bottom: 6px; }
+.sb-num  { font-family: var(--ff-disp); font-size: 44px; line-height: 1; color: var(--sb-color, var(--ink)); letter-spacing: 1px; }
+.sb-hint { font-family: var(--ff-mono); font-size: 9px; color: var(--ink3); margin-top: 4px; }
 
-    /* ── MAIN ── */
-    .main { padding: 20px 20px; }
+/* ══════════════════════════════════════════
+   FILTER BAR
+══════════════════════════════════════════ */
+.filter-bar {
+  background: var(--paper2); border-bottom: 1px solid var(--paper3);
+  padding: 10px 28px; display: flex; align-items: center; gap: 6px;
+  position: relative; z-index: 1; flex-wrap: wrap;
+}
+.fbar-lbl { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 2px; color: var(--ink3); flex-shrink: 0; }
+.fchip {
+  font-family: var(--ff-body); font-size: 11px; font-weight: 700;
+  padding: 5px 13px; border-radius: 4px; cursor: pointer; flex-shrink: 0;
+  border: 1.5px solid var(--paper3); background: var(--white); color: var(--ink3);
+  transition: all .13s; letter-spacing: .3px;
+}
+.fchip:hover { border-color: var(--ink2); color: var(--ink); }
+.fchip.act   { border-color: var(--ink);  background: var(--ink);  color: var(--white); }
+.fchip.act-f { border-color: var(--red);  background: var(--red);  color: var(--white); }
+.fchip.act-m { border-color: var(--blue); background: var(--blue); color: var(--white); }
+.fbar-sort {
+  font-family: var(--ff-body); font-size: 11px; font-weight: 600;
+  background: var(--white); border: 1.5px solid var(--paper3); color: var(--ink2);
+  border-radius: 4px; padding: 5px 10px; cursor: pointer; outline: none;
+  margin-left: auto; flex-shrink: 0; transition: border-color .13s;
+}
+.fbar-sort:focus { border-color: var(--ink); }
 
-    /* ── PROFILE GRID ── */
-    #profile-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-      gap: 16px;
-    }
+/* ══════════════════════════════════════════
+   MAIN
+══════════════════════════════════════════ */
+.main { padding: 24px 24px 48px; position: relative; z-index: 1; }
 
-    .profile-card {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 18px;
-      cursor: pointer;
-      transition: transform 0.18s, box-shadow 0.18s;
-      position: relative;
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      border: 1.5px solid var(--border);
-    }
-    .profile-card:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--border2);
-    }
+#loading-state { padding: 90px 0; text-align: center; }
+.ld-ring { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--paper3); border-top-color: var(--red); animation: spin .75s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ld-txt  { font-family: var(--ff-mono); font-size: 10px; letter-spacing: 3px; color: var(--ink3); }
+.ld-hint { font-family: var(--ff-mono); font-size: 9px; color: var(--ink4); margin-top: 8px; }
 
-    /* top color accent strip */
-    .profile-card::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: var(--card-top, var(--accent));
-      border-radius: 14px 14px 0 0;
-    }
+#error-state { padding: 70px 0; text-align: center; display: none; }
+.er-icon  { font-size: 40px; margin-bottom: 12px; }
+.er-title { font-family: var(--ff-disp); font-size: 36px; color: var(--red); margin-bottom: 10px; }
+.er-msg   { font-family: var(--ff-mono); font-size: 11px; color: var(--ink2); max-width: 500px; margin: 0 auto 20px; line-height: 1.9; background: var(--white); border: 1px solid var(--paper3); border-radius: var(--r); padding: 16px; text-align: left; white-space: pre-wrap; }
 
-    .card-top {
-      display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px;
-    }
+#empty-state { padding: 70px 0; text-align: center; display: none; }
+.emp-txt { font-family: var(--ff-mono); font-size: 10px; letter-spacing: 3px; color: var(--ink3); }
 
-    .avatar {
-      width: 48px; height: 48px; border-radius: 10px;
-      object-fit: cover; flex-shrink: 0;
-      background: var(--bg); border: 2px solid var(--border);
-    }
-    .avatar-placeholder {
-      width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
-      background: linear-gradient(135deg, #e8ecff, #dde3ff);
-      border: 2px solid var(--border2);
-      display: grid; place-items: center;
-      font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--accent);
-    }
+/* ══════════════════════════════════════════
+   PROFILE GRID
+══════════════════════════════════════════ */
+#profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(256px,1fr));
+  gap: 12px;
+}
 
-    .card-info { flex: 1; min-width: 0; }
-    .card-nick {
-      font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.2px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .card-city {
-      font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 0.5px; margin-top: 3px;
-    }
+.pcard {
+  background: var(--white); border: 1.5px solid var(--paper3);
+  border-radius: var(--r2); cursor: pointer; overflow: hidden; position: relative;
+  transition: transform .2s cubic-bezier(.34,1.4,.64,1), box-shadow .2s, border-color .2s;
+}
+.pcard:hover { transform: translateY(-4px); border-color: var(--ink2); box-shadow: 4px 8px 0 var(--ink), 0 0 0 1.5px var(--ink2); }
 
-    .card-badge {
-      font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 1px;
-      padding: 3px 8px; border-radius: 6px; text-transform: uppercase; flex-shrink: 0;
-    }
-    .badge-f { background: rgba(230,57,128,0.10); color: var(--accent2); border: 1.5px solid rgba(230,57,128,0.25); }
-    .badge-m { background: rgba(14,165,233,0.10);  color: #0ea5e9;       border: 1.5px solid rgba(14,165,233,0.25); }
-    .badge-u { background: var(--bg);               color: var(--dim);    border: 1.5px solid var(--border2); }
+.pcard-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--cb, var(--ink)); }
+.pcard-inner { padding: 14px 14px 14px 18px; }
 
-    .card-stats {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
-      background: var(--bg); border-radius: 10px; padding: 10px 8px;
-    }
-    .cs { text-align: center; }
-    .cs-val { font-size: 14px; font-weight: 700; color: var(--text); }
-    .cs-key { font-family: var(--mono); font-size: 9px; color: var(--dim); letter-spacing: 0.5px; margin-top: 2px; }
+.pc-top { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 12px; }
 
-    .card-footer {
-      margin-top: 12px; padding-top: 10px;
-      border-top: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .card-ts { font-family: var(--mono); font-size: 9px; color: var(--dim); }
-    .card-phase {
-      font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 1px; padding: 3px 8px; border-radius: 6px;
-    }
-    .phase-ready { background: rgba(16,185,129,0.10); color: var(--green); border: 1.5px solid rgba(16,185,129,0.25); }
+.av-wrap { position: relative; flex-shrink: 0; }
+.av-img, .av-ph { width: 50px; height: 50px; border-radius: var(--r); object-fit: cover; border: 1.5px solid var(--paper3); }
+.av-ph { display: grid; place-items: center; font-family: var(--ff-disp); font-size: 22px; color: var(--white); background: var(--ap, var(--ink)); }
+.av-dot { position: absolute; bottom: -3px; right: -3px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--white); display: grid; place-items: center; font-size: 7px; font-weight: 800; }
+.av-dot-f { background: var(--red);  color: #fff; }
+.av-dot-m { background: var(--blue); color: #fff; }
+.av-dot-u { background: var(--paper3); color: var(--ink3); }
 
-    .rank-star { height: 14px; vertical-align: middle; margin-right: 4px; }
+.pc-meta { flex: 1; min-width: 0; }
+.pc-nick { font-family: var(--ff-body); font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; letter-spacing: .1px; }
+.pc-city { font-family: var(--ff-mono); font-size: 9px; color: var(--ink3); letter-spacing: .5px; }
 
-    /* ── EMPTY / LOADING ── */
-    #loading-state {
-      padding: 80px 24px; text-align: center;
-    }
-    .spinner {
-      width: 44px; height: 44px; border-radius: 50%;
-      border: 3px solid var(--border); border-top-color: var(--accent);
-      animation: spin 0.75s linear infinite; margin: 0 auto 20px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 2px; }
+.pc-mode { font-family: var(--ff-mono); font-size: 8px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; align-self: flex-start; margin-top: 1px; }
+.mode-online { background: rgba(13,138,110,0.1); color: var(--teal); border: 1px solid rgba(13,138,110,0.25); }
+.mode-target { background: rgba(201,137,10,0.1); color: var(--gold); border: 1px solid rgba(201,137,10,0.25); }
+.mode-other  { background: var(--paper2); color: var(--ink3); border: 1px solid var(--paper3); }
 
-    #error-state {
-      padding: 60px 24px; text-align: center; display: none;
-    }
-    .error-icon { font-size: 36px; margin-bottom: 12px; }
-    .error-title { font-size: 20px; font-weight: 700; color: var(--accent2); margin-bottom: 8px; }
-    .error-msg {
-      font-family: var(--mono); font-size: 11px; color: var(--dim2);
-      max-width: 480px; margin: 0 auto 20px; line-height: 1.8;
-      background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: left;
-    }
+.pc-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--paper3); border-radius: var(--r); overflow: hidden; margin-bottom: 10px; }
+.pcs   { background: var(--paper); padding: 7px 6px; text-align: center; }
+.pcs-v { font-family: var(--ff-disp); font-size: 18px; color: var(--ink); line-height: 1; }
+.pcs-k { font-family: var(--ff-mono); font-size: 7.5px; color: var(--ink3); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
 
-    #empty-state { padding: 60px 24px; text-align: center; display: none; }
-    .empty-text { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+.pc-foot { display: flex; align-items: center; justify-content: space-between; padding-top: 9px; border-top: 1px solid var(--paper2); }
+.pc-ts   { font-family: var(--ff-mono); font-size: 8px; color: var(--ink4); }
+.pc-p2   { font-family: var(--ff-mono); font-size: 7.5px; font-weight: 500; letter-spacing: 1px; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; background: rgba(13,138,110,0.1); color: var(--teal); border: 1px solid rgba(13,138,110,0.3); }
+.rank-img { height: 12px; vertical-align: middle; margin-right: 2px; }
 
-    /* ── DETAIL DRAWER ── */
-    .drawer-overlay {
-      position: fixed; inset: 0; z-index: 200;
-      background: rgba(30,41,59,0.4); backdrop-filter: blur(4px);
-      display: none; align-items: flex-start; justify-content: flex-end;
-    }
-    .drawer-overlay.open { display: flex; }
+/* ══════════════════════════════════════════
+   PAGINATION
+══════════════════════════════════════════ */
+.pager { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 32px 0 6px; flex-wrap: wrap; }
+.pager-info { width: 100%; text-align: center; margin-bottom: 8px; font-family: var(--ff-mono); font-size: 10px; color: var(--ink3); letter-spacing: 1px; }
+.pgbtn { font-family: var(--ff-body); font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 5px; cursor: pointer; border: 1.5px solid var(--paper3); background: var(--white); color: var(--ink2); transition: all .13s; min-width: 36px; text-align: center; }
+.pgbtn:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
+.pgbtn:disabled { opacity: .25; cursor: not-allowed; }
+.pgbtn.cur { background: var(--ink); border-color: var(--ink); color: var(--white); }
+.pg-ellipsis { color: var(--ink3); font-family: var(--ff-mono); font-size: 12px; padding: 0 3px; }
 
-    .drawer {
-      width: 420px; max-width: 100vw; height: 100vh;
-      background: var(--surface); border-left: 1.5px solid var(--border);
-      overflow-y: auto; padding: 0;
-      animation: slide-in 0.22s cubic-bezier(0.16,1,0.3,1);
-      box-shadow: -8px 0 40px rgba(67,97,238,0.12);
-    }
-    @keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.foot-info { display: none; align-items: center; justify-content: space-between; padding-top: 8px; font-family: var(--ff-mono); font-size: 9px; color: var(--ink3); letter-spacing: .5px; }
 
-    .drawer-header {
-      padding: 20px 20px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; background: var(--surface); z-index: 1;
-    }
-    .drawer-nick { font-size: 20px; font-weight: 800; color: var(--text); }
-    .drawer-close {
-      width: 34px; height: 34px; border-radius: 8px;
-      background: var(--bg); border: 1.5px solid var(--border);
-      color: var(--dim2); cursor: pointer; display: grid; place-items: center;
-      font-size: 16px; transition: all 0.15s;
-    }
-    .drawer-close:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(230,57,128,0.06); }
+/* ══════════════════════════════════════════
+   DETAIL DRAWER
+══════════════════════════════════════════ */
+.drw-ov { position: fixed; inset: 0; z-index: 800; background: rgba(10,10,10,0.55); backdrop-filter: blur(6px); display: none; align-items: flex-start; justify-content: flex-end; }
+.drw-ov.open { display: flex; }
 
-    .drawer-avatar-row {
-      padding: 20px; display: flex; align-items: center; gap: 16px;
-      background: linear-gradient(135deg, #f5f7ff, #eef0ff);
-      border-bottom: 1px solid var(--border);
-    }
-    .drawer-avatar {
-      width: 76px; height: 76px; border-radius: 12px; object-fit: cover;
-      border: 2.5px solid var(--border2); background: var(--bg); flex-shrink: 0;
-    }
-    .drawer-avatar-ph {
-      width: 76px; height: 76px; border-radius: 12px; flex-shrink: 0;
-      background: linear-gradient(135deg, #dde3ff, #c7cff8);
-      border: 2.5px solid var(--border2);
-      display: grid; place-items: center; font-size: 30px; font-weight: 800; color: var(--accent);
-    }
+.drw { width: 460px; max-width: 100vw; height: 100vh; background: var(--white); border-left: 2px solid var(--ink); overflow-y: auto; display: flex; flex-direction: column; animation: slideIn .22s cubic-bezier(.16,1,.3,1); box-shadow: -12px 0 60px rgba(0,0,0,0.25); }
+@keyframes slideIn { from { transform: translateX(100%); } }
+.drw::-webkit-scrollbar { width: 4px; }
+.drw::-webkit-scrollbar-thumb { background: var(--paper3); border-radius: 4px; }
 
-    .drawer-section { padding: 16px 20px; }
-    .drawer-section-title {
-      font-family: var(--mono); font-size: 9px; letter-spacing: 2.5px; color: var(--dim);
-      text-transform: uppercase; margin-bottom: 12px;
-      padding-bottom: 6px; border-bottom: 1.5px solid var(--border);
-    }
+.drw-top-bar { height: 4px; background: var(--ink); flex-shrink: 0; }
 
-    .drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .drawer-field { }
-    .df-key { font-family: var(--mono); font-size: 9px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
-    .df-val { font-size: 13px; font-weight: 600; color: var(--text); word-break: break-all; }
-    .df-val a { color: var(--accent); text-decoration: none; }
-    .df-val a:hover { text-decoration: underline; }
-    .df-val.full { grid-column: 1/-1; }
+.drw-head { padding: 16px 20px 14px; border-bottom: 1.5px solid var(--paper2); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--white); z-index: 2; }
+.drw-nick { font-family: var(--ff-disp); font-size: 30px; color: var(--ink); letter-spacing: 1px; line-height: 1; }
+.drw-x { width: 32px; height: 32px; border-radius: 6px; background: var(--paper2); border: 1.5px solid var(--paper3); color: var(--ink2); cursor: pointer; display: grid; place-items: center; font-size: 14px; transition: all .13s; }
+.drw-x:hover { background: var(--ink); color: var(--white); border-color: var(--ink); }
 
-    .drawer-actions {
-      padding: 16px 20px; display: flex; gap: 10px;
-      border-top: 1px solid var(--border);
-      position: sticky; bottom: 0; background: var(--surface);
-    }
+.drw-hero { padding: 18px 20px; background: var(--paper); border-bottom: 1px solid var(--paper2); display: flex; gap: 16px; align-items: center; }
+.drw-av { width: 84px; height: 84px; border-radius: var(--r2); object-fit: cover; border: 2px solid var(--paper3); flex-shrink: 0; }
+.drw-av-ph { width: 84px; height: 84px; border-radius: var(--r2); flex-shrink: 0; display: grid; place-items: center; font-family: var(--ff-disp); font-size: 36px; color: var(--white); border: 2px solid var(--paper3); }
+.drw-hero-body { flex: 1; }
+.drw-mode-lbl { font-family: var(--ff-mono); font-size: 8px; letter-spacing: 2px; color: var(--ink3); text-transform: uppercase; margin-bottom: 5px; }
+.drw-city     { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.drw-tags     { font-family: var(--ff-mono); font-size: 9px; color: var(--teal); line-height: 1.7; letter-spacing: .5px; }
 
-    /* ── FOOTER ── */
-    .table-footer {
-      padding: 14px 0 4px;
-      display: flex; align-items: center; justify-content: space-between;
-      font-family: var(--mono); font-size: 11px; color: var(--dim);
-    }
+.drw-sec { padding: 16px 20px; border-bottom: 1px solid var(--paper2); }
+.drw-sec:last-of-type { border-bottom: none; }
+.drw-sec-hd { font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--ink3); text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+.drw-sec-hd::after { content: ''; flex: 1; height: 1px; background: var(--paper2); }
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 700px) {
-      .stats-row { grid-template-columns: repeat(3, 1fr); }
-      .stat:nth-child(4), .stat:nth-child(5) { border-top: 1px solid var(--border); }
-      .topbar-center { display: none; }
-      #profile-grid { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 440px) {
-      #profile-grid { grid-template-columns: 1fr; }
-      .stats-row { grid-template-columns: 1fr 1fr; }
-    }
-  </style>
+.drw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dfield { }
+.dk { font-family: var(--ff-mono); font-size: 8px; letter-spacing: 2px; color: var(--ink4); text-transform: uppercase; margin-bottom: 3px; }
+.dv { font-size: 13px; font-weight: 600; color: var(--ink); word-break: break-all; line-height: 1.4; }
+.dv a { color: var(--blue); text-decoration: none; }
+.dv a:hover { text-decoration: underline; }
+.dv.span2 { grid-column: 1/-1; }
+
+.meh-row { padding: 9px 0; border-bottom: 1px solid var(--paper2); font-size: 13px; color: var(--ink); line-height: 1.5; }
+.meh-row:last-child { border-bottom: none; }
+
+.drw-actions { padding: 14px 20px; display: flex; gap: 10px; border-top: 2px solid var(--paper2); position: sticky; bottom: 0; background: var(--white); }
+.dact { flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 6px; font-family: var(--ff-body); font-size: 12px; font-weight: 700; letter-spacing: .5px; padding: 10px 16px; border-radius: var(--r); cursor: pointer; text-decoration: none; transition: all .15s; border: none; }
+.dact-main { background: var(--ink); color: var(--white); box-shadow: 2px 3px 0 var(--ink3); }
+.dact-main:hover { background: var(--red); box-shadow: 2px 3px 0 #8a1a0e; }
+.dact-sec { background: var(--white); border: 1.5px solid var(--paper3); color: var(--ink2); }
+.dact-sec:hover { border-color: var(--ink); color: var(--ink); }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media (max-width: 960px) {
+  .stats-row { grid-template-columns: repeat(3,1fr); }
+  .stat-block:nth-child(4), .stat-block:nth-child(5) { border-top: 1px solid var(--paper2); }
+}
+@media (max-width: 640px) {
+  .topbar { padding: 0 14px; gap: 10px; }
+  .topbar-search { max-width: none; }
+  .logo-cms { display: none; } .logo-sep { display: none; }
+  .filter-bar { padding: 8px 14px; }
+  .main { padding: 14px; }
+  #profile-grid { grid-template-columns: 1fr 1fr; }
+  .stats-row { grid-template-columns: repeat(2,1fr); }
+  .stat-block:nth-child(5) { grid-column: 1/-1; }
+  .tbtn-ghost { display: none; }
+}
+@media (max-width: 430px) { #profile-grid { grid-template-columns: 1fr; } }
+</style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="brand">
-    <div class="brand-icon">DD</div>
-    <div>
-      <div class="brand-name">DD-CMS</div>
-      <div class="brand-ver">PROFILES DASHBOARD</div>
-    </div>
-  </div>
-  <div class="topbar-center">
-    <div class="search-wrap">
-      <span class="search-icon">⌕</span>
-      <input type="text" id="search-input" placeholder="Search nickname, city, tags...">
-    </div>
+<!-- ██ TOPBAR ██ -->
+<nav class="topbar">
+  <a class="logo-block" href="#">
+    <span class="logo-dd">DD</span>
+    <span class="logo-sep"></span>
+    <span class="logo-cms">
+      <span class="logo-cms-main">CMS</span>
+      <span class="logo-cms-sub">PROFILES</span>
+    </span>
+  </a>
+  <div class="topbar-search">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="search-input" type="text" placeholder="Search nickname, city, tags…" autocomplete="off">
   </div>
   <div class="topbar-right">
-    <div class="live-pill"><div class="live-dot"></div> LIVE</div>
-    <a href="https://github.com/net2t/DD-CMS-Final" target="_blank" class="btn btn-ghost">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <a href="https://github.com/net2t/DD-CMS-Final" target="_blank" class="tbtn tbtn-ghost">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       GitHub
     </a>
-    <button class="btn btn-accent" onclick="loadData()">↺ Refresh</button>
+    <button class="tbtn tbtn-red" onclick="loadData()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Refresh
+    </button>
   </div>
-</div>
+</nav>
 
-<!-- STATS ROW -->
+<!-- ██ STATS ██ -->
 <div class="stats-row">
-  <div class="stat" style="--stat-color:var(--accent)">
-    <div class="stat-label">Total Profiles</div>
-    <div class="stat-val" id="s-total" style="color:var(--accent)">—</div>
-    <div class="stat-sub">in Profiles sheet</div>
+  <div class="stat-block" style="--sb-color:var(--ink)">
+    <div class="sb-lbl">Total Profiles</div>
+    <div class="sb-num" id="s-total">—</div>
+    <div class="sb-hint">in sheet</div>
   </div>
-  <div class="stat" style="--stat-color:var(--accent2)">
-    <div class="stat-label">Female</div>
-    <div class="stat-val" id="s-female" style="color:var(--accent2)">—</div>
-    <div class="stat-sub" id="s-female-pct"></div>
+  <div class="stat-block" style="--sb-color:var(--red)">
+    <div class="sb-lbl">Female</div>
+    <div class="sb-num" id="s-female" style="color:var(--red)">—</div>
+    <div class="sb-hint" id="s-female-pct"></div>
   </div>
-  <div class="stat" style="--stat-color:#0ea5e9">
-    <div class="stat-label">Male</div>
-    <div class="stat-val" id="s-male" style="color:#0ea5e9">—</div>
-    <div class="stat-sub" id="s-male-pct"></div>
+  <div class="stat-block" style="--sb-color:var(--blue)">
+    <div class="sb-lbl">Male</div>
+    <div class="sb-num" id="s-male" style="color:var(--blue)">—</div>
+    <div class="sb-hint" id="s-male-pct"></div>
   </div>
-  <div class="stat" style="--stat-color:var(--green)">
-    <div class="stat-label">Phase 2 Ready</div>
-    <div class="stat-val" id="s-phase2" style="color:var(--green)">—</div>
-    <div class="stat-sub">posts &lt; 100</div>
+  <div class="stat-block" style="--sb-color:var(--teal)">
+    <div class="sb-lbl">Phase 2 Ready</div>
+    <div class="sb-num" id="s-phase2" style="color:var(--teal)">—</div>
+    <div class="sb-hint">posts &lt; 100</div>
   </div>
-  <div class="stat" style="--stat-color:var(--yellow)">
-    <div class="stat-label">Last Scraped</div>
-    <div class="stat-val" id="s-last" style="font-size:14px; padding-top:6px; color:var(--text2)">—</div>
-    <div class="stat-sub" id="s-last-nick"></div>
+  <div class="stat-block" style="--sb-color:var(--gold)">
+    <div class="sb-lbl">Last Scraped</div>
+    <div class="sb-num" id="s-last" style="font-size:18px;padding-top:12px;color:var(--gold)">—</div>
+    <div class="sb-hint" id="s-last-nick"></div>
   </div>
 </div>
 
-<!-- FILTERS -->
-<div class="filters">
-  <span class="filter-label">FILTER:</span>
-  <button class="filter-btn active" data-filter="all">All</button>
-  <button class="filter-btn f-female" data-filter="female">Female</button>
-  <button class="filter-btn f-male"   data-filter="male">Male</button>
-  <button class="filter-btn" data-filter="phase2">Phase 2 Ready</button>
-  <button class="filter-btn" data-filter="karachi">Karachi</button>
-  <button class="filter-btn" data-filter="lahore">Lahore</button>
-  <button class="filter-btn" data-filter="islamabad">Islamabad</button>
-  <select class="sort-select" id="sort-select">
-    <option value="date">Sort: Recent First</option>
-    <option value="followers">Sort: Followers</option>
-    <option value="posts">Sort: Posts</option>
-    <option value="nick">Sort: A–Z</option>
+<!-- ██ FILTERS ██ -->
+<div class="filter-bar">
+  <span class="fbar-lbl">FILTER:</span>
+  <button class="fchip act" data-f="all">All</button>
+  <button class="fchip"     data-f="female">Female</button>
+  <button class="fchip"     data-f="male">Male</button>
+  <button class="fchip"     data-f="phase2">Phase 2</button>
+  <button class="fchip"     data-f="karachi">Karachi</button>
+  <button class="fchip"     data-f="lahore">Lahore</button>
+  <button class="fchip"     data-f="islamabad">Islamabad</button>
+  <select class="fbar-sort" id="sort-select">
+    <option value="date">↓ Recent First</option>
+    <option value="followers">↓ Followers</option>
+    <option value="posts">↓ Posts</option>
+    <option value="nick">A → Z</option>
   </select>
 </div>
 
-<!-- MAIN -->
+<!-- ██ MAIN ██ -->
 <div class="main">
   <div id="loading-state">
-    <div class="spinner"></div>
-    <div class="loading-text">FETCHING SHEET DATA...</div>
-    <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:10px;" id="loading-hint"></div>
+    <div class="ld-ring"></div>
+    <div class="ld-txt">FETCHING PROFILES</div>
+    <div class="ld-hint">Sheet must be set to "Anyone with link → Viewer"</div>
   </div>
-
   <div id="error-state">
-    <div class="error-icon">⚠️</div>
-    <div class="error-title">Cannot Load Sheet</div>
-    <div class="error-msg" id="error-msg"></div>
-    <button class="btn btn-accent" onclick="loadData()">Try Again</button>
+    <div class="er-icon">⚠️</div>
+    <div class="er-title">Cannot Load</div>
+    <div class="er-msg" id="error-msg"></div>
+    <button class="tbtn tbtn-red" onclick="loadData()">Try Again</button>
   </div>
-
-  <div id="empty-state">
-    <div class="empty-text">NO PROFILES MATCH YOUR FILTER</div>
-  </div>
+  <div id="empty-state"><div class="emp-txt">NO PROFILES MATCH</div></div>
 
   <div id="profile-grid"></div>
-
-  <div class="table-footer" id="table-footer" style="display:none">
+  <div class="pager" id="pager" style="display:none"></div>
+  <div class="foot-info" id="foot-info">
     <span id="footer-count"></span>
     <span id="footer-updated"></span>
   </div>
 </div>
 
-<!-- DETAIL DRAWER -->
-<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer(event)">
-  <div class="drawer" id="drawer">
-    <div class="drawer-header">
-      <div class="drawer-nick" id="d-nick">—</div>
-      <button class="drawer-close" onclick="closeDrawerDirect()">✕</button>
+<!-- ██ DRAWER ██ -->
+<div class="drw-ov" id="drw-ov" onclick="closeDrw(event)">
+  <div class="drw" id="drw">
+    <div class="drw-top-bar" id="d-top-bar"></div>
+    <div class="drw-head">
+      <div class="drw-nick" id="d-nick">—</div>
+      <button class="drw-x" onclick="closeDrwDirect()">✕</button>
     </div>
-    <div class="drawer-avatar-row">
-      <div id="d-avatar-wrap"></div>
-      <div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1.5px;margin-bottom:4px;text-transform:uppercase">Status</div>
-        <div id="d-status" style="font-size:15px;font-weight:700;color:var(--green)"></div>
-        <div id="d-tags" style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--purple)"></div>
+    <div class="drw-hero">
+      <div id="d-av-wrap"></div>
+      <div class="drw-hero-body">
+        <div class="drw-mode-lbl" id="d-mode-lbl"></div>
+        <div class="drw-city" id="d-city-age"></div>
+        <div class="drw-tags" id="d-tags"></div>
       </div>
     </div>
-    <div class="drawer-section">
-      <div class="drawer-section-title">Profile Info</div>
-      <div class="drawer-grid" id="d-info"></div>
-    </div>
-    <div class="drawer-section">
-      <div class="drawer-section-title">Stats</div>
-      <div class="drawer-grid" id="d-stats"></div>
-    </div>
-    <div class="drawer-section" id="d-meh-section">
-      <div class="drawer-section-title">Mehfils</div>
-      <div id="d-meh"></div>
-    </div>
-    <div class="drawer-actions">
-      <a id="d-link-profile" href="#" target="_blank" class="btn btn-accent" style="flex:1;justify-content:center">View Profile</a>
-      <a id="d-link-posts"   href="#" target="_blank" class="btn btn-ghost"  style="flex:1;justify-content:center">View Posts</a>
+    <div class="drw-sec"><div class="drw-sec-hd">Profile Info</div><div class="drw-grid" id="d-info"></div></div>
+    <div class="drw-sec"><div class="drw-sec-hd">Stats</div><div class="drw-grid" id="d-stats"></div></div>
+    <div class="drw-sec" id="d-meh-sec"><div class="drw-sec-hd">Mehfils</div><div id="d-meh"></div></div>
+    <div class="drw-actions">
+      <a id="d-prof-link" href="#" target="_blank" class="dact dact-main">View Profile ↗</a>
+      <a id="d-post-link" href="#" target="_blank" class="dact dact-sec">View Posts ↗</a>
     </div>
   </div>
 </div>
 
 <script>
-// ── CONFIG ──
 const SHEET_ID  = '16t-D8dCXFvheHEpncoQ_VnXQKkrEREAup7c1ZLFXvu0';
 const SHEET_TAB = 'Profiles';
+const PER_PAGE  = 100;
 
-// Column indices (0-based) — matches COLUMN_ORDER in config_common.py
 const C = {
-ID:         0,  NICK:    1,  TAGS:     2,  CITY:      3,
-GENDER:     4,  MARRIED: 5,  AGE:      6,  JOINED:    7,
-FOLLOWERS:  8,  LIST:    9,  POSTS:   10,  RUN_MODE: 11,
-DATETIME:  12,  LASTPOST:13, LASTTIME:14,  IMAGE:    15,
-PROFILELINK:16, POSTURL: 17, RURL:    18,  MEHNAME:  19,
-MEHLINK:   20,  MEHDATE: 21, PHASE2:  22
+  ID:0,NICK:1,TAGS:2,CITY:3,GENDER:4,MARRIED:5,AGE:6,JOINED:7,
+  FOLLOWERS:8,LIST:9,POSTS:10,RUN_MODE:11,DATETIME:12,
+  LASTPOST:13,LASTTIME:14,IMAGE:15,PROFILELINK:16,
+  POSTURL:17,RURL:18,MEHNAME:19,MEHLINK:20,MEHDATE:21,PHASE2:22
 };
 
-// ── STATE ──
-let allProfiles = [];
-let filtered    = [];
-let activeFilter = 'all';
-let searchQuery  = '';
-let sortBy       = 'date';
-let lastFetch    = null;
+let allProfiles=[],filtered=[];
+let activeFilter='all',searchQuery='',sortBy='date';
+let currentPage=1,lastFetch=null;
 
-// ── FETCH ──
-async function loadData() {
-  show('loading-state');
-  hide('error-state'); hide('empty-state'); hide('table-footer');
-  document.getElementById('profile-grid').innerHTML = '';
-  document.getElementById('loading-hint').textContent =
-    'Make sure your Google Sheet is set to "Anyone with link → Viewer"';
+async function loadData(){
+  show('loading-state'); hide('error-state'); hide('empty-state');
+  document.getElementById('pager').style.display='none';
+  document.getElementById('profile-grid').innerHTML='';
+  document.getElementById('foot-info').style.display='none';
 
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_TAB)}`;
-
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_TAB)}`;
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-
-    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
-
-    if (json.status === 'error') {
-      throw new Error(json.errors?.[0]?.detailed_message || 'Sheet API error');
-    }
-
-    const rows = json.table?.rows || [];
-    allProfiles = rows
-      .slice(1)
-      .map(r => (r.c || []).map(c => c ? (c.v ?? c.f ?? '') : ''))
-      .filter(r => r[C.NICK] && String(r[C.NICK]).trim());
-
-    lastFetch = new Date();
-    buildStats();
-    applyFilters();
+    const res=await fetch(url);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text=await res.text();
+    const json=JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+    if(json.status==='error') throw new Error(json.errors?.[0]?.detailed_message||'Sheet API error');
+    const rows=json.table?.rows||[];
+    allProfiles=rows.slice(1)
+      .map(r=>(r.c||[]).map(c=>c?(c.v??c.f??''):''))
+      .filter(r=>r[C.NICK]&&String(r[C.NICK]).trim());
+    lastFetch=new Date();
+    buildStats(); currentPage=1; applyFilters();
     hide('loading-state');
-    show('table-footer');
-
-  } catch (err) {
-    showError(
-      `Failed to load sheet data.\n\nError: ${err.message}\n\n` +
-      `Make sure:\n1. Your sheet is public (Share → Anyone with link → Viewer)\n` +
-      `2. The tab is named exactly "Profiles"`
-    );
+    document.getElementById('foot-info').style.display='flex';
+  } catch(err){
+    showErr(`Failed to load sheet data.\n\nError: ${err.message}\n\nMake sure:\n1. Sheet is public (Share → Anyone with link → Viewer)\n2. Tab named exactly "Profiles"`);
   }
 }
 
-// ── STATS ──
-function buildStats() {
-  const total   = allProfiles.length;
-  const females = allProfiles.filter(r => String(r[C.GENDER]).toUpperCase() === 'FEMALE').length;
-  const males   = allProfiles.filter(r => String(r[C.GENDER]).toUpperCase() === 'MALE').length;
-  const phase2  = allProfiles.filter(r => String(r[C.PHASE2]).toLowerCase().includes('ready')).length;
-  const last    = allProfiles[0];
-
-  document.getElementById('s-total').textContent  = total.toLocaleString();
-  document.getElementById('s-female').textContent = females.toLocaleString();
-  document.getElementById('s-male').textContent   = males.toLocaleString();
-  document.getElementById('s-phase2').textContent = phase2.toLocaleString();
-  document.getElementById('s-female-pct').textContent = total ? Math.round(females/total*100)+'%' : '';
-  document.getElementById('s-male-pct').textContent   = total ? Math.round(males/total*100)+'%' : '';
-
-  if (last) {
-    document.getElementById('s-last').textContent      = String(last[C.DATETIME]).split(' ').slice(0,2).join(' ');
-    document.getElementById('s-last-nick').textContent = String(last[C.NICK]);
-  }
+function buildStats(){
+  const n=allProfiles.length;
+  const f=allProfiles.filter(r=>String(r[C.GENDER]).toUpperCase()==='FEMALE').length;
+  const m=allProfiles.filter(r=>String(r[C.GENDER]).toUpperCase()==='MALE').length;
+  const p=allProfiles.filter(r=>String(r[C.PHASE2]).toLowerCase().includes('ready')).length;
+  const last=allProfiles[0];
+  setText('s-total',n.toLocaleString()); setText('s-female',f.toLocaleString());
+  setText('s-male',m.toLocaleString());  setText('s-phase2',p.toLocaleString());
+  setText('s-female-pct',n?Math.round(f/n*100)+'% of total':'');
+  setText('s-male-pct',  n?Math.round(m/n*100)+'% of total':'');
+  if(last){ setText('s-last',String(last[C.DATETIME]).split(' ').slice(0,2).join(' ')); setText('s-last-nick',String(last[C.NICK])); }
 }
 
-// ── FILTER + SORT ──
-function applyFilters() {
-  const q = searchQuery.toLowerCase();
-
-  filtered = allProfiles.filter(r => {
-    const nick   = String(r[C.NICK]  || '').toLowerCase();
-    const city   = String(r[C.CITY]  || '').toLowerCase();
-    const tags   = String(r[C.TAGS]  || '').toLowerCase();
-    const gender = String(r[C.GENDER]|| '').toUpperCase();
-    const phase  = String(r[C.PHASE2]|| '').toLowerCase();
-
-    if (q && !nick.includes(q) && !city.includes(q) && !tags.includes(q)) return false;
-
-    if (activeFilter === 'female'    && gender !== 'FEMALE')             return false;
-    if (activeFilter === 'male'      && gender !== 'MALE')               return false;
-    if (activeFilter === 'phase2'    && !phase.includes('ready'))        return false;
-    if (activeFilter === 'karachi'   && !city.includes('karachi'))       return false;
-    if (activeFilter === 'lahore'    && !city.includes('lahore'))        return false;
-    if (activeFilter === 'islamabad' && !city.includes('islamabad'))     return false;
-
+function applyFilters(){
+  const q=searchQuery.toLowerCase();
+  filtered=allProfiles.filter(r=>{
+    const nick=String(r[C.NICK]||'').toLowerCase(), city=String(r[C.CITY]||'').toLowerCase();
+    const tags=String(r[C.TAGS]||'').toLowerCase(), gen=String(r[C.GENDER]||'').toUpperCase();
+    const ph=String(r[C.PHASE2]||'').toLowerCase();
+    if(q&&!nick.includes(q)&&!city.includes(q)&&!tags.includes(q)) return false;
+    if(activeFilter==='female'   &&gen!=='FEMALE') return false;
+    if(activeFilter==='male'     &&gen!=='MALE')   return false;
+    if(activeFilter==='phase2'   &&!ph.includes('ready')) return false;
+    if(activeFilter==='karachi'  &&!city.includes('karachi'))    return false;
+    if(activeFilter==='lahore'   &&!city.includes('lahore'))     return false;
+    if(activeFilter==='islamabad'&&!city.includes('islamabad'))  return false;
     return true;
   });
-
-  filtered.sort((a, b) => {
-    if (sortBy === 'followers') return (parseInt(b[C.FOLLOWERS])||0) - (parseInt(a[C.FOLLOWERS])||0);
-    if (sortBy === 'posts')     return (parseInt(b[C.POSTS]    )||0) - (parseInt(a[C.POSTS]    )||0);
-    if (sortBy === 'nick')      return String(a[C.NICK]).localeCompare(String(b[C.NICK]));
+  filtered.sort((a,b)=>{
+    if(sortBy==='followers') return(parseInt(b[C.FOLLOWERS])||0)-(parseInt(a[C.FOLLOWERS])||0);
+    if(sortBy==='posts')     return(parseInt(b[C.POSTS]    )||0)-(parseInt(a[C.POSTS]    )||0);
+    if(sortBy==='nick')      return String(a[C.NICK]).localeCompare(String(b[C.NICK]));
     return 0;
   });
-
-  renderGrid();
+  currentPage=1; renderPage();
 }
 
-// ── RENDER ──
-function renderGrid() {
-  const grid = document.getElementById('profile-grid');
-  grid.innerHTML = '';
-
-  if (!filtered.length) { show('empty-state'); return; }
+function renderPage(){
+  const grid=document.getElementById('profile-grid');
+  grid.innerHTML='';
+  if(!filtered.length){ show('empty-state'); document.getElementById('pager').style.display='none'; return; }
   hide('empty-state');
-
-  const frag = document.createDocumentFragment();
-  filtered.forEach((r, i) => frag.appendChild(makeCard(r, i)));
+  const total=Math.ceil(filtered.length/PER_PAGE);
+  if(currentPage>total) currentPage=total;
+  if(currentPage<1) currentPage=1;
+  const s=(currentPage-1)*PER_PAGE;
+  const frag=document.createDocumentFragment();
+  filtered.slice(s,s+PER_PAGE).forEach(r=>frag.appendChild(mkCard(r)));
   grid.appendChild(frag);
-
-  document.getElementById('footer-count').textContent =
-    `Showing ${filtered.length.toLocaleString()} of ${allProfiles.length.toLocaleString()} profiles`;
-  document.getElementById('footer-updated').textContent =
-    lastFetch ? `Last fetched: ${lastFetch.toLocaleTimeString()}` : '';
+  setText('footer-count',`${s+1}–${Math.min(s+PER_PAGE,filtered.length)} of ${filtered.length.toLocaleString()}`);
+  setText('footer-updated',lastFetch?`fetched ${lastFetch.toLocaleTimeString()}`:'');
+  renderPager(total);
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
-function makeCard(r, idx) {
-  const div   = document.createElement('div');
-  const nick  = String(r[C.NICK]  || '—');
-  const city  = String(r[C.CITY]  || '');
-  const gender= String(r[C.GENDER]|| '').toUpperCase();
-  const age   = String(r[C.AGE]   || '');
-  const followers = fmt(r[C.FOLLOWERS]);
-  const posts     = fmt(r[C.POSTS]);
-  const phase2    = String(r[C.PHASE2]|| '');
-  const dt        = String(r[C.DATETIME]|| '');
-  const img       = String(r[C.IMAGE]  || '');
-  const rurl      = String(r[C.RURL]   || '');
+function renderPager(total){
+  const pg=document.getElementById('pager');
+  if(total<=1){pg.style.display='none';return;}
+  pg.style.display='flex';
+  let h=`<span class="pager-info">Page ${currentPage} of ${total} &nbsp;·&nbsp; ${filtered.length.toLocaleString()} profiles</span>`;
+  h+=`<button class="pgbtn" onclick="goP(${currentPage-1})" ${currentPage===1?'disabled':''}>← Prev</button>`;
+  const s=Math.max(1,currentPage-2),e=Math.min(total,currentPage+2);
+  if(s>1){h+=`<button class="pgbtn" onclick="goP(1)">1</button>`;if(s>2)h+=`<span class="pg-ellipsis">…</span>`;}
+  for(let i=s;i<=e;i++) h+=`<button class="pgbtn${i===currentPage?' cur':''}" onclick="goP(${i})">${i}</button>`;
+  if(e<total){if(e<total-1)h+=`<span class="pg-ellipsis">…</span>`;h+=`<button class="pgbtn" onclick="goP(${total})">${total}</button>`;}
+  h+=`<button class="pgbtn" onclick="goP(${currentPage+1})" ${currentPage===total?'disabled':''}>Next →</button>`;
+  pg.innerHTML=h;
+}
+function goP(n){const t=Math.ceil(filtered.length/PER_PAGE);if(n<1||n>t)return;currentPage=n;renderPage();}
 
-  const genderBadge = gender === 'FEMALE'
-    ? '<span class="card-badge badge-f">F</span>'
-    : gender === 'MALE'
-    ? '<span class="card-badge badge-m">M</span>'
-    : '<span class="card-badge badge-u">?</span>';
+const COLORS=['#e8321a','#0d8a6e','#1a5de8','#c9890a','#7c3aed','#0891b2','#dc2626','#059669'];
+function nickColor(nick){let h=0;for(const c of(nick||''))h=(h*31+c.charCodeAt(0))&0xffffffff;return COLORS[Math.abs(h)%COLORS.length];}
 
-  const topColor = gender === 'FEMALE'
-    ? 'linear-gradient(90deg,var(--accent2),#f97fb0)'
-    : gender === 'MALE'
-    ? 'linear-gradient(90deg,#0ea5e9,#38bdf8)'
-    : 'linear-gradient(90deg,var(--accent),#7048ee)';
-
-  const avatarHtml = img
-    ? `<img class="avatar" src="${escHtml(img)}" alt="${escHtml(nick)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`
-      + `<div class="avatar-placeholder" style="display:none">${nick[0]?.toUpperCase()||'?'}</div>`
-    : `<div class="avatar-placeholder">${nick[0]?.toUpperCase()||'?'}</div>`;
-
-  const rankImg = rurl
-    ? `<img class="rank-star" src="${escHtml(rurl)}" alt="rank" onerror="this.style.display='none'">` : '';
-
-  const phaseHtml = phase2.toLowerCase().includes('ready')
-    ? '<span class="card-phase phase-ready">P2 Ready</span>'
-    : '';
-
-  div.className = 'profile-card';
-  div.style.setProperty('--card-top', topColor);
-  div.innerHTML = `
-    <div class="card-top">
-      <div style="position:relative;flex-shrink:0">${avatarHtml}</div>
-      <div class="card-info">
-        <div class="card-nick">${rankImg}${escHtml(nick)}</div>
-        <div class="card-city">${escHtml(city) || '&nbsp;'}${age ? ' · ' + escHtml(age) + 'y' : ''}</div>
+function mkCard(r){
+  const div=document.createElement('div');
+  const nick=String(r[C.NICK]||'—'),city=String(r[C.CITY]||''),gen=String(r[C.GENDER]||'').toUpperCase();
+  const age=String(r[C.AGE]||''),mar=String(r[C.MARRIED]||''),fol=fmt(r[C.FOLLOWERS]),posts=fmt(r[C.POSTS]);
+  const phase=String(r[C.PHASE2]||''),dt=String(r[C.DATETIME]||''),img=String(r[C.IMAGE]||'');
+  const rurl=String(r[C.RURL]||''),mode=String(r[C.RUN_MODE]||'').toLowerCase();
+  const barColor=gen==='FEMALE'?'var(--red)':gen==='MALE'?'var(--blue)':'var(--ink2)';
+  const dotCls=gen==='FEMALE'?'av-dot-f':gen==='MALE'?'av-dot-m':'av-dot-u';
+  const dotTxt=gen==='FEMALE'?'F':gen==='MALE'?'M':'?';
+  const ac=nickColor(nick);
+  const avHtml=img
+    ?`<img class="av-img" src="${x(img)}" alt="${x(nick)}" loading="lazy" onerror="this.style.display='none';this.nextSibling.style.display='grid'"><div class="av-ph" style="display:none;background:${ac}">${nick[0]?.toUpperCase()||'?'}</div>`
+    :`<div class="av-ph" style="background:${ac}">${nick[0]?.toUpperCase()||'?'}</div>`;
+  const modeCls=mode==='online'?'mode-online':mode==='target'?'mode-target':'mode-other';
+  const modeChip=mode?`<span class="pc-mode ${modeCls}">${mode}</span>`:'';
+  const rankImg=rurl?`<img class="rank-img" src="${x(rurl)}" alt="rank" onerror="this.style.display='none'">`:'' ;
+  const p2=phase.toLowerCase().includes('ready')?'<span class="pc-p2">P2 Ready</span>':'';
+  div.className='pcard';
+  div.innerHTML=`
+    <div class="pcard-bar" style="background:${barColor}"></div>
+    <div class="pcard-inner">
+      <div class="pc-top">
+        <div class="av-wrap">${avHtml}<span class="av-dot ${dotCls}">${dotTxt}</span></div>
+        <div class="pc-meta">
+          <div class="pc-nick">${rankImg}${x(nick)}</div>
+          <div class="pc-city">${city?'📍 '+x(city):'&nbsp;'}${age?' · '+x(age)+'y':''}</div>
+        </div>
+        ${modeChip}
       </div>
-      ${genderBadge}
-    </div>
-    <div class="card-stats">
-      <div class="cs"><div class="cs-val">${followers}</div><div class="cs-key">Followers</div></div>
-      <div class="cs"><div class="cs-val">${posts}</div><div class="cs-key">Posts</div></div>
-      <div class="cs"><div class="cs-val">${String(r[C.MARRIED]||'—')}</div><div class="cs-key">Married</div></div>
-    </div>
-    <div class="card-footer">
-      <div class="card-ts">${dt.split(' ').slice(0,2).join(' ')}</div>
-      ${phaseHtml}
-    </div>
-  `;
-  div.addEventListener('click', () => openDrawer(r));
+      <div class="pc-stats">
+        <div class="pcs"><div class="pcs-v">${fol}</div><div class="pcs-k">Followers</div></div>
+        <div class="pcs"><div class="pcs-v">${posts}</div><div class="pcs-k">Posts</div></div>
+        <div class="pcs"><div class="pcs-v">${x(mar)||'—'}</div><div class="pcs-k">Married</div></div>
+      </div>
+      <div class="pc-foot"><div class="pc-ts">${dt.split(' ').slice(0,2).join(' ')}</div>${p2}</div>
+    </div>`;
+  div.addEventListener('click',()=>openDrw(r));
   return div;
 }
 
-// ── DRAWER ──
-function openDrawer(r) {
-  const nick     = String(r[C.NICK]   || '—');
-  const img      = String(r[C.IMAGE]  || '');
-  const status   = String(r[C.RUN_MODE] || '');
-  const tags     = String(r[C.TAGS]   || '');
-  const profLink = String(r[C.PROFILELINK]|| '');
-  const postUrl  = String(r[C.POSTURL]    || '');
-  const mehName  = String(r[C.MEHNAME]    || '');
-  const mehLink  = String(r[C.MEHLINK]    || '');
-  const mehDate  = String(r[C.MEHDATE]    || '');
-  const rurl     = String(r[C.RURL]       || '');
-
-  document.getElementById('d-nick').textContent = nick;
-  document.getElementById('d-status').textContent = String(r[C.RUN_MODE] || '—');
-  document.getElementById('d-tags').textContent = tags ? '# ' + tags : '';
-
-  const avatarWrap = document.getElementById('d-avatar-wrap');
-  avatarWrap.innerHTML = img
-    ? `<img class="drawer-avatar" src="${escHtml(img)}" alt="${escHtml(nick)}" onerror="this.outerHTML='<div class=drawer-avatar-ph>${nick[0]?.toUpperCase()||'?'}</div>'">`
-    : `<div class="drawer-avatar-ph">${nick[0]?.toUpperCase()||'?'}</div>`;
-
-  document.getElementById('d-info').innerHTML = field('City',    r[C.CITY])
-    + field('Gender',  r[C.GENDER]) + field('Age', r[C.AGE])
-    + field('Married', r[C.MARRIED])+ field('Joined', r[C.JOINED])
-    + field('List',    r[C.LIST])   + field('Run Mode', r[C.RUN_MODE])
-    + field('Scraped', r[C.DATETIME], true)
-    + (rurl ? `<div class="drawer-field"><div class="df-key">Rank</div><div class="df-val"><img src="${escHtml(rurl)}" style="height:16px" alt="rank"></div></div>` : '');
-
-  document.getElementById('d-stats').innerHTML =
-    field('Followers', r[C.FOLLOWERS]) + field('Posts', r[C.POSTS])
-    + field('Phase 2',  r[C.PHASE2])   + field('Last Post', r[C.LASTTIME])
-    + (r[C.LASTPOST] ? `<div class="drawer-field df-val full"><div class="df-key">Last Post URL</div><div class="df-val"><a href="${escHtml(String(r[C.LASTPOST]))}" target="_blank">View Post ↗</a></div></div>` : '');
-
-  const mehSection = document.getElementById('d-meh-section');
-  const mehDiv     = document.getElementById('d-meh');
-  if (mehName) {
-    mehSection.style.display = '';
-    const names = mehName.split('\n');
-    const links = mehLink.split('\n');
-    const dates = mehDate.split('\n');
-    mehDiv.innerHTML = names.map((n, i) => `
-      <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)">
-        ${links[i] ? `<a href="${escHtml(links[i])}" target="_blank" style="color:var(--accent);text-decoration:none">${escHtml(n)}</a>` : escHtml(n)}
-        ${dates[i] ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-left:8px">${escHtml(dates[i])}</span>` : ''}
-      </div>`).join('');
-  } else {
-    mehSection.style.display = 'none';
-  }
-
-  document.getElementById('d-link-profile').href = profLink || '#';
-  document.getElementById('d-link-posts').href   = postUrl  || '#';
-  document.getElementById('drawer-overlay').classList.add('open');
+function openDrw(r){
+  const nick=String(r[C.NICK]||'—'),img=String(r[C.IMAGE]||''),mode=String(r[C.RUN_MODE]||'');
+  const tags=String(r[C.TAGS]||''),city=String(r[C.CITY]||''),age=String(r[C.AGE]||'');
+  const profLink=String(r[C.PROFILELINK]||''),postUrl=String(r[C.POSTURL]||'');
+  const mehName=String(r[C.MEHNAME]||''),mehLink=String(r[C.MEHLINK]||''),mehDate=String(r[C.MEHDATE]||'');
+  const rurl=String(r[C.RURL]||''),gen=String(r[C.GENDER]||'').toUpperCase();
+  const barColor=gen==='FEMALE'?'var(--red)':gen==='MALE'?'var(--blue)':'var(--ink2)';
+  document.getElementById('d-top-bar').style.background=barColor;
+  setText('d-nick',nick);
+  setText('d-mode-lbl',mode?'● '+mode.toUpperCase()+' MODE':'');
+  setText('d-city-age',[city,age?age+'y':''].filter(Boolean).join(' · ')||'');
+  setText('d-tags',tags?'# '+tags.replace(/,\s*/g,'  #'):'');
+  const ac=nickColor(nick);
+  const avWrap=document.getElementById('d-av-wrap');
+  avWrap.innerHTML=img
+    ?`<img class="drw-av" src="${x(img)}" alt="${x(nick)}" onerror="this.outerHTML='<div class=drw-av-ph style=background:${ac}>${nick[0]?.toUpperCase()||'?'}</div>'">`
+    :`<div class="drw-av-ph" style="background:${ac}">${nick[0]?.toUpperCase()||'?'}</div>`;
+  document.getElementById('d-info').innerHTML=
+    dfi('City',r[C.CITY])+dfi('Gender',r[C.GENDER])+dfi('Age',r[C.AGE])+dfi('Married',r[C.MARRIED])+
+    dfi('Joined',r[C.JOINED])+dfi('List',r[C.LIST])+dfi('Run Mode',r[C.RUN_MODE])+dfi('Scraped',r[C.DATETIME],true)+
+    (rurl?`<div class="dfield"><div class="dk">Rank</div><div class="dv"><img src="${x(rurl)}" style="height:14px" alt="rank"></div></div>`:'');
+  document.getElementById('d-stats').innerHTML=
+    dfi('Followers',r[C.FOLLOWERS])+dfi('Posts',r[C.POSTS])+dfi('Phase 2',r[C.PHASE2])+dfi('Last Post Time',r[C.LASTTIME])+
+    (r[C.LASTPOST]?`<div class="dfield"><div class="dk">Last Post URL</div><div class="dv span2"><a href="${x(String(r[C.LASTPOST]))}" target="_blank">View Post ↗</a></div></div>`:'');
+  const mehSec=document.getElementById('d-meh-sec'),mehDiv=document.getElementById('d-meh');
+  if(mehName){
+    mehSec.style.display='';
+    const names=mehName.split('\n'),links=mehLink.split('\n'),dates=mehDate.split('\n');
+    mehDiv.innerHTML=names.map((n,i)=>`<div class="meh-row">${links[i]?`<a href="${x(links[i])}" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:700">${x(n)}</a>`:x(n)}${dates[i]?`<span style="font-family:var(--ff-mono);font-size:8px;color:var(--ink4);margin-left:8px">${x(dates[i])}</span>`:''}</div>`).join('');
+  } else { mehSec.style.display='none'; }
+  document.getElementById('d-prof-link').href=profLink||'#';
+  document.getElementById('d-post-link').href=postUrl||'#';
+  document.getElementById('drw-ov').classList.add('open');
 }
 
-function field(key, val, full) {
-  val = String(val || '—');
-  return `<div class="drawer-field${full?' df-val full':''}">
-    <div class="df-key">${key}</div>
-    <div class="df-val">${escHtml(val)}</div>
-  </div>`;
+function dfi(key,val,full){
+  return`<div class="dfield${full?' span2':''}"><div class="dk">${key}</div><div class="dv${full?' span2':''}">${x(String(val||'—'))}</div></div>`;
 }
+function closeDrw(e){if(e.target===document.getElementById('drw-ov'))closeDrwDirect();}
+function closeDrwDirect(){document.getElementById('drw-ov').classList.remove('open');}
+function show(id){document.getElementById(id).style.display='';}
+function hide(id){document.getElementById(id).style.display='none';}
+function setText(id,v){document.getElementById(id).textContent=v;}
+function x(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmt(v){const n=parseInt(String(v||'').replace(/\D/g,''));if(isNaN(n))return'—';if(n>=1000)return(n/1000).toFixed(1)+'k';return String(n);}
+function showErr(msg){hide('loading-state');document.getElementById('error-msg').innerText=msg;show('error-state');}
 
-function closeDrawer(e) {
-  if (e.target === document.getElementById('drawer-overlay')) closeDrawerDirect();
-}
-function closeDrawerDirect() {
-  document.getElementById('drawer-overlay').classList.remove('open');
-}
-
-// ── HELPERS ──
-function show(id) { document.getElementById(id).style.display = ''; }
-function hide(id) { document.getElementById(id).style.display = 'none'; }
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function fmt(v) {
-  const n = parseInt(String(v || '').replace(/\D/g, ''));
-  if (isNaN(n)) return '—';
-  if (n >= 1000) return (n/1000).toFixed(1) + 'k';
-  return String(n);
-}
-function showError(msg) {
-  hide('loading-state');
-  document.getElementById('error-msg').innerText = msg;
-  show('error-state');
-}
-
-// ── EVENTS ──
-document.getElementById('search-input').addEventListener('input', e => {
-  searchQuery = e.target.value.trim();
-  applyFilters();
-});
-
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeFilter = btn.dataset.filter;
+document.getElementById('search-input').addEventListener('input',e=>{searchQuery=e.target.value.trim();applyFilters();});
+document.querySelectorAll('.fchip').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.fchip').forEach(b=>b.classList.remove('act','act-f','act-m'));
+    const f=btn.dataset.f; activeFilter=f;
+    btn.classList.add('act');
+    if(f==='female')btn.classList.add('act-f');
+    if(f==='male')  btn.classList.add('act-m');
     applyFilters();
   });
 });
+document.getElementById('sort-select').addEventListener('change',e=>{sortBy=e.target.value;applyFilters();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrwDirect();});
 
-document.getElementById('sort-select').addEventListener('change', e => {
-  sortBy = e.target.value;
-  applyFilters();
-});
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeDrawerDirect();
-});
-
-// ── INIT ──
 loadData();
 </script>
 </body>
