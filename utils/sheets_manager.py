@@ -384,7 +384,13 @@ class SheetsManager:
             run_mode:     "Online" or "Target"
             list_value:   RunList Col F value (Target mode) or None (Online mode)
         """
-        profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+        # Use YYYY-MM-DD HH:MM format so Google Sheets text-sort works correctly.
+        # Old format "%d-%b-%y %I:%M %p" (e.g. 08-Mar-26 05:00 PM) sorted
+        # alphabetically by day-number first, which caused March entries to
+        # appear BELOW January/February entries after every sort run.
+        # New format "2026-03-08 17:00" sorts correctly as plain text (largest
+        # year/month/day always wins) — no change needed to the sort API call.
+        profile_data["DATETIME SCRAP"] = get_pkt_time().strftime("%Y-%m-%d %H:%M")
 
         # Col 9 — LIST
         if list_value:
@@ -586,8 +592,9 @@ class SheetsManager:
         diff_min  = ""
         try:
             if start_val and end_val:
-                s = datetime.strptime(start_val, "%d-%b-%y %I:%M %p")
-                e = datetime.strptime(end_val,   "%d-%b-%y %I:%M %p")
+                # Parse the sortable YYYY-MM-DD HH:MM format used by DATETIME SCRAP
+                s = datetime.strptime(start_val, "%Y-%m-%d %H:%M")
+                e = datetime.strptime(end_val,   "%Y-%m-%d %H:%M")
                 diff_min = str(int(round((e - s).total_seconds() / 60)))
         except Exception:
             pass

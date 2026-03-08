@@ -358,7 +358,9 @@ class ProfileScraper:
 
             data = {col: Config.DEFAULT_VALUES.get(col, "") for col in Config.COLUMN_ORDER}
             data["NICK NAME"]     = clean_nick
-            data["DATETIME SCRAP"] = now.strftime("%d-%b-%y %I:%M %p")
+            # Use YYYY-MM-DD HH:MM so the Profiles sheet sorts correctly as text.
+            # This matches the format set in sheets_manager._enrich_profile().
+            data["DATETIME SCRAP"] = now.strftime("%Y-%m-%d %H:%M")
 
             # Ban / suspension
             if detect_suspension(page_source) or detect_banned(page_source):
