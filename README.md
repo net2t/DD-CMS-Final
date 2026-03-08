@@ -1,141 +1,252 @@
-# DD-CMS-V3
+# DD-CMS-Final — DamaDam Profile Scraper
 
-DamaDam (damadam.pk) profile scraper with two run modes:
-
-- **Online mode**: scrape currently online users.
-- **Target mode**: scrape nicknames from Google Sheet `RunList` where status is **⚡ Pending**.
-
-## Status
-
-- **Login**: Selenium + cookies
-- **Writes**: Google Sheets (Profiles + Dashboard; Target also updates RunList)
-- **Scheduler**: Online mode every 15 minutes (local scheduler + GitHub Actions cron)
-
-## Badges
+A Python scraper that automatically collects user profile data from [damadam.pk](https://damadam.pk) and writes it to a Google Sheet. Runs automatically every 15 minutes via GitHub Actions — no PC needs to be on.
 
 [![Online Mode (15 min)](https://github.com/net2t/DD-CMS-Final/actions/workflows/online-schedule.yml/badge.svg)](https://github.com/net2t/DD-CMS-Final/actions/workflows/online-schedule.yml)
 [![Target Mode (Manual)](https://github.com/net2t/DD-CMS-Final/actions/workflows/target-manual.yml/badge.svg)](https://github.com/net2t/DD-CMS-Final/actions/workflows/target-manual.yml)
-
-![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
-![Selenium](https://img.shields.io/badge/Selenium-4.x-43B02A?logo=selenium&logoColor=white)
-![Google%20Sheets](https://img.shields.io/badge/Google%20Sheets-gspread-34A853?logo=google&logoColor=white)
-
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Last Commit](https://img.shields.io/github/last-commit/net2t/DD-CMS-Final)
-![Issues](https://img.shields.io/github/issues/net2t/DD-CMS-Final)
-![Stars](https://img.shields.io/github/stars/net2t/DD-CMS-Final)
 
-## Quick start
+---
 
-### 1) Install
+## What It Does
+
+```
+GitHub Actions (every 15 min)
+        ↓
+Opens DamaDam in Chrome (headless — no screen needed)
+        ↓
+Logs in with your account
+        ↓
+Visits each online user's profile page
+        ↓
+Extracts: name, city, age, followers, posts, last post, photo, mehfil rooms...
+        ↓
+Writes data to your Google Sheet instantly (one row per profile)
+        ↓
+Sorts sheet so newest scrapes always appear at the top
+```
+
+**Two run modes:**
+
+| Mode | What it does | When it runs |
+|---|---|---|
+| **Online Mode** | Scrapes whoever is currently online at damadam.pk/online_kon/ | Automatically every 15 min via GitHub Actions |
+| **Target Mode** | Scrapes a list of nicknames you put in the RunList sheet | Manually — you trigger it |
+
+---
+
+## Google Sheet Structure
+
+The scraper writes to these tabs in your sheet:
+
+| Tab | Purpose |
+|---|---|
+| **Profiles** | Main data — one row per user, 23 columns |
+| **RunList** | Target mode input — put nicknames here with status `⚡ Pending` |
+| **Dashboard** | Run history — one row per run with stats |
+| **Tags** | Optional — assign tag labels to nicknames |
+
+### Profiles Tab — All 23 Columns
+
+```
+Col A  — ID               User's numeric ID on DamaDam
+Col B  — NICK NAME        Username
+Col C  — TAGS             Matched from Tags sheet
+Col D  — CITY
+Col E  — GENDER
+Col F  — MARRIED
+Col G  — AGE
+Col H  — JOINED           Account creation date
+Col I  — FOLLOWERS        Verified follower count
+Col J  — LIST             RunList tag value (Target mode only)
+Col K  — POSTS            Post count
+Col L  — RUN MODE         "Online" or "Target"
+Col M  — DATETIME SCRAP   When scraped — format: YYYY-MM-DD HH:MM
+Col N  — LAST POST        URL of most recent post
+Col O  — LAST POST TIME   Date/time of most recent post
+Col P  — IMAGE            Profile photo URL
+Col Q  — PROFILE LINK     Full profile URL
+Col R  — POST URL         Public profile page URL
+Col S  — RURL             Rank badge image URL
+Col T  — MEH NAME         Mehfil room names (one per line)
+Col U  — MEH LINK         Mehfil room links (one per line)
+Col V  — MEH DATE         Mehfil join dates (one per line)
+Col W  — PHASE 2          Reserved for future use
+```
+
+### RunList Tab Format
+
+To scrape specific users in Target Mode, add rows to the RunList tab:
+
+```
+Col A — NICKNAME    The DamaDam username to scrape
+Col B — STATUS      Set to: ⚡ Pending  (scraper updates this to Done 💀 when finished)
+Col C — REMARKS     Scraper writes result here (e.g. "Updated: 2026-03-08 17:00")
+```
+
+---
+
+## Quick Start (Local / PC)
+
+### Step 1 — Clone the repo
+
+```bash
+git clone https://github.com/net2t/DD-CMS-Final.git
+cd DD-CMS-Final
+```
+
+### Step 2 — Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2) Configure
+### Step 3 — Create your `.env` file
 
-Copy `.env.sample` to `.env` and fill in values.
+Copy `.env.sample` to `.env` and fill in your values:
 
-Required:
+```env
+DAMADAM_USERNAME=your_username
+DAMADAM_PASSWORD=your_password
 
-- `DAMADAM_USERNAME`
-- `DAMADAM_PASSWORD`
-- `GOOGLE_SHEET_URL`
-- Google credentials either:
-  - `GOOGLE_CREDENTIALS_JSON` (service account JSON string)
-  - OR `GOOGLE_APPLICATION_CREDENTIALS=credentials.json` (file in repo root)
+GOOGLE_SHEET_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit
+GOOGLE_CREDENTIALS_JSON={"type":"service_account",...}
+```
 
-### 3) Run
+→ For full setup instructions (Google credentials, sheet creation) see:
+[`docs/guides/SETUP_WINDOWS.md`](docs/guides/SETUP_WINDOWS.md)
 
-#### A) Interactive menu (recommended)
+### Step 4 — Run it
 
 ```bash
+# Interactive menu — prompts you to choose mode and options
 python run.py
+
+# Or run directly:
+python run.py online             # Scrape currently online users
+python run.py target             # Scrape your RunList
+python run.py online --limit 20  # Limit to 20 profiles
 ```
 
-You’ll get:
+---
 
-- Mode select (Online / Target / Scheduler)
-- Options:
-  - limit (how many profiles)
-  - batch size
-  - min/max delay
-  - page load timeout
-  - sheet write delay
+## GitHub Actions — Automatic Cloud Runs
 
-#### B) Direct CLI
+Once secrets are configured, GitHub runs the scraper every 15 minutes for you. Your PC does not need to be on.
 
-```bash
-python run.py online --limit 20
-python run.py target --limit 10
-python run.py scheduler --limit 50
-```
+### Required Secrets
 
-## Run modes
+Go to: **Your repo → Settings → Secrets and variables → Actions → New repository secret**
 
-### Online mode
+| Secret Name | What to put |
+|---|---|
+| `DAMADAM_USERNAME` | Your DamaDam username |
+| `DAMADAM_PASSWORD` | Your DamaDam password |
+| `GOOGLE_SHEET_URL` | Full URL of your Google Sheet |
+| `GOOGLE_CREDENTIALS_JSON` | Your service account JSON — full file contents as one line |
+| `DAMADAM_USERNAME_2` | Backup account username *(optional)* |
+| `DAMADAM_PASSWORD_2` | Backup account password *(optional)* |
 
-- Fetches `https://damadam.pk/online_kon/`
-- Scrapes each user’s profile
-- Writes to **Profiles** sheet
-- Updates **Dashboard**
+→ Full guide: [`docs/guides/GITHUB_ACTIONS_GUIDE.md`](docs/guides/GITHUB_ACTIONS_GUIDE.md)
 
-### Target mode
+### Workflows
 
-- Reads `RunList` sheet
-- Selects rows where status contains **pending**
-- Scrapes each nickname
-- Writes to **Profiles** sheet
-- Updates `RunList` status + remarks immediately (crash-safe)
-- Updates **Dashboard**
+| Workflow file | Trigger | What it runs |
+|---|---|---|
+| `online-schedule.yml` | Every 15 min (cron) + manual | Online Mode |
+| `target-manual.yml` | Manual only | Target Mode |
 
-## Google Sheet tabs expected
+To trigger Target Mode manually: **Actions tab → Target Mode → Run workflow**
 
-- `Profiles`
-- `RunList`
-- `Dashboard`
-- `Tags` (optional)
+---
 
-## GitHub Actions
+## Configuration Reference
 
-### Online scheduled (every 15 minutes)
+All settings live in `.env` (local) or GitHub Secrets (cloud).
 
-Workflow: `.github/workflows/online-schedule.yml`
+| Variable | Default | Description |
+|---|---|---|
+| `DAMADAM_USERNAME` | *(required)* | Primary DamaDam login username |
+| `DAMADAM_PASSWORD` | *(required)* | Primary DamaDam login password |
+| `DAMADAM_USERNAME_2` | — | Backup account (used if primary fails) |
+| `DAMADAM_PASSWORD_2` | — | Backup account password |
+| `GOOGLE_SHEET_URL` | *(required)* | Your Google Sheet URL |
+| `GOOGLE_CREDENTIALS_JSON` | *(required)* | Service account JSON string |
+| `MIN_DELAY` | `0.3` | Minimum seconds between profile requests |
+| `MAX_DELAY` | `0.5` | Maximum seconds between profile requests |
+| `PAGE_LOAD_TIMEOUT` | `10` | Seconds to wait for a page to load |
+| `SHEET_WRITE_DELAY` | `0.5` | Seconds between Google Sheets API calls |
+| `LAST_POST_FETCH_PUBLIC_PAGE` | `false` | Set `true` for richer last-post data (slower) |
+| `SORT_PROFILES_BY_DATE` | `true` | Sort Profiles sheet newest-first after each run |
 
-- Triggered by cron every 15 minutes
-- Also supports manual trigger with an optional `limit`
-
-### Target manual
-
-Workflow: `.github/workflows/target-manual.yml`
-
-- Manual trigger only (`workflow_dispatch`)
-- Optional `limit`
-
-### Required repository secrets
-
-Add these in **Repo → Settings → Secrets and variables → Actions**:
-
-- `DAMADAM_USERNAME`
-- `DAMADAM_PASSWORD`
-- `DAMADAM_USERNAME_2` (optional)
-- `DAMADAM_PASSWORD_2` (optional)
-- `GOOGLE_SHEET_URL`
-- `GOOGLE_CREDENTIALS_JSON`
+---
 
 ## Troubleshooting
 
-- If runs won’t start because of a stale lock:
-  - delete `run.lock`
-- If login is slow/timeouts:
-  - increase `PAGE_LOAD_TIMEOUT` in `.env` (example: `60`)
-  - increase delays (`MIN_DELAY`, `MAX_DELAY`)
-- If Sheets auth fails:
-  - ensure `GOOGLE_CREDENTIALS_JSON` is valid JSON
-  - or provide `credentials.json` and set `GOOGLE_APPLICATION_CREDENTIALS=credentials.json`
+| Problem | Cause | Fix |
+|---|---|---|
+| Sheet not updating | GitHub Actions failing silently | Check **Actions tab → recent run → logs** |
+| Profiles show old dates | DATETIME SCRAP sort bug (fixed v3.0.1) | Run `python fix_datetime_format.py` once |
+| Login fails | Wrong credentials or site changed | Test login manually; check your secrets |
+| `run.lock` stuck | Previous run crashed without cleanup | Delete `run.lock` from project root |
+| 429 errors in logs | Google Sheets rate limit | Increase `SHEET_WRITE_DELAY` to `1.0` |
+| 0 profiles found | DamaDam HTML structure changed | Check `config/selectors.py` |
 
-## Docs
+→ Full guide: [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md)
 
-More detailed docs are in:
+---
 
-- `docs/README.md`
+## Project Structure
+
+```
+DD-CMS-Final/
+│
+├── config/
+│   ├── config_common.py      ← All settings & column definitions
+│   ├── config_online.py      ← Online mode credential overrides
+│   ├── config_target.py      ← Target mode credential overrides
+│   └── selectors.py          ← CSS/XPath selectors for DamaDam pages
+│
+├── core/                     ← LOCKED — do not modify
+│   ├── browser_manager.py    ← Chrome setup & launch options
+│   ├── login_manager.py      ← DamaDam login & cookie handling
+│   └── run_context.py        ← Connects browser + sheets
+│
+├── phases/
+│   ├── phase_profile.py      ← Routes to online or target mode
+│   └── profile/
+│       ├── online_mode.py    ← Fetches online users list from site
+│       └── target_mode.py    ← Profile scraper + main run loop
+│
+├── utils/
+│   ├── sheets_manager.py     ← All Google Sheets read/write logic
+│   ├── ui.py                 ← Logging, timestamps, progress display
+│   └── url_builder.py        ← Builds profile & public page URLs
+│
+├── docs/
+│   ├── guides/               ← Setup, GitHub Actions, Troubleshooting, Testing
+│   └── reference/            ← Architecture details
+│
+├── .github/workflows/
+│   ├── online-schedule.yml   ← Runs Online Mode every 15 min
+│   └── target-manual.yml     ← Manual trigger for Target Mode
+│
+├── run.py                    ← Main entry point
+├── fix_datetime_format.py    ← One-time migration script (run once after v3.0.1 upgrade)
+├── requirements.txt          ← Python package list
+├── .env.sample               ← Template — copy to .env and fill in
+└── README.md                 ← This file
+```
+
+---
+
+## Docs Index
+
+| File | What's in it |
+|---|---|
+| [`docs/guides/SETUP_WINDOWS.md`](docs/guides/SETUP_WINDOWS.md) | Complete Windows setup from scratch |
+| [`docs/guides/GITHUB_ACTIONS_GUIDE.md`](docs/guides/GITHUB_ACTIONS_GUIDE.md) | How to set up automatic cloud runs |
+| [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) | Common errors and fixes |
+| [`docs/guides/TESTING.md`](docs/guides/TESTING.md) | How to verify the scraper is working correctly |
+| [`CHANGELOG.md`](CHANGELOG.md) | Full version history and bug fixes |

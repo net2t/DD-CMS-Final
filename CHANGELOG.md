@@ -1,96 +1,106 @@
-# DD-CMS-V3 Changelog
+# Changelog
 
-All notable changes from V2 → V3 are documented here.
+All notable changes are listed here. Newest version at the top.
+
+---
+
+## [v3.0.1] — 2026-03-08
+
+### Bug Fix — Profiles Sheet Showing Old Dates
+
+**Problem:**
+The Profiles sheet appeared to stop updating after 01-Mar-2026. Data was actually being written correctly every 15 minutes, but the sort at the end of each run was reordering rows incorrectly — making old rows float to the top and hiding fresh data.
+
+**Root cause:**
+`DATETIME SCRAP` was stored as `08-Mar-26 05:00 PM`. Google Sheets' `sortRange` API sorts this as plain text, alphabetically. Alphabetical sort on this format compares the day number first (`01`, `02`... `31`), not the year or month. So `01-Apr-26` sorted above `31-Mar-26` — March entries disappeared below older data after every run.
+
+**Fix:**
+Changed `DATETIME SCRAP` format from `%d-%b-%y %I:%M %p` to `%Y-%m-%d %H:%M` (e.g. `2026-03-08 17:00`). This format sorts correctly as plain text because the year comes first.
+
+**Files changed:**
+- `utils/sheets_manager.py` — `_enrich_profile()` and `update_dashboard()` strptime
+- `phases/profile/target_mode.py` — `scrape_profile()` timestamp stamp
+
+**Migration:**
+Run `python fix_datetime_format.py` once to convert all existing rows in your sheet from the old format to the new one. Only needs to be done once.
 
 ---
 
 ## [v3.0.0] — 2026-02-23
 
-### Project Structure
-- Moved to clean new repo: `DD-CMS-V3`
-- Root has only: `run.py`, `CHANGELOG.md`, `.gitignore`, `.env.sample`, `requirements.txt`
-- All logic organized into `core/`, `config/`, `phases/`, `utils/`, `docs/`, `logs/`
-- `core/` is fully locked — AI and contributors must not modify these files
+Complete rewrite from V2. New clean repo structure, all logic reorganized into modules.
 
-### New Features
+### Structure Changes
+- Root now contains only: `run.py`, `CHANGELOG.md`, `.gitignore`, `.env.sample`, `requirements.txt`
+- All logic split into `core/`, `config/`, `phases/`, `utils/`, `docs/`
+- `core/` is locked — browser and login code must not be modified
 
-#### Overlap Lock System
-- `run.lock` file created at run start, deleted at finish
-- If Online Mode scheduler ticks while a run is active → tick is **skipped** (no cancellation, no overlap)
-- Manual runs also check the lock — won't start if another run is active
-- If a run crashes: delete `run.lock` manually to reset
+### New: Overlap Lock System
+- `run.lock` file created at run start, deleted when run finishes
+- If GitHub Actions triggers while a run is still going → new run is skipped (no overlap, no data corruption)
+- If a run crashes and leaves a stale lock: manually delete `run.lock` to reset
 
-#### Online Mode Scheduler
-- `python run.py scheduler` starts Online Mode every 15 minutes automatically
-- No overlap: if previous run is still going, next tick is skipped silently
-- Ctrl+C or SIGTERM stops the scheduler cleanly
+### New: Online Mode Scheduler (local)
+- `python run.py scheduler` runs Online Mode on your PC every 15 minutes
+- Ctrl+C stops it cleanly
 
-#### Manual Run Buttons (CLI)
-- `python run.py online` — run Online Mode once
-- `python run.py target` — run Target Mode once
-- `python run.py online --limit 20` — limit profiles per run
-- `python run.py scheduler --limit 50` — scheduler with profile cap
+### Bug Fix: Data Lost on Crash (Critical)
+- **Old behaviour:** All profiles scraped first, then written to sheet at the end → crash = all data lost
+- **New behaviour:** Each profile is written to the sheet immediately after scraping → crash-safe
 
-### Bug Fixes
+### Bug Fix: Row Movement
+- Profile rows now move to Row 2 (top) after each scrape using Google Sheets `moveDimension` API
+- Most recently scraped profile always appears first
 
-#### Batch Mode Fixed (Critical)
-- **Old behavior**: All profiles scraped first → all written to sheet at end (lost data on crash)
-- **New behavior**: Each profile is written to sheet IMMEDIATELY after scraping
-- RunList is marked "Done" right after each profile — crash-safe
-
-#### Row Move to Row 2 — Fixed
-- After scraping any profile (new or existing), it is moved to Row 2 of Profiles sheet
-- Uses Google Sheets `moveDimension` API — one call, no delete/insert overhead
-- In-memory cache updated correctly after each move
-
-#### Duplicate Check — Fixed
-- On-demand single-row fetch (not full sheet read on every check)
-- Cache stays in sync because writes are per-profile (not batched)
-
-#### Column Mapping — Fixed
-- **Col 9 (LIST)**: RunList Col F value goes here (Target mode) or empty (Online mode)
-  - Previously was called "STATUS" or "SKIP/DEL" — now renamed to "LIST"
-- **Col 11 (RUN MODE)**: "Online" or "Target" — previously was broken/mixed with status
-- **Col 9 (STATUS old)** no longer used for verified/unverified — unverified profiles are skipped entirely, no column needed
-
-### Removals
-
-#### OnlineLog Sheet — Removed
-- No more OnlineLog sheet or any reference to it
-- Dashboard is the only run summary destination
-
-#### Dashboard Folder — Removed
-- Removed internal dashboard folder and all references
-- Dashboard = the Google Sheet tab only
-
-#### Formatting — Removed
-- No auto-formatting (color, bold, row highlighting) applied during scraping
-- Only header row gets Quantico white font on sheet init
-- This significantly speeds up runs
+### Bug Fix: Duplicate Detection
+- Now uses on-demand single-row fetch instead of reading the full sheet on every check
+- In-memory cache stays in sync with per-profile writes
 
 ### Column Changes (Profiles Sheet)
-```
-Index  Old Name      New Name     Notes
-─────  ────────────  ───────────  ───────────────────────────────────────────
-9      STATUS        LIST         RunList Col F value (Target) / empty (Online)
-11     SKIP/DEL      RUN MODE     "Online" or "Target"
-```
 
-### Sort
-- Profiles sheet sorted by DATETIME SCRAP (Col M / index 12) **descending** at end of each run
-- Most recently scraped profile appears at top
-- Implemented via Google Sheets `sortRange` API (one batch call)
+| Index | Old Name | New Name | Notes |
+|---|---|---|---|
+| 9 | STATUS | LIST | RunList Col F value (Target mode) or empty (Online mode) |
+| 11 | SKIP/DEL | RUN MODE | "Online" or "Target" |
 
-### Last Post Page
-- Set to `?page=1` (was `?page=4` — reduced to minimize API usage)
-- Controlled by `LAST_POST_FETCH_PUBLIC_PAGE` env var (default: false = fast mode)
+### Removed
+- **OnlineLog sheet** — removed entirely. Dashboard is the only run summary destination
+- **Auto-formatting** — no more colour/bold applied during scraping. Significantly speeds up runs. Only the header row gets Quantico white font on sheet initialisation
+- Various unused files cleaned up (legacy configs, duplicate phase files, old dashboard HTML files)
 
 ### Defaults
-- `BATCH_SIZE = 50` (default)
-- `MAX_PROFILES_PER_RUN = 0` (unlimited by default)
-- `MIN_DELAY = 0.3s`, `MAX_DELAY = 0.5s` between profile requests
+- `BATCH_SIZE = 50`
+- `MAX_PROFILES_PER_RUN = 0` (unlimited)
+- `MIN_DELAY = 0.3s`, `MAX_DELAY = 0.5s`
+- `PAGE_LOAD_TIMEOUT = 10s`
 
-### Core Lock Policy
-- `core/CORE_LOCK.md` documents which files must not be modified
-- All core files (`browser_manager.py`, `login_manager.py`, `run_context.py`) have lock headers
-- Start and Login are confirmed working — not touched in V3
+---
+
+## [v2.100.0.19] — 2026-02-20
+
+### Performance — Major Speed Improvements
+- Browser now blocks image loading → saves 40–60% of page load time per profile
+- Switched to `eager` page load strategy → browser stops waiting once DOM is ready
+- `LAST_POST_FETCH_PUBLIC_PAGE` now defaults to `false` → saves 15–25 seconds per profile
+- Reduced `PAGE_LOAD_TIMEOUT` from 30s → 20s
+- Reduced `WebDriverWait` from 12s → 10s
+- Added browser performance flags: disable-extensions, disable-sync, disable-notifications
+
+**Result:** 100 profiles now takes ~20–35 min (was 2–3 hours)
+
+### Cleanup
+- Removed `utils/profile_cache.py` — never connected to scraper
+- Removed `utils/validator.py` — replaced by inline validation in target_mode.py
+- Removed `utils/retry.py` — decorators never applied
+- Removed duplicate phase files
+- Removed old dashboard HTML test files
+
+---
+
+## [v2.100.0.18] — 2026-01-02
+
+### Fixed
+- Profiles sheet Col L header updated to `RUN MODE`
+- Removed `MEH TYPE` column (was causing formatting issues)
+- Profile image extraction now prefers cloudfront avatar-imgs, ignores placeholder `og_image.png`
+- Sheet header formatting now uses 429 retry/backoff wrapper

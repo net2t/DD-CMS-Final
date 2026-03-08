@@ -1,505 +1,265 @@
-# 🪟 Windows Setup Guide
+# Windows Setup Guide
 
-**Complete step-by-step guide for Windows users (beginner-friendly).**
+Complete step-by-step guide to get DD-CMS-Final running on your Windows PC.
 
----
-
-## 📋 What You Need
-
-Before starting, have these ready:
-- [ ] Windows 10 or 11
-- [ ] Internet connection
-- [ ] DamaDam account (username + password)
-- [ ] Google account (for Google Sheets)
-- [ ] 30-60 minutes of time
+**Time required:** ~40 minutes
+**Difficulty:** Beginner-friendly
 
 ---
 
-## 🎯 Quick Overview
+## Before You Start
 
-```
-Step 1: Install Python         (10 min)
-Step 2: Install Git            (5 min)
-Step 3: Download Project       (5 min)
-Step 4: Install Dependencies   (5 min)
-Step 5: Setup Credentials      (10 min)
-Step 6: Test Run              (5 min)
-```
+Have these ready:
 
-**Total time: ~40 minutes**
+- Windows 10 or 11
+- Your DamaDam account username and password
+- A Google account (for Google Sheets)
+- Internet connection
 
 ---
 
-## 📥 Step 1: Install Python (10 minutes)
+## Step 1 — Install Python
 
-### 1.1 Download Python
+### Download
 
-1. Open browser, go to: https://www.python.org/downloads/
-2. Click big yellow button: **Download Python 3.11.x**
-3. Save the file (e.g., `python-3.11.7-amd64.exe`)
+1. Go to: https://www.python.org/downloads/
+2. Click the big yellow **Download Python 3.11.x** button
+3. Save the installer file
 
-### 1.2 Install Python
+### Install
 
-1. **Double-click** the downloaded file
-2. **✅ IMPORTANT:** Check ☑️ "Add Python to PATH"
+1. Double-click the downloaded `.exe` file
+2. **⚠️ Important:** Before clicking anything else, check the box at the bottom:
    ```
-   ┌─────────────────────────────────┐
-   │ ☑️ Add Python 3.11 to PATH     │  ← CHECK THIS!
-   └─────────────────────────────────┘
+   ☑️ Add Python 3.11 to PATH
    ```
+   If you miss this, Python won't work from the terminal.
 3. Click **Install Now**
-4. Wait for installation (~2 minutes)
-5. Click **Close**
+4. Wait ~2 minutes, then click **Close**
 
-### 1.3 Verify Installation
+### Verify
 
-1. Press `Win + R` keys
-2. Type: `cmd` and press Enter
-3. In the black window, type:
-   ```cmd
+1. Press `Win + R`, type `cmd`, press Enter
+2. In the black window, type:
+   ```
    python --version
    ```
-4. Should see: `Python 3.11.x`
+3. You should see something like: `Python 3.11.9`
 
-**If you see error "python not recognized":**
-- You forgot to check "Add to PATH"
-- Uninstall Python and reinstall (check the box!)
+**If you see "python is not recognized":** You missed the PATH checkbox. Uninstall Python from Windows Settings and reinstall — this time check the box.
 
 ---
 
-## 🔧 Step 2: Install Git (5 minutes)
+## Step 2 — Install Git
 
-### 2.1 Download Git
+### Download
 
 1. Go to: https://git-scm.com/download/win
-2. Download will start automatically
-3. Save the file (e.g., `Git-2.43.0-64-bit.exe`)
+2. The download starts automatically
+3. Save the installer file
 
-### 2.2 Install Git
+### Install
 
-1. **Double-click** the downloaded file
-2. Click **Next** for all screens (default settings OK)
-3. Wait for installation (~2 minutes)
-4. Click **Finish**
+1. Double-click the downloaded `.exe`
+2. Click **Next** through all screens — default settings are fine
+3. Click **Finish**
 
-### 2.3 Verify Installation
+### Verify
 
-1. Press `Win + R`
-2. Type: `cmd` and press Enter
-3. Type:
-   ```cmd
-   git --version
-   ```
-4. Should see: `git version 2.43.x`
+Open a new `cmd` window and type:
+```
+git --version
+```
+You should see: `git version 2.x.x`
 
 ---
 
-## 📦 Step 3: Download Project (5 minutes)
+## Step 3 — Download the Project
 
-### 3.1 Choose Location
-
-1. Open **File Explorer** (Win + E)
-2. Go to: `C:\Users\YourName\Documents\`
-3. Create new folder: `Projects`
-4. Open the `Projects` folder
-
-### 3.2 Download Code
-
-**Method A: Using Git (Recommended)**
-1. Right-click in `Projects` folder
-2. Click **Open in Terminal** (Windows 11) or **Git Bash Here** (Windows 10)
-3. Type:
-   ```bash
-   git clone https://github.com/net2t/DD-CMS-Final.git
-   ```
-4. Press Enter
-5. Wait for download (~1 minute)
-
-**Method B: Download ZIP**
-1. Go to: https://github.com/net2t/DD-CMS-Final
-2. Click green **Code** button
-3. Click **Download ZIP**
-4. Save to `Projects` folder
-5. Right-click ZIP → **Extract All**
-6. Rename folder to `DD-CMS-Final`
-
-### 3.3 Verify Download
-
-You should now have:
+Open `cmd` and navigate to where you want to keep the project. For example:
 ```
-C:\Users\YourName\Documents\Projects\DD-CMS-Final\
-├── config/
-├── core/
-├── phases/
-├── utils/
-├── main.py
-├── requirements.txt
-└── README.md
+cd "C:\Users\NADEEM\3D Objects"
+```
+
+Then clone the repo:
+```
+git clone https://github.com/net2t/DD-CMS-Final.git
+```
+
+This creates a folder called `DD-CMS-Final`. To open a terminal inside it:
+```
+cd DD-CMS-Final
 ```
 
 ---
 
-## 🔌 Step 4: Install Dependencies (5 minutes)
+## Step 4 — Install Python Packages
 
-### 4.1 Open Project in Terminal
-
-1. Open **File Explorer**
-2. Navigate to: `C:\Users\YourName\Documents\Projects\DD-CMS-Final`
-3. Type `cmd` in the address bar
-4. Press Enter
-
-You should see:
+From inside the `DD-CMS-Final` folder, run:
 ```
-C:\Users\YourName\Documents\Projects\DD-CMS-Final>
-```
-
-### 4.2 Install Requirements
-
-Type this command:
-```cmd
 pip install -r requirements.txt
 ```
 
-Press Enter and wait (~2 minutes).
+This installs Selenium, gspread, and all other dependencies. It takes about 2 minutes.
 
-You'll see:
-```
-Collecting selenium>=4.15.0
-Downloading selenium-4.15.2.tar.gz
-Installing collected packages: selenium, gspread, ...
-Successfully installed ...
-```
-
-### 4.3 Verify Installation
-
-Type:
-```cmd
-pip list
-```
-
-Should see these packages:
-- selenium
-- gspread
-- google-auth
-- python-dotenv
-- rich
+**Verify:** Type `pip list` — you should see `selenium`, `gspread`, `google-auth`, `python-dotenv`, `rich` in the list.
 
 ---
 
-## 🔐 Step 5: Setup Credentials (10 minutes)
+## Step 5 — Create Your `.env` File
 
-### 5.1 Create .env File
+The `.env` file holds your private credentials. It never gets uploaded to GitHub.
 
-1. In project folder, find `.env.example`
-2. Right-click → **Copy**
-3. Right-click → **Paste**
-4. Rename copy to `.env` (no ".example")
+1. In File Explorer, go to your `DD-CMS-Final` folder
+2. Find the file `.env.sample`
+3. Copy it and rename the copy to `.env` (remove `.sample`)
+4. Right-click `.env` → Open with → Notepad
 
-### 5.2 Edit .env File
-
-1. Right-click `.env` → **Open with** → **Notepad**
-2. Fill in your information:
+Fill in your details:
 
 ```env
 # Your DamaDam login
-DAMADAM_USERNAME=your_username_here
-DAMADAM_PASSWORD=your_password_here
+DAMADAM_USERNAME=YourUsernameHere
+DAMADAM_PASSWORD=YourPasswordHere
 
-# Backup account (optional but recommended)
+# Optional backup account
 DAMADAM_USERNAME_2=
 DAMADAM_PASSWORD_2=
 
-# Your Google Sheet URL (get from Step 5.3)
-GOOGLE_SHEET_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit
+# Your Google Sheet URL (set up in Step 6)
+GOOGLE_SHEET_URL=https://docs.google.com/spreadsheets/d/YOUR_ID_HERE/edit
 ```
 
-3. Save and close
+Save and close.
 
-### 5.3 Setup Google Sheet
+---
 
-**Create Sheet:**
-1. Go to: https://sheets.google.com
-2. Click **+ Blank** to create new sheet
-3. Name it: `DamaDam Scraper Data`
-4. Copy the URL from browser
+## Step 6 — Set Up Google Sheets Access
 
-**Create Tabs:**
-Create these sheets (click + button at bottom):
-- Profiles
-- RunList
-- OnlineLog
-- Dashboard
-- Tags (optional)
+This is the most involved step. It gives the scraper permission to write to your Google Sheet.
 
-### 5.4 Get Google Credentials
+### 6a — Create a Google Sheet
 
-**Create Service Account:**
+1. Go to https://sheets.google.com
+2. Click **+ Blank** to create a new sheet
+3. Name it something like `DD-CMS Data`
+4. At the bottom, create these tabs by clicking the `+` button:
+   - `Profiles`
+   - `RunList`
+   - `Dashboard`
+   - `Tags` (optional)
+5. Copy the URL from your browser's address bar — you'll need it for `.env`
+
+### 6b — Create a Service Account (Google Cloud)
+
+A service account is a special Google account that lets scripts access your sheet without needing a browser login.
+
 1. Go to: https://console.cloud.google.com
-2. Create new project: `DamaDam Scraper`
-3. Enable Google Sheets API
-4. Create Service Account
-5. Download `credentials.json`
-6. Move `credentials.json` to project folder
+2. Click the project dropdown at the top → **New Project**
+3. Name it `DD-CMS` → click **Create**
+4. In the left menu: **APIs & Services → Library**
+5. Search for `Google Sheets API` → click it → click **Enable**
+6. Also enable `Google Drive API` the same way
+7. In the left menu: **APIs & Services → Credentials**
+8. Click **+ Create Credentials → Service Account**
+9. Give it any name (e.g. `dd-cms-bot`) → click **Done**
+10. Click on the service account you just created
+11. Go to the **Keys** tab → **Add Key → Create new key → JSON**
+12. A `.json` file downloads automatically — keep this safe
 
-**Share Sheet:**
-1. Open your Google Sheet
-2. Click **Share** button
-3. Paste service account email (from credentials.json)
-4. Give **Editor** permission
+### 6c — Share Your Sheet with the Service Account
 
-**Detailed guide:** https://docs.gspread.org/en/latest/oauth2.html
+1. Open the downloaded `.json` file in Notepad
+2. Find the line `"client_email"` — copy that email address (looks like `dd-cms-bot@your-project.iam.gserviceaccount.com`)
+3. Open your Google Sheet
+4. Click the **Share** button (top right)
+5. Paste the service account email
+6. Set permission to **Editor**
+7. Uncheck "Notify people" → click **Share**
+
+### 6d — Add Credentials to Your .env
+
+You have two options:
+
+**Option A — Use credentials.json file (easier for local use):**
+1. Rename the downloaded `.json` file to `credentials.json`
+2. Place it in the `DD-CMS-Final` folder (same level as `run.py`)
+3. In `.env`, add:
+   ```
+   GOOGLE_APPLICATION_CREDENTIALS=credentials.json
+   ```
+
+**Option B — Use JSON string (required for GitHub Actions):**
+1. Open the `.json` file in Notepad
+2. Select all text (`Ctrl+A`) → copy it
+3. In `.env`, add:
+   ```
+   GOOGLE_CREDENTIALS_JSON={"type":"service_account","project_id":"...entire json here..."}
+   ```
+   It must be on one line with no line breaks.
 
 ---
 
-## 🧪 Step 6: Test Run (5 minutes)
+## Step 7 — Test Run
 
-### 6.1 Add Test Profile
-
-1. Open your Google Sheet
-2. Go to **RunList** tab
-3. Add header row:
-   ```
-   NICKNAME | STATUS | REMARKS | SKIP
-   ```
-4. Add test row:
-   ```
-   testuser | ⚡ Pending | | 
-   ```
-
-### 6.2 Run Scraper
-
-In terminal (from project folder):
-```cmd
-python main.py test --max-profiles 1
-```
-
-### 6.3 Expected Output
+Now test that everything works. From inside the `DD-CMS-Final` folder:
 
 ```
-================================================================================
-🚀 DamaDam Scraper - TEST MODE 🚀
-Version: v2.100.0.18
-================================================================================
-
-🔐 Starting authentication...
-✅ Login successful
-
-=== RUNNING PROFILE PHASE (TEST MODE) ===
-Processing 1 profile(s)...
-
-1️⃣ [████████████████████] testuser (new)
-
-📊 Scraping Run Summary
-┏━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━┓
-┃ Metric       ┃   Value ┃ Status ┃
-┡━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━┩
-│ ✅ Success   │       1 │     ✅ │
-│ ❌ Failed    │       0 │     ✅ │
-└──────────────┴─────────┴────────┘
-
-🎉 Run completed successfully!
+python run.py online --limit 3
 ```
 
-### 6.4 Verify Results
+This scrapes 3 currently-online DamaDam users and writes them to your Profiles sheet.
 
-1. Open your Google Sheet
-2. Check **Profiles** tab
-3. Should see one row with scraped data
+**Expected output:**
+```
+✅ Browser initialized successfully
+✅ Primary account login successful
+✅ Google Sheets connected
+💠 Found 80+ valid online users
+[1/3] 33% SomeNickname (scraping)
+✅ New profile SomeNickname → Row 2
+...
+✅ Profiles sorted by date
+✅ Dashboard updated
+```
 
-**If successful:** ✅ Setup complete!
-**If errors:** See Troubleshooting section below
+**Then check your Google Sheet** — the Profiles tab should have 3 new rows.
 
 ---
 
-## 🐛 Troubleshooting
+## Updating the Code
 
-### Error: "python not recognized"
+When there are fixes or new features pushed to GitHub:
 
-**Problem:** Python not in PATH
-
-**Fix:**
-1. Uninstall Python
-2. Reinstall Python
-3. ✅ Check "Add Python to PATH" during installation
-
-### Error: "No module named 'selenium'"
-
-**Problem:** Dependencies not installed
-
-**Fix:**
-```cmd
+```
+cd "C:\Users\NADEEM\3D Objects\DD-CMS-Final"
+git pull
 pip install -r requirements.txt
 ```
 
-### Error: "credentials.json not found"
+---
 
-**Problem:** Missing Google credentials
+## Common Errors
 
-**Fix:**
-1. Download `credentials.json` from Google Cloud Console
-2. Place in project root folder (same level as main.py)
+| Error message | What it means | Fix |
+|---|---|---|
+| `python is not recognized` | Python not in PATH | Reinstall Python — check "Add to PATH" |
+| `No module named 'selenium'` | Packages not installed | Run `pip install -r requirements.txt` |
+| `credentials.json not found` | Missing Google credentials file | Place `credentials.json` in project root |
+| `Invalid GOOGLE_CREDENTIALS_JSON` | JSON string broken/incomplete | Re-copy from the `.json` file — must be one line |
+| `Login failed` | Wrong username or password | Test credentials on damadam.pk manually |
+| `Spreadsheet not found` | Wrong sheet URL or not shared | Share sheet with the service account email |
 
-### Error: "404 Not Found" (Google Sheets)
-
-**Problem:** Wrong sheet URL or permissions
-
-**Fix:**
-1. Verify URL format: `https://docs.google.com/spreadsheets/d/.../edit`
-2. Share sheet with service account email
-3. Give Editor permission
-
-### Error: "Login failed"
-
-**Problem:** Wrong username/password
-
-**Fix:**
-1. Test credentials on DamaDam website manually
-2. Check for typos in `.env` file
-3. No extra spaces in username/password
-
-### Browser Opens but Crashes
-
-**Problem:** ChromeDriver version mismatch
-
-**Fix:**
-1. Update Chrome browser to latest
-2. Reinstall selenium: `pip install --upgrade selenium`
+→ More detailed fixes: [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
 
 ---
 
-## 🎓 Next Steps
+## Security Reminders
 
-### Daily Usage
+These files contain your passwords and API keys. **Never share them or commit them to GitHub.**
 
-```cmd
-# Target mode (from RunList)
-python main.py target --max-profiles 10
+- `.env`
+- `credentials.json`
+- `damadam_cookies.pkl`
 
-# Online mode (currently online users)
-python main.py online --max-profiles 20
-```
-
-### Update Code
-
-```cmd
-# Pull latest changes
-git pull origin main
-
-# Reinstall dependencies (if changed)
-pip install -r requirements.txt
-```
-
-### View Logs
-
-```cmd
-# Open logs folder
-cd logs
-
-# View latest log
-type target_*.log
-```
-
----
-
-## 📁 Project Structure
-
-```
-C:\Users\YourName\Documents\Projects\DD-CMS-Final\
-│
-├── config/              ← Configuration files
-├── core/                ← Browser & login
-├── phases/              ← Scraping logic
-├── utils/               ← Helper functions
-├── logs/                ← Log files (auto-created)
-│
-├── .env                 ← Your credentials (DO NOT SHARE!)
-├── credentials.json     ← Google credentials (DO NOT SHARE!)
-├── main.py              ← Run this file
-├── requirements.txt     ← Dependencies list
-└── README.md            ← Documentation
-```
-
----
-
-## 🔒 Security Tips
-
-**Protect these files:**
-- ❌ `.env` - Contains passwords
-- ❌ `credentials.json` - Contains API keys
-- ❌ `*.pkl` - Contains cookies
-
-**Never share or commit to GitHub!**
-
-These are already in `.gitignore`, but be careful:
-- Don't copy to public folders
-- Don't upload to cloud drives
-- Don't email these files
-
----
-
-## 💡 Tips for Windows Users
-
-### Open Terminal Quickly
-
-1. Navigate to project folder in File Explorer
-2. Type `cmd` in address bar
-3. Press Enter
-
-### Edit Files Easily
-
-**Good editors:**
-- Notepad++ (free, simple)
-- VS Code (free, powerful)
-- PyCharm (free community edition)
-
-**Don't use:**
-- Regular Notepad (might break formatting)
-- Microsoft Word (wrong tool)
-
-### Schedule Automatic Runs
-
-Use Windows Task Scheduler:
-1. Open Task Scheduler
-2. Create Basic Task
-3. Trigger: Daily at specific time
-4. Action: Start a program
-5. Program: `python.exe`
-6. Arguments: `C:\...\main.py target --max-profiles 10`
-
----
-
-## 📞 Getting Help
-
-**Still stuck?**
-
-1. **Check documentation:**
-   - README.md - Overview
-   - TROUBLESHOOTING.md - Common issues
-   - LIMIT_HANDLING.md - Rate limits
-
-2. **Check logs:**
-   - Open `logs/` folder
-   - Look for ERROR messages
-   - Copy exact error text
-
-3. **Contact maintainer:**
-   - Email: net2outlawzz@gmail.com
-   - Include: Error message, what you tried, screenshots
-
----
-
-## ✅ Setup Complete!
-
-Congratulations! You're ready to start scraping.
-
-**Recommended first run:**
-```cmd
-python main.py target --max-profiles 5
-```
-
-**What to read next:**
-1. README.md - Full feature list
-2. LIMIT_HANDLING.md - If you hit rate limits
-3. docs/meta/project_rules.md - If you want to modify code
-
-**Happy scraping! 🚀**
+They are already listed in `.gitignore`, but double-check before pushing anything.
