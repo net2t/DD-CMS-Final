@@ -113,83 +113,49 @@ body::after{
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
 
 /* ═══════════════════════════════════════════════════════════
-   CARD — Dual Glow Lines Animation
+   CARD — Electric Current Spark Line Animation
 
-   TECHNIQUE: The .card-wrap has padding:2px (the "ring zone").
-   Two pseudo-elements (::before, ::after) spin conic-gradients
-   behind the card. Each has a thin bright arc (~12% lit, rest
-   transparent). They rotate at different speeds + start angles,
-   creating TWO independent glow lines orbiting the card.
-   
-   The inner .card covers center with solid background,
-   so only the 2px border ring shows the spinning glow.
+   REAL TECHNIQUE: SVG <rect> with stroke-dashoffset.
+   A rect traces the exact card border path (same border-radius).
+   stroke-dasharray = [small spark length] [huge gap].
+   stroke-dashoffset animates by -perimeter each cycle.
+   → The tiny dash "runs" around the border like electricity.
+
+   Two sparks per card at different speeds + phase offsets.
+   SVG is injected by mkCard() in JS below.
 ═══════════════════════════════════════════════════════════ */
 
 .card-wrap{
   position:relative;
-  border-radius:calc(var(--r2) + 3px);
-  padding:2px;
+  border-radius:var(--r2);
   cursor:pointer;
   animation:cardIn .35s ease both;
-  isolation:isolate;
 }
 @keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-/* GLOW LINE 1 — primary color (cyan / pink / blue based on gender), fast spin */
-.card-wrap::before{
-  content:'';
+/* SVG overlay — sits on top, pointer-events off */
+.card-wrap > svg.c-svg{
   position:absolute;
-  inset:-1px;
-  border-radius:inherit;
-  background:conic-gradient(
-    from 0deg,
-    transparent 0%,
-    transparent 65%,
-    color-mix(in srgb, var(--rc, var(--acc)) 40%, transparent) 72%,
-    var(--rc, var(--acc)) 78%,
-    rgba(255,255,255,.95) 81%,
-    var(--pur) 85%,
-    color-mix(in srgb, var(--pur) 30%, transparent) 90%,
-    transparent 95%,
-    transparent 100%
-  );
-  animation:glow1spin 3s linear infinite;
-  z-index:0;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:10;
+  overflow:visible;
 }
-@keyframes glow1spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
-/* GLOW LINE 2 — offset 180deg, purple→pink, slower speed */
-.card-wrap::after{
-  content:'';
-  position:absolute;
-  inset:-1px;
-  border-radius:inherit;
-  background:conic-gradient(
-    from 180deg,
-    transparent 0%,
-    transparent 65%,
-    color-mix(in srgb, var(--pur) 40%, transparent) 72%,
-    var(--pur) 78%,
-    rgba(255,255,255,.88) 81%,
-    var(--rc, var(--pink)) 85%,
-    color-mix(in srgb, var(--rc, var(--pink)) 30%, transparent) 90%,
-    transparent 95%,
-    transparent 100%
-  );
-  animation:glow2spin 4.8s linear infinite;
-  z-index:0;
-}
-@keyframes glow2spin{from{transform:rotate(180deg)}to{transform:rotate(540deg)}}
-
-/* inner solid card sits above the pseudo glow, covers center */
+/* inner card */
 .card{
   position:relative;z-index:2;
   border-radius:var(--r2);overflow:hidden;
   background:var(--surf);
-  border:1px solid rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.07);
   transition:transform .28s cubic-bezier(.34,1.4,.64,1),box-shadow .28s;
 }
-.card-wrap:hover .card{transform:translateY(-5px);box-shadow:0 20px 52px rgba(0,0,0,.8),0 0 35px rgba(0,212,255,.07)}
+.card-wrap:hover .card{
+  transform:translateY(-5px);
+  box-shadow:0 20px 52px rgba(0,0,0,.8),0 0 35px rgba(0,212,255,.1);
+}
 
 /* blurred photo bg */
 .cbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center top;filter:blur(16px) saturate(1.5);opacity:.2;transform:scale(1.08)}
@@ -532,11 +498,65 @@ function mkCard(r){
   const rankImg=rurl?`<img class="rank-img" src="${e(rurl)}" alt="rank" onerror="this.style.display='none'">`: '';
   const tagChip=tags?`<span class="c-tag">${e(tags.split(',')[0].trim())}</span>`:'';
 
+  // Resolve actual color values for SVG (can't use CSS vars in SVG attributes)
+  const sparkCol1 = gen==='FEMALE'?'#ff4f7b': gen==='MALE'?'#3d9eff':'#00d4ff';
+  const sparkCol2 = '#7c5cfc';
+
+  // Card perimeter ≈ 2*(W+H) - corner adjustments. We use SVG viewBox units.
+  // Card is ~260px wide, roughly 230px tall (content varies).
+  // We set viewBox to match and use a <rect> with rx=16 to trace the border.
+  // Perimeter of rounded-rect ≈ 2*(260+230) - (8-2π)*16 ≈ 938px
+  // stroke-dasharray: [spark_length] [perimeter - spark_length]
+  // Animating dashoffset from 0 to -perimeter makes the spark travel the full loop.
+  const uid = Math.random().toString(36).slice(2,7); // unique id per card for keyframes
+
   const wrap=document.createElement('div');
   wrap.className='card-wrap';
-  wrap.style.setProperty('--rc',rc);
+  wrap.style.setProperty('--rc',sparkCol1);
 
   wrap.innerHTML=`
+    <svg class="c-svg" viewBox="0 0 100% 100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <filter id="fg${uid}" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="fg2${uid}" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <style>
+          @keyframes spark1_${uid}{to{stroke-dashoffset:-940}}
+          @keyframes spark2_${uid}{to{stroke-dashoffset:-940}}
+          .s1_${uid}{
+            stroke-dasharray:28,912;
+            stroke-dashoffset:0;
+            animation:spark1_${uid} 2.8s linear infinite;
+          }
+          .s2_${uid}{
+            stroke-dasharray:18,922;
+            stroke-dashoffset:-470;
+            animation:spark2_${uid} 4.2s linear infinite;
+          }
+        </style>
+      </defs>
+      <!-- dim static border -->
+      <rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)"
+        rx="15" ry="15" fill="none"
+        stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <!-- spark line 1 — primary color with glow -->
+      <rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)"
+        rx="15" ry="15" fill="none"
+        stroke="${sparkCol1}" stroke-width="1.5" stroke-linecap="round"
+        filter="url(#fg${uid})"
+        class="s1_${uid}"/>
+      <!-- spark line 2 — purple, opposite phase -->
+      <rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)"
+        rx="15" ry="15" fill="none"
+        stroke="${sparkCol2}" stroke-width="1.5" stroke-linecap="round"
+        filter="url(#fg2${uid})"
+        class="s2_${uid}"/>
+    </svg>
     <div class="card">
       ${img?`<div class="cbg" style="background-image:url('${e(img)}')"></div>`:''}
       <div class="cov"></div>
@@ -563,6 +583,37 @@ function mkCard(r){
         </div>
       </div>
     </div>`;
+
+  // After injection, fix SVG sizing to use actual px not calc()
+  // We use ResizeObserver so it works at any card width
+  requestAnimationFrame(()=>{
+    const svg = wrap.querySelector('svg.c-svg');
+    if(!svg) return;
+    const w = wrap.offsetWidth, h = wrap.offsetHeight;
+    if(!w||!h) return;
+    const r = 15;
+    // Perimeter of rounded rect
+    const perim = Math.round(2*(w+h) - (8-2*Math.PI)*r);
+    const sparkLen1=30, sparkLen2=18;
+    const gap1=perim-sparkLen1, gap2=perim-sparkLen2;
+    const halfPerim=Math.round(perim/2);
+    svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    // Update all rects to use actual dimensions
+    svg.querySelectorAll('rect').forEach(rect=>{
+      rect.setAttribute('width',w-2);
+      rect.setAttribute('height',h-2);
+    });
+    // Update the keyframe animations with real perimeter
+    const styleEl=svg.querySelector('style');
+    if(styleEl){
+      styleEl.textContent=`
+        @keyframes spark1_${uid}{to{stroke-dashoffset:${-perim}}}
+        @keyframes spark2_${uid}{to{stroke-dashoffset:${-perim}}}
+        .s1_${uid}{stroke-dasharray:${sparkLen1},${gap1};stroke-dashoffset:0;animation:spark1_${uid} 2.8s linear infinite;}
+        .s2_${uid}{stroke-dasharray:${sparkLen2},${gap2};stroke-dashoffset:${-halfPerim};animation:spark2_${uid} 4.2s linear infinite;}
+      `;
+    }
+  });
 
   wrap.addEventListener('click',()=>openDrw(r));
   return wrap;
