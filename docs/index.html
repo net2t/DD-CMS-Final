@@ -7,46 +7,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Space+Mono:wght@400;700&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ══════════════════════════════════════
-   DESIGN TOKENS  —  dark techy theme
-══════════════════════════════════════ */
 :root {
-  --bg:     #07090f;
-  --bg2:    #0b0e19;
-  --bg3:    #111626;
-  --surf:   #151c2e;
-  --bd:     rgba(255,255,255,0.07);
-  --bd2:    rgba(255,255,255,0.14);
-  --txt:    #dde1ef;
-  --txt2:   #8891aa;
-  --txt3:   #485068;
-  --acc:    #00d4ff;   /* cyan  */
-  --pur:    #7c5cfc;   /* purple*/
-  --pink:   #ff4f7b;   /* female*/
-  --blue:   #3d9eff;   /* male  */
-  --gold:   #ffd166;
-  --green:  #06d6a0;
-  --r:10px; --r2:16px;
-  --ff-h: 'Rajdhani','Exo 2',sans-serif;
-  --ff-b: 'Exo 2',sans-serif;
-  --ff-m: 'Space Mono',monospace;
+  --bg:#07090f;--bg2:#0b0e19;--bg3:#111626;--surf:#151c2e;
+  --bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.14);
+  --txt:#dde1ef;--txt2:#8891aa;--txt3:#485068;
+  --acc:#00d4ff;--pur:#7c5cfc;--pink:#ff4f7b;--blue:#3d9eff;
+  --gold:#ffd166;--green:#06d6a0;
+  --r:10px;--r2:16px;
+  --ff-h:'Rajdhani','Exo 2',sans-serif;
+  --ff-b:'Exo 2',sans-serif;
+  --ff-m:'Space Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--txt);font-family:var(--ff-b);min-height:100vh;overflow-x:hidden}
-
-/* animated grid lines */
 body::before{
   content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background-image:
-    linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);
-  background-size:48px 48px;
-  animation:gridmove 80s linear infinite;
+  background-image:linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);
+  background-size:48px 48px;animation:gridmove 80s linear infinite;
 }
 @keyframes gridmove{to{background-position:48px 48px}}
-
-/* top radial glow */
 body::after{
   content:'';position:fixed;top:-180px;left:50%;transform:translateX(-50%);
   width:800px;height:500px;
@@ -54,28 +34,21 @@ body::after{
   pointer-events:none;z-index:0;
 }
 
-/* ══════════════════════════════════════
-   TOPBAR
-══════════════════════════════════════ */
+/* TOPBAR */
 .topbar{
-  position:sticky;top:0;z-index:300;
-  background:rgba(7,9,15,.88);
-  backdrop-filter:blur(24px) saturate(160%);
-  border-bottom:1px solid var(--bd);
-  display:flex;align-items:center;
-  padding:0 22px;height:58px;gap:14px;
+  position:sticky;top:0;z-index:300;background:rgba(7,9,15,.92);
+  backdrop-filter:blur(24px) saturate(160%);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;padding:0 22px;height:58px;gap:14px;
 }
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
 .logo-icon{
   width:34px;height:34px;border-radius:8px;
   background:linear-gradient(135deg,var(--acc),var(--pur));
-  display:grid;place-items:center;
-  font-family:var(--ff-h);font-size:15px;font-weight:700;color:#fff;
+  display:grid;place-items:center;font-family:var(--ff-h);font-size:15px;font-weight:700;color:#fff;
   box-shadow:0 0 14px rgba(0,212,255,.35);
 }
 .logo-txt{font-family:var(--ff-h);font-size:20px;font-weight:700;color:var(--txt);letter-spacing:1px}
 .logo-txt span{color:var(--acc)}
-
 .tsearch{flex:1;max-width:420px;position:relative}
 .tsearch svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--txt3);pointer-events:none}
 .tsearch input{
@@ -86,331 +59,198 @@ body::after{
 }
 .tsearch input::placeholder{color:var(--txt3)}
 .tsearch input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
-
 .tright{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}
 .live{
-  display:flex;align-items:center;gap:6px;
-  font-family:var(--ff-m);font-size:8px;letter-spacing:2px;color:var(--green);
-  background:rgba(6,214,160,.08);border:1px solid rgba(6,214,160,.2);
-  border-radius:20px;padding:5px 12px;
+  display:flex;align-items:center;gap:6px;font-family:var(--ff-m);font-size:8px;letter-spacing:2px;color:var(--green);
+  background:rgba(6,214,160,.08);border:1px solid rgba(6,214,160,.2);border-radius:20px;padding:5px 12px;
 }
 .ldot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-
 .btn{
-  font-family:var(--ff-b);font-size:12px;font-weight:600;
-  padding:8px 15px;border-radius:8px;cursor:pointer;
-  display:inline-flex;align-items:center;gap:6px;
-  transition:all .2s;border:none;text-decoration:none;
+  font-family:var(--ff-b);font-size:12px;font-weight:600;padding:8px 15px;border-radius:8px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:all .2s;border:none;text-decoration:none;
 }
 .btn-out{background:transparent;border:1px solid var(--bd2);color:var(--txt2)}
 .btn-out:hover{border-color:var(--acc);color:var(--acc)}
-.btn-pri{
-  background:linear-gradient(135deg,var(--acc),var(--pur));
-  color:#fff;box-shadow:0 4px 14px rgba(0,212,255,.25);
-}
+.btn-pri{background:linear-gradient(135deg,var(--acc),var(--pur));color:#fff;box-shadow:0 4px 14px rgba(0,212,255,.25)}
 .btn-pri:hover{box-shadow:0 6px 22px rgba(0,212,255,.4);transform:translateY(-1px)}
 
-/* ══════════════════════════════════════
-   STATS ROW
-══════════════════════════════════════ */
-.stats{
-  display:flex;background:var(--bg2);
-  border-bottom:1px solid var(--bd);
-  overflow-x:auto;position:relative;z-index:1;
-}
+/* STATS */
+.stats{display:flex;background:var(--bg2);border-bottom:1px solid var(--bd);overflow-x:auto;position:relative;z-index:1;scrollbar-width:none}
 .stats::-webkit-scrollbar{display:none}
-.st{
-  flex:1;min-width:110px;padding:14px 18px;
-  border-right:1px solid var(--bd);position:relative;
-}
+.st{flex:1;min-width:110px;padding:14px 18px;border-right:1px solid var(--bd);position:relative}
 .st:last-child{border-right:none}
-.st::before{
-  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
-  background:var(--sc,var(--acc));box-shadow:0 0 8px var(--sc,var(--acc));
-}
+.st::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--sc,var(--acc));box-shadow:0 0 8px var(--sc,var(--acc))}
 .st-lbl{font-family:var(--ff-m);font-size:7.5px;letter-spacing:2px;color:var(--txt3);text-transform:uppercase;margin-bottom:5px}
 .st-val{font-family:var(--ff-h);font-size:26px;font-weight:700;color:var(--sc,var(--acc));line-height:1}
 .st-sub{font-family:var(--ff-m);font-size:7.5px;color:var(--txt3);margin-top:3px}
 
-/* ══════════════════════════════════════
-   FILTER BAR
-══════════════════════════════════════ */
-.fbar{
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-  padding:9px 22px;background:var(--bg2);
-  border-bottom:1px solid var(--bd);
-  position:relative;z-index:1;
-}
+/* FILTER BAR */
+.fbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:9px 22px;background:var(--bg2);border-bottom:1px solid var(--bd);position:relative;z-index:1}
 .flbl{font-family:var(--ff-m);font-size:7.5px;letter-spacing:2px;color:var(--txt3);flex-shrink:0;margin-right:2px}
-.fc{
-  font-family:var(--ff-b);font-size:11px;font-weight:600;
-  padding:5px 13px;border-radius:20px;cursor:pointer;
-  border:1px solid var(--bd);background:transparent;color:var(--txt3);
-  transition:all .15s;
-}
+.fc{font-family:var(--ff-b);font-size:11px;font-weight:600;padding:5px 13px;border-radius:20px;cursor:pointer;border:1px solid var(--bd);background:transparent;color:var(--txt3);transition:all .15s}
 .fc:hover{border-color:var(--bd2);color:var(--txt)}
-.fc.act  {border-color:var(--acc);background:rgba(0,212,255,.1);color:var(--acc)}
+.fc.act{border-color:var(--acc);background:rgba(0,212,255,.1);color:var(--acc)}
 .fc.act-f{border-color:var(--pink);background:rgba(255,79,123,.1);color:var(--pink)}
 .fc.act-m{border-color:var(--blue);background:rgba(61,158,255,.1);color:var(--blue)}
-.fsort{
-  font-family:var(--ff-b);font-size:11px;font-weight:600;margin-left:auto;flex-shrink:0;
-  background:var(--surf);border:1px solid var(--bd);color:var(--txt2);
-  border-radius:8px;padding:5px 10px;cursor:pointer;outline:none;transition:border-color .15s;
-}
+.fsort{font-family:var(--ff-b);font-size:11px;font-weight:600;margin-left:auto;flex-shrink:0;background:var(--surf);border:1px solid var(--bd);color:var(--txt2);border-radius:8px;padding:5px 10px;cursor:pointer;outline:none;transition:border-color .15s}
 .fsort:focus{border-color:var(--acc)}
 
-/* ══════════════════════════════════════
-   MAIN
-══════════════════════════════════════ */
+/* MAIN */
 .main{padding:22px;position:relative;z-index:1}
-
 #loading-state{padding:90px 0;text-align:center}
-.ld-ring{
-  width:46px;height:46px;border-radius:50%;margin:0 auto 18px;
-  border:2px solid var(--bd);border-top-color:var(--acc);
-  animation:spin .8s linear infinite;
-  box-shadow:0 0 18px rgba(0,212,255,.2);
-}
+.ld-ring{width:46px;height:46px;border-radius:50%;margin:0 auto 18px;border:2px solid var(--bd);border-top-color:var(--acc);animation:spin .8s linear infinite;box-shadow:0 0 18px rgba(0,212,255,.2)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ld-t{font-family:var(--ff-m);font-size:9px;letter-spacing:3px;color:var(--txt3)}
 .ld-h{font-family:var(--ff-m);font-size:8px;color:var(--txt3);margin-top:7px;opacity:.6}
-
 #error-state{padding:80px 0;text-align:center;display:none}
 .er-t{font-family:var(--ff-h);font-size:38px;font-weight:700;color:var(--pink);margin-bottom:10px}
-.er-m{
-  font-family:var(--ff-m);font-size:10px;color:var(--txt2);
-  max-width:500px;margin:0 auto 20px;background:var(--surf);
-  border:1px solid var(--bd);border-radius:var(--r);padding:14px;
-  text-align:left;white-space:pre-wrap;line-height:1.8;
-}
+.er-m{font-family:var(--ff-m);font-size:10px;color:var(--txt2);max-width:500px;margin:0 auto 20px;background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);padding:14px;text-align:left;white-space:pre-wrap;line-height:1.8}
 #empty-state{padding:80px 0;text-align:center;display:none}
 .em-t{font-family:var(--ff-m);font-size:9px;letter-spacing:3px;color:var(--txt3)}
 
-/* ══════════════════════════════════════
-   PROFILE GRID
-══════════════════════════════════════ */
-#grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(258px,1fr));
-  gap:20px;
-}
+/* GRID */
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
 
-/* ─────────────────────────────────────
-   THE CARD  — key visual pieces:
-   1) rotating conic ring  (::before on wrapper)
-   2) blurred photo bg     (.cbg)
-   3) dark gradient overlay(.cov)
-   4) content on top       (.cc)
-───────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   CARD — Dual Glow Lines Animation
 
-/* outer wrapper — hosts the animated ring */
+   TECHNIQUE: The .card-wrap has padding:2px (the "ring zone").
+   Two pseudo-elements (::before, ::after) spin conic-gradients
+   behind the card. Each has a thin bright arc (~12% lit, rest
+   transparent). They rotate at different speeds + start angles,
+   creating TWO independent glow lines orbiting the card.
+   
+   The inner .card covers center with solid background,
+   so only the 2px border ring shows the spinning glow.
+═══════════════════════════════════════════════════════════ */
+
 .card-wrap{
   position:relative;
-  border-radius:calc(var(--r2) + 2px);
-  padding:2px;            /* ring thickness */
+  border-radius:calc(var(--r2) + 3px);
+  padding:2px;
   cursor:pointer;
-  animation:cardIn .32s ease both;
+  animation:cardIn .35s ease both;
+  isolation:isolate;
 }
-@keyframes cardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-/* the rotating conic-gradient ring */
-/* We use a pseudo and animate background-position trick for max browser compat */
+/* GLOW LINE 1 — primary color (cyan / pink / blue based on gender), fast spin */
 .card-wrap::before{
   content:'';
-  position:absolute;inset:0;
+  position:absolute;
+  inset:-1px;
   border-radius:inherit;
   background:conic-gradient(
     from 0deg,
     transparent 0%,
-    var(--rc, var(--acc)) 12%,
-    var(--pur) 22%,
-    transparent 32%
+    transparent 65%,
+    color-mix(in srgb, var(--rc, var(--acc)) 40%, transparent) 72%,
+    var(--rc, var(--acc)) 78%,
+    rgba(255,255,255,.95) 81%,
+    var(--pur) 85%,
+    color-mix(in srgb, var(--pur) 30%, transparent) 90%,
+    transparent 95%,
+    transparent 100%
   );
-  animation:ringRotate 3.5s linear infinite;
+  animation:glow1spin 3s linear infinite;
   z-index:0;
 }
-@keyframes ringRotate{to{transform:rotate(360deg)}}
+@keyframes glow1spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
-/* inner card body — sits above the ring */
-.card{
-  position:relative;z-index:1;
-  border-radius:var(--r2);
-  overflow:hidden;
-  background:var(--surf);
-  border:1px solid rgba(255,255,255,0.06);
-  transition:transform .25s cubic-bezier(.34,1.4,.64,1),box-shadow .25s;
-}
-.card-wrap:hover .card{
-  transform:translateY(-4px);
-  box-shadow:0 16px 48px rgba(0,0,0,.7);
-}
-
-/* blurred photo background — ~20% opacity */
-.cbg{
-  position:absolute;inset:0;z-index:0;
-  background-size:cover;background-position:center top;
-  filter:blur(16px) saturate(1.5);
-  opacity:.2;           /* 20% blur bg */
-  transform:scale(1.08);/* hide blur edges */
-}
-
-/* dark overlay on top of blurred bg */
-.cov{
-  position:absolute;inset:0;z-index:1;
-  background:linear-gradient(
-    175deg,
-    rgba(11,14,25,.5)  0%,
-    rgba(11,14,25,.82) 50%,
-    rgba(11,14,25,.97) 100%
+/* GLOW LINE 2 — offset 180deg, purple→pink, slower speed */
+.card-wrap::after{
+  content:'';
+  position:absolute;
+  inset:-1px;
+  border-radius:inherit;
+  background:conic-gradient(
+    from 180deg,
+    transparent 0%,
+    transparent 65%,
+    color-mix(in srgb, var(--pur) 40%, transparent) 72%,
+    var(--pur) 78%,
+    rgba(255,255,255,.88) 81%,
+    var(--rc, var(--pink)) 85%,
+    color-mix(in srgb, var(--rc, var(--pink)) 30%, transparent) 90%,
+    transparent 95%,
+    transparent 100%
   );
+  animation:glow2spin 4.8s linear infinite;
+  z-index:0;
 }
+@keyframes glow2spin{from{transform:rotate(180deg)}to{transform:rotate(540deg)}}
 
-/* all card content sits above bg + overlay */
+/* inner solid card sits above the pseudo glow, covers center */
+.card{
+  position:relative;z-index:2;
+  border-radius:var(--r2);overflow:hidden;
+  background:var(--surf);
+  border:1px solid rgba(255,255,255,0.05);
+  transition:transform .28s cubic-bezier(.34,1.4,.64,1),box-shadow .28s;
+}
+.card-wrap:hover .card{transform:translateY(-5px);box-shadow:0 20px 52px rgba(0,0,0,.8),0 0 35px rgba(0,212,255,.07)}
+
+/* blurred photo bg */
+.cbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center top;filter:blur(16px) saturate(1.5);opacity:.2;transform:scale(1.08)}
+.cov{position:absolute;inset:0;z-index:1;background:linear-gradient(175deg,rgba(11,14,25,.5) 0%,rgba(11,14,25,.82) 50%,rgba(11,14,25,.97) 100%)}
 .cc{position:relative;z-index:2;padding:16px 15px 13px}
 
-/* ── Avatar row ── */
+/* Avatar row */
 .av-row{display:flex;align-items:flex-start;gap:13px;margin-bottom:13px}
 .av-wrap{position:relative;flex-shrink:0}
-
-/* bigger avatar — 74px */
-.av,.av-ph{
-  width:74px;height:74px;
-  border-radius:12px;object-fit:cover;
-  border:2px solid rgba(255,255,255,.12);
-  box-shadow:0 4px 18px rgba(0,0,0,.55);
-}
-.av-ph{
-  display:grid;place-items:center;
-  font-family:var(--ff-h);font-size:30px;font-weight:700;color:#fff;
-}
-
-/* gender badge on avatar */
-.gbadge{
-  position:absolute;bottom:-4px;right:-4px;
-  width:20px;height:20px;border-radius:50%;
-  border:2px solid var(--surf);
-  display:grid;place-items:center;
-  font-family:var(--ff-m);font-size:7px;font-weight:700;
-}
+.av,.av-ph{width:74px;height:74px;border-radius:12px;object-fit:cover;border:2px solid rgba(255,255,255,.12);box-shadow:0 4px 18px rgba(0,0,0,.55)}
+.av-ph{display:grid;place-items:center;font-family:var(--ff-h);font-size:30px;font-weight:700;color:#fff}
+.gbadge{position:absolute;bottom:-4px;right:-4px;width:20px;height:20px;border-radius:50%;border:2px solid var(--surf);display:grid;place-items:center;font-family:var(--ff-m);font-size:7px;font-weight:700}
 .gb-f{background:var(--pink);color:#fff;box-shadow:0 0 10px rgba(255,79,123,.5)}
 .gb-m{background:var(--blue);color:#fff;box-shadow:0 0 10px rgba(61,158,255,.5)}
 .gb-u{background:var(--surf);color:var(--txt3);border-color:var(--bd)}
-
 .av-meta{flex:1;min-width:0;padding-top:3px}
-.c-nick{
-  font-family:var(--ff-h);font-size:17px;font-weight:700;
-  color:var(--txt);letter-spacing:.4px;margin-bottom:4px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.c-city{
-  font-family:var(--ff-m);font-size:8.5px;color:var(--txt3);
-  letter-spacing:.4px;margin-bottom:8px;
-}
-.modechip{
-  display:inline-block;font-family:var(--ff-m);font-size:7.5px;
-  letter-spacing:1.5px;text-transform:uppercase;
-  padding:3px 9px;border-radius:4px;
-}
-.m-on{background:rgba(6,214,160,.1); color:var(--green);border:1px solid rgba(6,214,160,.25)}
-.m-tg{background:rgba(255,209,102,.1);color:var(--gold); border:1px solid rgba(255,209,102,.25)}
+.c-nick{font-family:var(--ff-h);font-size:17px;font-weight:700;color:var(--txt);letter-spacing:.4px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-city{font-family:var(--ff-m);font-size:8.5px;color:var(--txt3);letter-spacing:.4px;margin-bottom:8px}
+.modechip{display:inline-block;font-family:var(--ff-m);font-size:7.5px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;border-radius:4px}
+.m-on{background:rgba(6,214,160,.1);color:var(--green);border:1px solid rgba(6,214,160,.25)}
+.m-tg{background:rgba(255,209,102,.1);color:var(--gold);border:1px solid rgba(255,209,102,.25)}
 .m-ot{background:var(--bg3);color:var(--txt3);border:1px solid var(--bd)}
 
-/* ── 3-col stats ── */
-.cstats{
-  display:grid;grid-template-columns:1fr 1fr 1fr;
-  gap:1px;background:rgba(255,255,255,.06);
-  border-radius:8px;overflow:hidden;margin-bottom:11px;
-}
+/* Stats */
+.cstats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,.06);border-radius:8px;overflow:hidden;margin-bottom:11px}
 .cs{background:rgba(255,255,255,.03);padding:8px 5px;text-align:center}
 .cs-v{font-family:var(--ff-h);font-size:18px;font-weight:700;color:var(--txt);line-height:1}
 .cs-k{font-family:var(--ff-m);font-size:7px;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
 
-/* ── Card footer ── */
-.cfoot{
-  display:flex;align-items:center;justify-content:space-between;
-  padding-top:9px;border-top:1px solid rgba(255,255,255,.07);
-}
+/* Card footer */
+.cfoot{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid rgba(255,255,255,.07)}
 .c-ts{font-family:var(--ff-m);font-size:7.5px;color:var(--txt3)}
-.c-tag{
-  font-family:var(--ff-m);font-size:7.5px;letter-spacing:1px;
-  padding:2px 8px;border-radius:4px;text-transform:uppercase;
-  background:rgba(124,92,252,.1);color:var(--pur);
-  border:1px solid rgba(124,92,252,.25);
-}
+.c-tag{font-family:var(--ff-m);font-size:7.5px;letter-spacing:1px;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:rgba(124,92,252,.1);color:var(--pur);border:1px solid rgba(124,92,252,.25)}
 .rank-img{height:13px;vertical-align:middle;margin-right:3px}
 
-/* ══════════════════════════════════════
-   PAGER
-══════════════════════════════════════ */
-.pager{
-  display:flex;align-items:center;justify-content:center;
-  gap:5px;padding:34px 0 8px;flex-wrap:wrap;
-}
-.pg-info{
-  width:100%;text-align:center;margin-bottom:10px;
-  font-family:var(--ff-m);font-size:8.5px;color:var(--txt3);letter-spacing:1px;
-}
-.pb{
-  font-family:var(--ff-b);font-size:12px;font-weight:600;
-  padding:7px 14px;border-radius:8px;cursor:pointer;
-  border:1px solid var(--bd);background:var(--surf);color:var(--txt2);
-  transition:all .14s;min-width:37px;text-align:center;
-}
+/* PAGER */
+.pager{display:flex;align-items:center;justify-content:center;gap:5px;padding:34px 0 8px;flex-wrap:wrap}
+.pg-info{width:100%;text-align:center;margin-bottom:10px;font-family:var(--ff-m);font-size:8.5px;color:var(--txt3);letter-spacing:1px}
+.pb{font-family:var(--ff-b);font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;border:1px solid var(--bd);background:var(--surf);color:var(--txt2);transition:all .14s;min-width:37px;text-align:center}
 .pb:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
 .pb:disabled{opacity:.22;cursor:not-allowed}
 .pb.cur{background:linear-gradient(135deg,var(--acc),var(--pur));border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(0,212,255,.25)}
 .pg-dot{color:var(--txt3);font-family:var(--ff-m);padding:0 3px}
 .foot-info{text-align:center;padding:6px 0 2px;font-family:var(--ff-m);font-size:8px;color:var(--txt3);letter-spacing:.5px}
 
-/* ══════════════════════════════════════
-   DRAWER
-══════════════════════════════════════ */
-.ov{
-  position:fixed;inset:0;z-index:900;
-  background:rgba(3,5,10,.75);
-  backdrop-filter:blur(14px);
-  display:none;align-items:flex-start;justify-content:flex-end;
-}
+/* DRAWER */
+.ov{position:fixed;inset:0;z-index:900;background:rgba(3,5,10,.75);backdrop-filter:blur(14px);display:none;align-items:flex-start;justify-content:flex-end}
 .ov.open{display:flex}
-.drw{
-  width:475px;max-width:100vw;height:100vh;
-  background:var(--bg2);border-left:1px solid var(--bd);
-  overflow-y:auto;display:flex;flex-direction:column;
-  animation:slIn .24s cubic-bezier(.16,1,.3,1);
-  box-shadow:-24px 0 80px rgba(0,0,0,.55);
-}
+.drw{width:475px;max-width:100vw;height:100vh;background:var(--bg2);border-left:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column;animation:slIn .24s cubic-bezier(.16,1,.3,1);box-shadow:-24px 0 80px rgba(0,0,0,.55)}
 @keyframes slIn{from{transform:translateX(100%)}}
 .drw::-webkit-scrollbar{width:4px}
 .drw::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
-
-/* accent line at top of drawer */
 .d-accent{height:3px;flex-shrink:0}
-
-.d-head{
-  padding:15px 20px 13px;border-bottom:1px solid var(--bd);
-  display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;background:var(--bg2);z-index:2;
-}
+.d-head{padding:15px 20px 13px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:2}
 .d-nick{font-family:var(--ff-h);font-size:27px;font-weight:700;color:var(--txt);letter-spacing:.5px}
-.d-x{
-  width:33px;height:33px;border-radius:7px;
-  background:var(--surf);border:1px solid var(--bd);
-  color:var(--txt2);cursor:pointer;display:grid;place-items:center;
-  font-size:13px;transition:all .14s;
-}
+.d-x{width:33px;height:33px;border-radius:7px;background:var(--surf);border:1px solid var(--bd);color:var(--txt2);cursor:pointer;display:grid;place-items:center;font-size:13px;transition:all .14s}
 .d-x:hover{background:var(--pink);border-color:var(--pink);color:#fff}
-
-/* drawer hero — same blurred bg technique */
-.d-hero{
-  position:relative;padding:22px 20px;
-  border-bottom:1px solid var(--bd);
-  display:flex;gap:16px;align-items:center;overflow:hidden;
-}
+.d-hero{position:relative;padding:22px 20px;border-bottom:1px solid var(--bd);display:flex;gap:16px;align-items:center;overflow:hidden}
 .d-hbg{position:absolute;inset:0;background-size:cover;background-position:center top;filter:blur(22px) saturate(1.5);opacity:.18;transform:scale(1.1);z-index:0}
 .d-hov{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(11,14,25,.65),rgba(11,14,25,.92))}
 .d-hc{position:relative;z-index:2;display:flex;gap:16px;align-items:center;width:100%}
-
 .d-av{width:86px;height:86px;border-radius:13px;object-fit:cover;border:2px solid rgba(255,255,255,.14);box-shadow:0 8px 30px rgba(0,0,0,.5);flex-shrink:0}
 .d-avph{width:86px;height:86px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;font-family:var(--ff-h);font-size:36px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.1)}
 .d-hbody{flex:1}
@@ -418,61 +258,68 @@ body::after{
 .d-name{font-family:var(--ff-h);font-size:20px;font-weight:700;color:var(--txt);margin-bottom:4px}
 .d-ca{font-size:13px;font-weight:500;color:var(--txt2);margin-bottom:7px}
 .d-tags{font-family:var(--ff-m);font-size:8.5px;color:var(--pur);letter-spacing:.5px;line-height:1.9}
-
 .d-sec{padding:15px 20px;border-bottom:1px solid var(--bd)}
 .d-sec:last-of-type{border-bottom:none}
-.d-sh{
-  font-family:var(--ff-m);font-size:7.5px;letter-spacing:3px;color:var(--txt3);
-  text-transform:uppercase;margin-bottom:13px;
-  display:flex;align-items:center;gap:10px;
-}
+.d-sh{font-family:var(--ff-m);font-size:7.5px;letter-spacing:3px;color:var(--txt3);text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:10px}
 .d-sh::after{content:'';flex:1;height:1px;background:var(--bd)}
-
 .d-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.df{}
 .dk{font-family:var(--ff-m);font-size:7.5px;letter-spacing:1.5px;color:var(--txt3);text-transform:uppercase;margin-bottom:3px}
 .dv{font-family:var(--ff-b);font-size:13px;font-weight:600;color:var(--txt);word-break:break-all;line-height:1.4}
 .dv a{color:var(--acc);text-decoration:none}
 .dv a:hover{text-decoration:underline}
 .dv.sp{grid-column:1/-1}
-
 .mrow{padding:9px 0;border-bottom:1px solid var(--bd)}
 .mrow:last-child{border-bottom:none}
 .mn{font-weight:600;color:var(--txt);font-size:13px;margin-bottom:3px}
 .md{font-family:var(--ff-m);font-size:7.5px;color:var(--txt3)}
-
-.d-acts{
-  padding:13px 20px;display:flex;gap:9px;
-  border-top:1px solid var(--bd);position:sticky;bottom:0;background:var(--bg2);
-}
-.da{
-  flex:1;justify-content:center;display:inline-flex;align-items:center;gap:5px;
-  font-family:var(--ff-b);font-size:12px;font-weight:700;letter-spacing:.4px;
-  padding:11px 15px;border-radius:9px;cursor:pointer;text-decoration:none;
-  transition:all .15s;border:none;
-}
+.d-acts{padding:13px 20px;display:flex;gap:9px;border-top:1px solid var(--bd);position:sticky;bottom:0;background:var(--bg2)}
+.da{flex:1;justify-content:center;display:inline-flex;align-items:center;gap:5px;font-family:var(--ff-b);font-size:12px;font-weight:700;letter-spacing:.4px;padding:11px 15px;border-radius:9px;cursor:pointer;text-decoration:none;transition:all .15s;border:none}
 .da-p{background:linear-gradient(135deg,var(--acc),var(--pur));color:#fff;box-shadow:0 4px 18px rgba(0,212,255,.25)}
 .da-p:hover{box-shadow:0 6px 26px rgba(0,212,255,.4);transform:translateY(-1px)}
 .da-s{background:var(--surf);border:1px solid var(--bd2);color:var(--txt2)}
 .da-s:hover{border-color:var(--acc);color:var(--acc)}
 
-/* ══════════════════════════════════════
+/* ═══════════════
    RESPONSIVE
-══════════════════════════════════════ */
-@media(max-width:860px){#grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}}
-@media(max-width:640px){
-  .topbar{padding:0 13px}.tsearch{max-width:none}.logo-txt{display:none}
-  .fbar{padding:8px 13px}.main{padding:13px}
-  #grid{grid-template-columns:1fr 1fr;gap:10px}
-  .stats .st{min-width:88px;padding:11px 13px}
-  .btn-out{display:none}.drw{width:100vw}
+═══════════════ */
+@media(max-width:860px){
+  #grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
 }
-@media(max-width:390px){#grid{grid-template-columns:1fr}}
+@media(max-width:640px){
+  .topbar{padding:0 12px;gap:8px;height:54px}
+  .tsearch{flex:1}
+  .logo-txt{display:none}
+  .tright{gap:6px}
+  .live{padding:4px 8px;font-size:7px;letter-spacing:1px}
+  .btn-out{display:none}
+  .fbar{padding:7px 12px;gap:5px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .fbar::-webkit-scrollbar{display:none}
+  .fc{padding:4px 10px;font-size:10px;flex-shrink:0}
+  .fsort{font-size:10px;padding:4px 8px;flex-shrink:0}
+  .flbl{display:none}
+  .main{padding:10px}
+  #grid{grid-template-columns:1fr 1fr;gap:8px}
+  .st{min-width:82px;padding:10px 10px}
+  .st-val{font-size:21px}
+  .cc{padding:12px 11px 10px}
+  .av,.av-ph{width:62px;height:62px;border-radius:10px}
+  .av-ph{font-size:24px}
+  .c-nick{font-size:15px}
+  .cs-v{font-size:16px}
+  /* Drawer from bottom on mobile */
+  .ov{align-items:flex-end;justify-content:center}
+  .drw{width:100vw;max-height:92vh;height:auto;border-left:none;border-top:1px solid var(--bd);border-radius:20px 20px 0 0}
+  @keyframes slIn{from{transform:translateY(100%)}}
+}
+@media(max-width:400px){
+  #grid{grid-template-columns:1fr}
+  .cstats{grid-template-columns:1fr 1fr 1fr}
+}
 </style>
 </head>
 <body>
 
-<!-- ▓ TOPBAR ▓ -->
+<!-- TOPBAR -->
 <nav class="topbar">
   <a class="logo" href="#">
     <div class="logo-icon">DD</div>
@@ -495,7 +342,7 @@ body::after{
   </div>
 </nav>
 
-<!-- ▓ STATS ▓ -->
+<!-- STATS -->
 <div class="stats">
   <div class="st" style="--sc:var(--acc)"><div class="st-lbl">Total</div><div class="st-val" id="s-tot">—</div><div class="st-sub">profiles</div></div>
   <div class="st" style="--sc:var(--pink)"><div class="st-lbl">Female</div><div class="st-val" id="s-f">—</div><div class="st-sub" id="s-fp"></div></div>
@@ -504,7 +351,7 @@ body::after{
   <div class="st" style="--sc:var(--gold)"><div class="st-lbl">Last Scraped</div><div class="st-val" id="s-ld" style="font-size:15px;padding-top:7px">—</div><div class="st-sub" id="s-ln"></div></div>
 </div>
 
-<!-- ▓ FILTERS ▓ -->
+<!-- FILTERS -->
 <div class="fbar">
   <span class="flbl">FILTER</span>
   <button class="fc act" data-f="all">All</button>
@@ -523,7 +370,7 @@ body::after{
   </select>
 </div>
 
-<!-- ▓ MAIN ▓ -->
+<!-- MAIN -->
 <div class="main">
   <div id="loading-state">
     <div class="ld-ring"></div>
@@ -535,13 +382,13 @@ body::after{
     <div class="er-m" id="em"></div>
     <button class="btn btn-pri" onclick="load()">Try Again</button>
   </div>
-  <div id="empty-state"><div class="em-t">NO PROFILES MATCH</div></div>
+  <div id="empty-state"><div class="em-t">NO PROFILES MATCH — —</div></div>
   <div id="grid"></div>
   <div class="pager" id="pager" style="display:none"></div>
   <div class="foot-info" id="fi" style="display:none"></div>
 </div>
 
-<!-- ▓ DRAWER ▓ -->
+<!-- DRAWER -->
 <div class="ov" id="ov" onclick="closeDrw(event)">
   <div class="drw">
     <div class="d-accent" id="da"></div>
@@ -573,16 +420,11 @@ body::after{
 </div>
 
 <script>
-// ══════════════════════════════════════
-//  CONFIG
-//  Replace SHEET_ID with your Google Sheet ID
-//  (the long string from your sheet URL)
-// ══════════════════════════════════════
+// CONFIG
 const SHEET_ID  = '16t-D8dCXFvheHEpncoQ_VnXQKkrEREAup7c1ZLFXvu0';
 const SHEET_TAB = 'Profiles';
-const PER_PAGE  = 100;  // 100 cards per page
+const PER_PAGE  = 100;
 
-// Column index map — must match Config.COLUMN_ORDER in config_common.py
 const C = {
   ID:0,NICK:1,TAGS:2,CITY:3,GENDER:4,MARRIED:5,AGE:6,JOINED:7,
   FOLLOWERS:8,LIST:9,POSTS:10,RUN_MODE:11,DATETIME:12,
@@ -590,19 +432,13 @@ const C = {
   POSTURL:17,RURL:18,MEHNAME:19,MEHLINK:20,MEHDATE:21,PHASE2:22
 };
 
-// ── App state ──
 let all=[],filt=[];
-let activeFil='all', q='', sort='date';
-let page=1, fetched=null;
+let activeFil='all',q='',sort='date';
+let page=1,fetched=null;
 
-// ══════════════════════════════════════
-//  LOAD  — fetches Profiles tab from Google Sheets public API
-// ══════════════════════════════════════
 async function load(){
-  show('loading-state'); hide('error-state'); hide('empty-state');
-  id('pager').style.display='none';
-  id('grid').innerHTML='';
-  id('fi').style.display='none';
+  show('loading-state');hide('error-state');hide('empty-state');
+  id('pager').style.display='none';id('grid').innerHTML='';id('fi').style.display='none';
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_TAB)}`;
   try{
     const res=await fetch(url);
@@ -611,22 +447,14 @@ async function load(){
     const json=JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
     if(json.status==='error') throw new Error(json.errors?.[0]?.detailed_message||'Sheet API error');
     const rows=json.table?.rows||[];
-    // skip header row, map cells to plain values, drop blank nick rows
-    all=rows.slice(1)
-      .map(r=>(r.c||[]).map(c=>c?(c.v??c.f??''):''))
-      .filter(r=>r[C.NICK]&&String(r[C.NICK]).trim());
-    fetched=new Date();
-    buildStats(); page=1; applyFil();
-    hide('loading-state');
-    id('fi').style.display='block';
+    all=rows.slice(1).map(r=>(r.c||[]).map(c=>c?(c.v??c.f??''):'')).filter(r=>r[C.NICK]&&String(r[C.NICK]).trim());
+    fetched=new Date();buildStats();page=1;applyFil();
+    hide('loading-state');id('fi').style.display='block';
   }catch(e){
     showErr(`Failed to load sheet.\n\nError: ${e.message}\n\nMake sure:\n1. Sheet is public (Share → Anyone with link → Viewer)\n2. Tab named exactly "Profiles"`);
   }
 }
 
-// ══════════════════════════════════════
-//  STATS BAR  — total, female%, male%, online count, last scraped
-// ══════════════════════════════════════
 function buildStats(){
   const n=all.length;
   const f=all.filter(r=>s(r[C.GENDER]).toUpperCase()==='FEMALE').length;
@@ -634,28 +462,22 @@ function buildStats(){
   const o=all.filter(r=>s(r[C.RUN_MODE]).toUpperCase()==='ONLINE').length;
   const last=all[0];
   st('s-tot',n.toLocaleString());
-  st('s-f',f.toLocaleString());   st('s-fp',n?Math.round(f/n*100)+'% of total':'');
-  st('s-m',m.toLocaleString());   st('s-mp',n?Math.round(m/n*100)+'% of total':'');
+  st('s-f',f.toLocaleString());st('s-fp',n?Math.round(f/n*100)+'% of total':'');
+  st('s-m',m.toLocaleString());st('s-mp',n?Math.round(m/n*100)+'% of total':'');
   st('s-on',o.toLocaleString());
-  if(last){ st('s-ld',s(last[C.DATETIME]).split(' ').slice(0,2).join(' ')); st('s-ln',s(last[C.NICK])); }
+  if(last){st('s-ld',s(last[C.DATETIME]).split(' ').slice(0,2).join(' '));st('s-ln',s(last[C.NICK]));}
 }
 
-// ══════════════════════════════════════
-//  FILTER + SORT
-// ══════════════════════════════════════
 function applyFil(){
   const ql=q.toLowerCase();
   filt=all.filter(r=>{
-    const nick=s(r[C.NICK]).toLowerCase();
-    const city=s(r[C.CITY]).toLowerCase();
-    const tags=s(r[C.TAGS]).toLowerCase();
-    const gen =s(r[C.GENDER]).toUpperCase();
-    const mode=s(r[C.RUN_MODE]).toLowerCase();
+    const nick=s(r[C.NICK]).toLowerCase(),city=s(r[C.CITY]).toLowerCase(),tags=s(r[C.TAGS]).toLowerCase();
+    const gen=s(r[C.GENDER]).toUpperCase(),mode=s(r[C.RUN_MODE]).toLowerCase();
     if(ql&&!nick.includes(ql)&&!city.includes(ql)&&!tags.includes(ql)) return false;
-    if(activeFil==='female'    && gen !=='FEMALE')   return false;
-    if(activeFil==='male'      && gen !=='MALE')     return false;
-    if(activeFil==='online'    && mode!=='online')   return false;
-    if(activeFil==='target'    && mode!=='target')   return false;
+    if(activeFil==='female'    && gen !=='FEMALE')  return false;
+    if(activeFil==='male'      && gen !=='MALE')    return false;
+    if(activeFil==='online'    && mode!=='online')  return false;
+    if(activeFil==='target'    && mode!=='target')  return false;
     if(activeFil==='karachi'   && !city.includes('karachi'))   return false;
     if(activeFil==='lahore'    && !city.includes('lahore'))    return false;
     if(activeFil==='islamabad' && !city.includes('islamabad')) return false;
@@ -663,81 +485,56 @@ function applyFil(){
   });
   filt.sort((a,b)=>{
     if(sort==='followers') return (parseInt(b[C.FOLLOWERS])||0)-(parseInt(a[C.FOLLOWERS])||0);
-    if(sort==='posts')     return (parseInt(b[C.POSTS]    )||0)-(parseInt(a[C.POSTS]    )||0);
+    if(sort==='posts')     return (parseInt(b[C.POSTS])||0)-(parseInt(a[C.POSTS])||0);
     if(sort==='nick')      return s(a[C.NICK]).localeCompare(s(b[C.NICK]));
-    return 0; // 'date' — sheet already sorted newest first
+    return 0;
   });
-  page=1; render();
+  page=1;render();
 }
 
-// ══════════════════════════════════════
-//  RENDER PAGE  — builds cards for current page slice
-// ══════════════════════════════════════
 function render(){
-  const grid=id('grid');
-  grid.innerHTML='';
-  if(!filt.length){ show('empty-state'); id('pager').style.display='none'; return; }
+  const grid=id('grid');grid.innerHTML='';
+  if(!filt.length){show('empty-state');id('pager').style.display='none';return;}
   hide('empty-state');
   const tot=Math.ceil(filt.length/PER_PAGE);
-  if(page>tot) page=tot;
-  if(page<1)   page=1;
+  if(page>tot)page=tot;if(page<1)page=1;
   const s0=(page-1)*PER_PAGE;
   const frag=document.createDocumentFragment();
   filt.slice(s0,s0+PER_PAGE).forEach((r,i)=>{
-    const c=mkCard(r);
-    c.style.animationDelay=(i*16)+'ms'; // stagger cards
-    frag.appendChild(c);
+    const c=mkCard(r);c.style.animationDelay=(i*10)+'ms';frag.appendChild(c);
   });
   grid.appendChild(frag);
-  st('fi',
-    `Showing ${s0+1}–${Math.min(s0+PER_PAGE,filt.length)} of ${filt.length.toLocaleString()} profiles`+
-    (fetched?` · fetched ${fetched.toLocaleTimeString()}`:'')
-  );
-  renderPager(tot);
-  window.scrollTo({top:0,behavior:'smooth'});
+  st('fi',`Showing ${s0+1}–${Math.min(s0+PER_PAGE,filt.length)} of ${filt.length.toLocaleString()} profiles`+(fetched?` · fetched ${fetched.toLocaleTimeString()}`:''));
+  renderPager(tot);window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ══════════════════════════════════════
-//  CARD BUILDER  — creates one .card-wrap element
-// ══════════════════════════════════════
 const PAL=['#e8321a','#0d8a6e','#1a5de8','#c9890a','#7c3aed','#0891b2','#dc2626','#059669','#b45309','#7e22ce'];
 function nickCol(n){let h=0;for(const c of(n||''))h=(h*31+c.charCodeAt(0))&0xffffffff;return PAL[Math.abs(h)%PAL.length]}
 
 function mkCard(r){
-  const nick =s(r[C.NICK])||'—';
-  const city =s(r[C.CITY])||'';
-  const gen  =s(r[C.GENDER]).toUpperCase();
-  const age  =s(r[C.AGE])||'';
-  const mar  =s(r[C.MARRIED])||'';
-  const fol  =fmt(r[C.FOLLOWERS]);
-  const pst  =fmt(r[C.POSTS]);
-  const dt   =s(r[C.DATETIME])||'';
-  const img  =s(r[C.IMAGE])||'';
-  const rurl =s(r[C.RURL])||'';
-  const mode =s(r[C.RUN_MODE]).toLowerCase();
-  const tags =s(r[C.TAGS])||'';
-  const ac   =nickCol(nick);
+  const nick=s(r[C.NICK])||'—',city=s(r[C.CITY])||'',gen=s(r[C.GENDER]).toUpperCase();
+  const age=s(r[C.AGE])||'',mar=s(r[C.MARRIED])||'';
+  const fol=fmt(r[C.FOLLOWERS]),pst=fmt(r[C.POSTS]);
+  const dt=s(r[C.DATETIME])||'',img=s(r[C.IMAGE])||'',rurl=s(r[C.RURL])||'';
+  const mode=s(r[C.RUN_MODE]).toLowerCase(),tags=s(r[C.TAGS])||'';
+  const ac=nickCol(nick);
+  const rc=gen==='FEMALE'?'var(--pink)':gen==='MALE'?'var(--blue)':'var(--acc)';
 
-  // ring colour: pink for female, blue for male, cyan for unknown
-  const rc = gen==='FEMALE'?'var(--pink)': gen==='MALE'?'var(--blue)':'var(--acc)';
-
-  // avatar html — 74px, real photo if available, placeholder otherwise
-  const avHtml = img
-    ? `<img class="av" src="${e(img)}" alt="${e(nick)}" loading="lazy"
-          onerror="this.style.display='none';this.nextSibling.style.display='grid'">
+  const avHtml=img
+    ?`<img class="av" src="${e(img)}" alt="${e(nick)}" loading="lazy" onerror="this.style.display='none';this.nextSibling.style.display='grid'">
        <div class="av-ph" style="display:none;background:${ac}">${nick[0]?.toUpperCase()||'?'}</div>`
-    : `<div class="av-ph" style="background:${ac}">${nick[0]?.toUpperCase()||'?'}</div>`;
+    :`<div class="av-ph" style="background:${ac}">${nick[0]?.toUpperCase()||'?'}</div>`;
 
-  const badgeCls = gen==='FEMALE'?'gb-f': gen==='MALE'?'gb-m':'gb-u';
-  const badgeTxt = gen==='FEMALE'?'F':    gen==='MALE'?'M':'?';
-  const modeCls  = mode==='online'?'m-on': mode==='target'?'m-tg':'m-ot';
-  const dtShort  = dt.split(' ').slice(0,2).join(' ');
-  const rankImg  = rurl?`<img class="rank-img" src="${e(rurl)}" alt="rank" onerror="this.style.display='none'">`: '';
-  const tagChip  = tags?`<span class="c-tag">${e(tags.split(',')[0].trim())}</span>`:'';
+  const badgeCls=gen==='FEMALE'?'gb-f':gen==='MALE'?'gb-m':'gb-u';
+  const badgeTxt=gen==='FEMALE'?'F':gen==='MALE'?'M':'?';
+  const modeCls=mode==='online'?'m-on':mode==='target'?'m-tg':'m-ot';
+  const dtShort=dt.split(' ').slice(0,2).join(' ');
+  const rankImg=rurl?`<img class="rank-img" src="${e(rurl)}" alt="rank" onerror="this.style.display='none'">`: '';
+  const tagChip=tags?`<span class="c-tag">${e(tags.split(',')[0].trim())}</span>`:'';
 
   const wrap=document.createElement('div');
   wrap.className='card-wrap';
-  wrap.style.setProperty('--rc', rc); // sets ring colour via CSS variable
+  wrap.style.setProperty('--rc',rc);
 
   wrap.innerHTML=`
     <div class="card">
@@ -771,65 +568,44 @@ function mkCard(r){
   return wrap;
 }
 
-// ══════════════════════════════════════
-//  OPEN DRAWER  — fills in all detail fields
-// ══════════════════════════════════════
 function openDrw(r){
-  const nick     =s(r[C.NICK])||'—';
-  const img      =s(r[C.IMAGE])||'';
-  const mode     =s(r[C.RUN_MODE])||'';
-  const tags     =s(r[C.TAGS])||'';
-  const city     =s(r[C.CITY])||'';
-  const age      =s(r[C.AGE])||'';
-  const gen      =s(r[C.GENDER]).toUpperCase();
-  const profLink =s(r[C.PROFILELINK])||'';
-  const postUrl  =s(r[C.POSTURL])||'';
-  const mehName  =s(r[C.MEHNAME])||'';
-  const mehLink  =s(r[C.MEHLINK])||'';
-  const mehDate  =s(r[C.MEHDATE])||'';
-  const rurl     =s(r[C.RURL])||'';
-  const ac       =nickCol(nick);
+  const nick=s(r[C.NICK])||'—',img=s(r[C.IMAGE])||'',mode=s(r[C.RUN_MODE])||'';
+  const tags=s(r[C.TAGS])||'',city=s(r[C.CITY])||'',age=s(r[C.AGE])||'';
+  const gen=s(r[C.GENDER]).toUpperCase(),profLink=s(r[C.PROFILELINK])||'',postUrl=s(r[C.POSTURL])||'';
+  const mehName=s(r[C.MEHNAME])||'',mehLink=s(r[C.MEHLINK])||'',mehDate=s(r[C.MEHDATE])||'';
+  const rurl=s(r[C.RURL])||'',ac=nickCol(nick);
 
-  // Accent bar colour
-  const accentCol= gen==='FEMALE'?'linear-gradient(90deg,var(--pink),var(--pur))':
-                   gen==='MALE'  ?'linear-gradient(90deg,var(--blue),var(--pur))':
-                   'linear-gradient(90deg,var(--acc),var(--pur))';
+  const accentCol=gen==='FEMALE'?'linear-gradient(90deg,var(--pink),var(--pur))':
+                  gen==='MALE'  ?'linear-gradient(90deg,var(--blue),var(--pur))':
+                  'linear-gradient(90deg,var(--acc),var(--pur))';
   id('da').style.background=accentCol;
-
-  // blurred hero bg
   id('dhb').style.backgroundImage=img?`url('${e(img)}')`:'';
-
-  st('dn',nick); st('dnm',nick);
+  st('dn',nick);st('dnm',nick);
   st('dml',mode?'● '+mode.toUpperCase()+' MODE':'');
   st('dca',[city,age?age+'y':''].filter(Boolean).join(' · ')||'');
   st('dtg',tags?'# '+tags.replace(/,\s*/g,'  #'):'');
 
-  // avatar
   const davEl=id('dav');
   davEl.innerHTML=img
-    ?`<img class="d-av" src="${e(img)}" alt="${e(nick)}"
-          onerror="this.outerHTML='<div class=d-avph style=background:${ac}>${nick[0]?.toUpperCase()||'?'}</div>'">`
+    ?`<img class="d-av" src="${e(img)}" alt="${e(nick)}" onerror="this.outerHTML='<div class=d-avph style=background:${ac}>${nick[0]?.toUpperCase()||'?'}</div>'">`
     :`<div class="d-avph" style="background:${ac}">${nick[0]?.toUpperCase()||'?'}</div>`;
 
-  // info grid
   id('di').innerHTML=
     df('City',r[C.CITY])+df('Gender',r[C.GENDER])+
-    df('Age',r[C.AGE])  +df('Married',r[C.MARRIED])+
+    df('Age',r[C.AGE])+df('Married',r[C.MARRIED])+
     df('Joined',r[C.JOINED])+df('List',r[C.LIST])+
     df('Run Mode',r[C.RUN_MODE])+df('Scraped',r[C.DATETIME],true)+
     (rurl?`<div class="df"><div class="dk">Rank</div><div class="dv"><img src="${e(rurl)}" style="height:14px" alt="rank"></div></div>`:'');
 
-  // stats grid
   id('ds').innerHTML=
     df('Followers',r[C.FOLLOWERS])+df('Posts',r[C.POSTS])+
-    df('Phase 2',r[C.PHASE2])     +df('Last Post Time',r[C.LASTTIME])+
+    df('Phase 2',r[C.PHASE2])+df('Last Post Time',r[C.LASTTIME])+
     (r[C.LASTPOST]?`<div class="df"><div class="dk">Last Post</div><div class="dv sp"><a href="${e(s(r[C.LASTPOST]))}" target="_blank">View Post ↗</a></div></div>`:'');
 
-  // mehfils
-  const msec=id('dmhs'); const mdiv=id('dmh');
+  const msec=id('dmhs'),mdiv=id('dmh');
   if(mehName){
     msec.style.display='';
-    const ns=mehName.split('\n'), ls=mehLink.split('\n'), ds=mehDate.split('\n');
+    const ns=mehName.split('\n'),ls=mehLink.split('\n'),ds=mehDate.split('\n');
     mdiv.innerHTML=ns.map((n,i)=>
       `<div class="mrow">
         <div class="mn">${ls[i]?`<a href="${e(ls[i])}" target="_blank" style="color:var(--acc);text-decoration:none">${e(n)}</a>`:e(n)}</div>
@@ -843,9 +619,6 @@ function openDrw(r){
   id('ov').classList.add('open');
 }
 
-// ══════════════════════════════════════
-//  PAGER
-// ══════════════════════════════════════
 function renderPager(tot){
   const pg=id('pager');
   if(tot<=1){pg.style.display='none';return}
@@ -861,9 +634,6 @@ function renderPager(tot){
 }
 function goP(n){const t=Math.ceil(filt.length/PER_PAGE);if(n<1||n>t)return;page=n;render();}
 
-// ══════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════
 function closeDrw(ev){if(ev.target===id('ov'))closeDrwD();}
 function closeDrwD(){id('ov').classList.remove('open');}
 function df(k,v,full){return`<div class="df${full?' sp':''}"><div class="dk">${k}</div><div class="dv${full?' sp':''}">${e(s(v)||'—')}</div></div>`;}
@@ -876,26 +646,20 @@ function show(i){id(i).style.display=''}
 function hide(i){id(i).style.display='none'}
 function showErr(msg){hide('loading-state');id('em').innerText=msg;show('error-state')}
 
-// ══════════════════════════════════════
-//  EVENT WIRING
-// ══════════════════════════════════════
 id('si').addEventListener('input',ev=>{q=ev.target.value.trim();applyFil();});
 document.querySelectorAll('.fc').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('.fc').forEach(x=>x.classList.remove('act','act-f','act-m'));
-    const f=b.dataset.f; activeFil=f; b.classList.add('act');
+    const f=b.dataset.f;activeFil=f;b.classList.add('act');
     if(f==='female')b.classList.add('act-f');
-    if(f==='male')  b.classList.add('act-m');
+    if(f==='male')b.classList.add('act-m');
     applyFil();
   });
 });
 id('ss').addEventListener('change',ev=>{sort=ev.target.value;applyFil();});
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeDrwD();});
 
-// Auto-refresh every 5 minutes
-setInterval(load, 5*60*1000);
-
-// Initial load
+setInterval(load,5*60*1000);
 load();
 </script>
 </body>
