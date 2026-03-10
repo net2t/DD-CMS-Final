@@ -1,4 +1,4 @@
-name: Target Mode (Manual)
+name: Target Mode (📊)
 
 on:
   workflow_dispatch:
