@@ -2,7 +2,7 @@ name: Online Mode ⏰
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/55 * * * *'
   workflow_dispatch:
     inputs:
       limit:
