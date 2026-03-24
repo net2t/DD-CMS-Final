@@ -1,12 +1,11 @@
 """
 Profile Scraper + Target Mode Runner — DD-CMS-V3
 
-Key changes from V2:
-- Per-profile sheet write: RunList is updated IMMEDIATELY after each profile
-  (no more batch queue — crash-safe)
-- Col 9  (LIST)     ← RunList Col F value  (Target) or "" (Online)
-- Col 11 (RUN MODE) ← "Online" or "Target"
-- Public page URL uses ?page=1
+Fixes (v3.0.2):
+- Post count: more aggressive fallback extraction; also preserved if blank via sheets_manager
+- Batch flush: called at correct intervals; final flush guaranteed at end of run
+- Row movement: every profile moves to Row 2 (handled in sheets_manager.write_profile)
+- Col D ignore: handled in sheets_manager.get_pending_targets()
 """
 
 import time
@@ -55,29 +54,26 @@ def normalize_post_url(url):
 
 
 def normalize_post_datetime(raw_date):
-    """Parse any date/time string → 'dd-mmm-yy hh:mm am/pm' (PKT)."""
     if not raw_date or not str(raw_date).strip():
         return ""
     now  = get_pkt_time()
     text = str(raw_date).strip().lower()
     text = re.sub(r'\s+', ' ', text.replace('\n', ' ').replace('\t', ' '))
 
-    # Relative times e.g. "3 hours ago"
     if "ago" in text:
         delta = timedelta()
         for amount, unit in re.findall(r'(\d+)\s*(year|yr|month|mon|week|wk|day|hour|hr|minute|min|second|sec)s?', text):
             amount = int(amount)
             u = unit
-            if u in ('year', 'yr'):   delta += timedelta(days=amount * 365)
-            elif u in ('month','mon'): delta += timedelta(days=amount * 30)
-            elif u in ('week', 'wk'): delta += timedelta(weeks=amount)
-            elif u == 'day':           delta += timedelta(days=amount)
-            elif u in ('hour', 'hr'): delta += timedelta(hours=amount)
-            elif u in ('minute','min'):delta += timedelta(minutes=amount)
-            elif u in ('second','sec'):delta += timedelta(seconds=amount)
+            if u in ('year', 'yr'):    delta += timedelta(days=amount * 365)
+            elif u in ('month', 'mon'): delta += timedelta(days=amount * 30)
+            elif u in ('week', 'wk'):  delta += timedelta(weeks=amount)
+            elif u == 'day':            delta += timedelta(days=amount)
+            elif u in ('hour', 'hr'):  delta += timedelta(hours=amount)
+            elif u in ('minute', 'min'):delta += timedelta(minutes=amount)
+            elif u in ('second', 'sec'):delta += timedelta(seconds=amount)
         return (now - delta).strftime("%d-%b-%y %I:%M %p").lower()
 
-    # Absolute date formats
     for fmt in [
         "%d-%b-%y %I:%M %p", "%d-%b-%y %H:%M", "%d-%m-%y %H:%M",
         "%d-%m-%Y %H:%M",    "%d-%b-%y %H:%M:%S", "%Y-%m-%d %H:%M:%S",
@@ -100,7 +96,6 @@ def normalize_post_datetime(raw_date):
 
 
 def normalize_date_only(raw_date):
-    """Return date portion only: dd-mmm-yy"""
     dt_str = normalize_post_datetime(raw_date)
     if not dt_str:
         return ""
@@ -111,7 +106,6 @@ def normalize_date_only(raw_date):
 
 
 def sanitize_nickname_for_url(nickname):
-    """Return cleaned nickname safe for URL, or None if invalid."""
     if not nickname or not isinstance(nickname, str):
         return None
     nickname = nickname.strip()
@@ -163,7 +157,6 @@ def detect_banned(page_source):
 # ── Profile Scraper ────────────────────────────────────────────────────────────
 
 class ProfileScraper:
-    """Scrapes a single DamaDam user profile page."""
 
     def __init__(self, driver):
         self.driver = driver
@@ -188,25 +181,13 @@ class ProfileScraper:
             pass
         return result
 
-    def _extract_friend_status(self, page_source):
-        try:
-            btn = self.driver.find_element(By.XPATH, ProfileSelectors.FRIEND_STATUS_BUTTON)
-            label = btn.text.strip().upper()
-            if "UNFOLLOW" in label: return "Yes"
-            if "FOLLOW"   in label: return "No"
-        except Exception:
-            pass
-        if 'action="/follow/remove/' in page_source: return "Yes"
-        if 'action="/follow/add/'    in page_source: return "No"
-        return ""
-
     def _extract_rank(self, page_source):
         try:
             match = re.search(r'src=\"(/static/img/stars/[^\"]+)\"', page_source)
             if not match:
                 return "", ""
-            rel  = match.group(1)
-            url  = rel if rel.startswith('http') else f"https://damadam.pk{rel}"
+            rel   = match.group(1)
+            url   = rel if rel.startswith('http') else f"https://damadam.pk{rel}"
             lower = rel.lower()
             if   "red"    in lower: label = "Red Star"
             elif "gold"   in lower: label = "Gold Star"
@@ -226,31 +207,65 @@ class ProfileScraper:
         return ""
 
     def _extract_stats(self, page_source):
+        """
+        Extract follower count and post count.
+
+        Strategy (in order):
+          1. XPath selectors on page elements
+          2. Regex fallbacks on raw page_source
+          3. Wider regex patterns to catch different HTML structures
+
+        Post count is also extracted from URL-count patterns in case the
+        <b> tag inside the posts link is missing.
+        """
         stats = {'FOLLOWERS': '', 'POSTS': ''}
+
+        # ── Followers ──────────────────────────────────────────────────────────
         try:
             stats['FOLLOWERS'] = clean_text(
                 self.driver.find_element(By.XPATH, ProfileSelectors.FOLLOWERS_COUNT).text)
         except Exception:
             pass
+
+        if not stats['FOLLOWERS']:
+            for pat in [
+                r'([\d,\.]+)\s+verified\s+followers',
+                r'([\d,\.]+)\s+followers',
+                r'/followers/[^>]*>\s*<b>([\d,\.]+)',
+            ]:
+                m = re.search(pat, page_source, re.IGNORECASE)
+                if m:
+                    stats['FOLLOWERS'] = clean_text(m.group(1))
+                    break
+
+        # ── Posts ──────────────────────────────────────────────────────────────
         try:
             stats['POSTS'] = clean_text(
                 self.driver.find_element(By.XPATH, ProfileSelectors.POSTS_COUNT).text)
         except Exception:
             pass
-        # Fallback regex
-        if not stats['FOLLOWERS']:
-            for pat in [r'([\d,\.]+)\s+verified\s+followers', r'([\d,\.]+)\s+followers']:
-                m = re.search(pat, page_source, re.IGNORECASE)
-                if m: stats['FOLLOWERS'] = clean_text(m.group(1)); break
+
         if not stats['POSTS']:
-            m = re.search(r'([\d,\.]+)\s+posts?', page_source, re.IGNORECASE)
-            if m: stats['POSTS'] = clean_text(m.group(1))
+            # Try multiple patterns — DamaDam sometimes wraps count differently
+            for pat in [
+                r'([\d,\.]+)\s+posts?',
+                r'/posts/[^>]*>\s*<b>([\d,\.]+)',
+                r'<b>([\d,\.]+)</b>\s*posts?',
+                r'posts?[^<]*<b>([\d,\.]+)',
+            ]:
+                m = re.search(pat, page_source, re.IGNORECASE)
+                if m:
+                    # Use the first capture group that has a digit
+                    val = m.group(1) if m.lastindex == 1 else (m.group(2) if m.lastindex >= 2 else "")
+                    if val and re.search(r'\d', val):
+                        stats['POSTS'] = clean_text(val)
+                        break
+
         return stats
 
     def _extract_last_post(self, nickname, page_source, posts_count=None):
         result = {'LAST POST': '', 'LAST POST TIME': ''}
 
-        # Try selectors on current page
         try:
             href = self.driver.find_element(By.XPATH, ProfileSelectors.LAST_POST_TEXT).get_attribute('href')
             if href: result['LAST POST'] = normalize_post_url(href)
@@ -262,15 +277,13 @@ class ProfileScraper:
         except Exception:
             pass
 
-        # If posts confirmed zero, skip public page
         if posts_count == 0:
             return result
 
-        # Fetch public profile page 1 if enabled and data still missing
         if (not result['LAST POST'] or not result['LAST POST TIME']) \
                 and nickname and Config.LAST_POST_FETCH_PUBLIC_PAGE:
             private_url = self.driver.current_url
-            public_url  = get_public_profile_url(nickname)  # already has ?page=1
+            public_url  = get_public_profile_url(nickname)
             try:
                 self.driver.get(public_url)
                 WebDriverWait(self.driver, Config.LAST_POST_PUBLIC_PAGE_TIMEOUT).until(
@@ -338,9 +351,6 @@ class ProfileScraper:
         return ""
 
     def scrape_profile(self, nickname, source="Target"):
-        """
-        Scrape a single profile page. Returns profile dict or None on hard failure.
-        """
         clean_nick = sanitize_nickname_for_url(nickname)
         if not clean_nick:
             log_msg(f"Invalid nickname: {nickname}", "ERROR")
@@ -357,12 +367,9 @@ class ProfileScraper:
             now         = get_pkt_time()
 
             data = {col: Config.DEFAULT_VALUES.get(col, "") for col in Config.COLUMN_ORDER}
-            data["NICK NAME"]     = clean_nick
-            # Use YYYY-MM-DD HH:MM so the Profiles sheet sorts correctly as text.
-            # This matches the format set in sheets_manager._enrich_profile().
+            data["NICK NAME"]      = clean_nick
             data["DATETIME SCRAP"] = now.strftime("%Y-%m-%d %H:%M")
 
-            # Ban / suspension
             if detect_suspension(page_source) or detect_banned(page_source):
                 data['STATUS'] = 'Banned'
                 return data
@@ -372,7 +379,6 @@ class ProfileScraper:
 
             data['STATUS'] = 'Verified'
 
-            # Extract structured data
             mehfil      = self._extract_mehfil_details(page_source)
             stats       = self._extract_stats(page_source)
             _, rank_img = self._extract_rank(page_source)
@@ -390,21 +396,20 @@ class ProfileScraper:
             image_url  = self._extract_profile_image(page_source)
 
             data.update({
-                "ID":           user_id,
-                "PROFILE LINK": url.rstrip('/'),
-                "POST URL":     get_public_profile_url(clean_nick),
-                "RURL":         rank_img,
-                "FOLLOWERS":    stats['FOLLOWERS'],
-                "POSTS":        stats['POSTS'],
-                "LAST POST":    last_post['LAST POST'],
+                "ID":             user_id,
+                "PROFILE LINK":   url.rstrip('/'),
+                "POST URL":       get_public_profile_url(clean_nick),
+                "RURL":           rank_img,
+                "FOLLOWERS":      stats['FOLLOWERS'],
+                "POSTS":          stats['POSTS'],
+                "LAST POST":      last_post['LAST POST'],
                 "LAST POST TIME": last_post['LAST POST TIME'],
-                "IMAGE":        image_url,
-                "MEH NAME":     "\n".join(mehfil['MEH NAME']),
-                "MEH LINK":     "\n".join(mehfil['MEH LINK']),
-                "MEH DATE":     "\n".join(mehfil['MEH DATE']),
+                "IMAGE":          image_url,
+                "MEH NAME":       "\n".join(mehfil['MEH NAME']),
+                "MEH LINK":       "\n".join(mehfil['MEH LINK']),
+                "MEH DATE":       "\n".join(mehfil['MEH DATE']),
             })
 
-            # Profile detail fields
             field_map = [
                 ('City',    'CITY',    lambda x: clean_text(x) if x else ''),
                 ('Gender',  'GENDER',  lambda x: 'Female' if x and 'female' in x.lower()
@@ -444,20 +449,12 @@ class ProfileScraper:
 
 def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TARGET"):
     """
-    Scrape profiles and write results IMMEDIATELY after each profile.
+    Scrape profiles and write results via batch system.
 
-    This is crash-safe: RunList is updated right after each profile is scraped,
-    so no data is lost if the run is interrupted.
+    moveDimension (row move to top) is still done immediately per profile.
+    Data writes are queued and flushed every BATCH_SIZE profiles.
 
-    Args:
-        driver:       Selenium WebDriver
-        sheets:       SheetsManager instance
-        max_profiles: 0 = unlimited
-        targets:      list of target dicts (if None, reads from RunList)
-        run_label:    "TARGET" or "ONLINE"
-
-    Returns:
-        dict of run statistics
+    Col D in RunList = ignore flag (handled in sheets.get_pending_targets()).
     """
     label = (run_label or "TARGET").strip().upper()
     log_msg(f"=== {label} MODE STARTED ===")
@@ -467,7 +464,6 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
         "unchanged": 0, "skipped": 0, "processed": 0, "total_found": 0,
     }
 
-    # Fetch targets from RunList if not provided (Target mode path)
     if targets is None:
         try:
             targets = sheets.get_pending_targets()
@@ -498,7 +494,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
             stats["skipped"] += 1
             continue
 
-        # ── 1. Scrape ─────────────────────────────────────────────────────────
+        # ── 1. Scrape ──────────────────────────────────────────────────────────
         log_progress(i, len(targets), nickname, "scraping")
         profile_data = scraper.scrape_profile(nickname, source=target.get('source', run_mode))
 
@@ -517,10 +513,8 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
         consecutive_failures = 0
 
-        # ── 2. Write to Profiles sheet immediately ────────────────────────────
-        # list_value = RunList Col F (target mode only; empty for online mode)
-        list_value = target.get('tag', '') if run_mode == "Target" else ""
-
+        # ── 2. Queue write (moveDimension is immediate inside write_profile) ───
+        list_value   = target.get('tag', '') if run_mode == "Target" else ""
         write_result = sheets.write_profile(
             profile_data,
             run_mode=run_mode,
@@ -528,9 +522,9 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
         )
         w_status = write_result.get("status")
 
-        ts = profile_data.get("DATETIME SCRAP") or get_pkt_time().strftime("%d-%b-%y %I:%M %p")
+        ts = profile_data.get("DATETIME SCRAP") or get_pkt_time().strftime("%Y-%m-%d %H:%M")
 
-        # ── 3. Update RunList immediately (Target mode) ───────────────────────
+        # ── 3. Update RunList status immediately (Target mode only) ────────────
         if w_status == "new":
             stats["success"] += 1; stats["new"] += 1
             remark = f"New Added: {ts}"
@@ -543,7 +537,7 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
         elif w_status == "unchanged":
             stats["success"] += 1; stats["unchanged"] += 1
-            remark = f"Scraped ✅ {ts}"
+            remark = f"Scraped OK: {ts}"
             log_progress(i, len(targets), nickname, "unchanged")
 
         elif w_status == "skipped":
@@ -556,21 +550,20 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
             remark = write_result.get("error") or "Sheet write failed"
             log_progress(i, len(targets), nickname, "error")
 
-        # Update RunList row in Target mode
         if target.get('row'):
             final_status = 'done' if w_status in ('new', 'updated', 'unchanged', 'skipped') else 'error'
             sheets.update_target_status(target['row'], final_status, remark)
 
         stats["processed"] += 1
 
-        # ── Flush batch every BATCH_SIZE profiles ───────────────────────────────────
+        # ── 4. Flush batch every BATCH_SIZE profiles ───────────────────────────
         if sheets.should_flush_batch():
             sheets.flush_batch()
 
         if i < len(targets):
             time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
 
-    # Flush any remaining buffered writes at the end of the run
+    # ── 5. Final flush for any remaining queued writes ─────────────────────────
     sheets.flush_batch()
 
     log_msg(f"=== {label} MODE COMPLETED — "

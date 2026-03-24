@@ -8,8 +8,13 @@ on:
         required: false
         default: '0'
 
+# ── SAME concurrency group as online-schedule.yml ────────────────────────────
+# This ensures Target Mode and Online Mode NEVER run at the same time.
+# If Online Mode is running when you manually trigger Target Mode,
+# GitHub Actions will WAIT for Online Mode to finish, then run Target Mode.
+# cancel-in-progress: false = do NOT cancel the running job, just queue this one.
 concurrency:
-  group: dd-cms-target
+  group: dd-cms
   cancel-in-progress: false
 
 jobs:

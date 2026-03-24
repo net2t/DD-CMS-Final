@@ -34,6 +34,8 @@ Sorts sheet so newest scrapes always appear at the top
 | **Online Mode** | Scrapes whoever is currently online at damadam.pk/online_kon/ | Automatically every 15 min via GitHub Actions |
 | **Target Mode** | Scrapes a list of nicknames you put in the RunList sheet | Manually — you trigger it |
 
+> **Both modes cannot run at the same time.** If Online Mode is running when you trigger Target Mode (or vice versa), the second one waits in queue and starts automatically after the first finishes. No data is lost, no conflicts.
+
 ---
 
 ## Google Sheet Structure
@@ -51,13 +53,13 @@ The scraper writes to these tabs in your sheet:
 
 ```
 Col A  — ID               User's numeric ID on DamaDam
-Col B  — NICK NAME        Username
+Col B  — NICK NAME        Username  ← Cell note shows before/after when data changes
 Col C  — TAGS             Matched from Tags sheet
 Col D  — CITY
 Col E  — GENDER
 Col F  — MARRIED
 Col G  — AGE
-Col H  — JOINED           Account creation date
+Col H  — JOINED
 Col I  — FOLLOWERS        Verified follower count
 Col J  — LIST             RunList tag value (Target mode only)
 Col K  — POSTS            Post count
@@ -75,6 +77,26 @@ Col V  — MEH DATE         Mehfil join dates (one per line)
 Col W  — PHASE 2          Reserved for future use
 ```
 
+### Change Detection — Cell Notes
+
+When a profile is re-scraped and any tracked field has changed, a **cell note** is automatically added to the NICK NAME cell (Col B). To view it:
+- **Hover** over the cell — the note pops up
+- Or press **Shift+F2** while the cell is selected
+
+The note shows:
+```
+BEFORE:
+  CITY: LAHORE
+  FOLLOWERS: 120
+AFTER:
+  CITY: KARACHI
+  FOLLOWERS: 145
+
+Updated: 2026-03-24 17:00
+```
+
+Fields excluded from change tracking (always changing or not meaningful to track): ID, NICK NAME, JOINED, DATETIME SCRAP, LAST POST, LAST POST TIME, PROFILE LINK, POST URL, PHASE 2, RUN MODE, LIST.
+
 ### RunList Tab Format
 
 To scrape specific users in Target Mode, add rows to the RunList tab:
@@ -82,8 +104,13 @@ To scrape specific users in Target Mode, add rows to the RunList tab:
 ```
 Col A — NICKNAME    The DamaDam username to scrape
 Col B — STATUS      Set to: ⚡ Pending  (scraper updates this to Done 💀 when finished)
-Col C — REMARKS     Scraper writes result here (e.g. "Updated: 2026-03-08 17:00")
+Col C — REMARKS     Scraper writes result here (e.g. "Updated: 2026-03-24 17:00")
+Col D — IGNORE      Put ANY value here to skip this row permanently (leave blank to scrape normally)
+Col E — (unused)
+Col F — TAG         Optional tag value — written to Col J (LIST) in Profiles sheet
 ```
+
+> **Col D Ignore Flag:** If you want to keep a nickname in your RunList but never scrape it, put any value (e.g. `skip`, `x`, `ignore`) in Col D. The scraper will skip it every time without changing its status.
 
 ---
 
@@ -157,6 +184,8 @@ Go to: **Your repo → Settings → Secrets and variables → Actions → New re
 | `online-schedule.yml` | Every 15 min (cron) + manual | Online Mode |
 | `target-manual.yml` | Manual only | Target Mode |
 
+Both workflows share the same concurrency group (`dd-cms`). They will never run simultaneously — the second one waits for the first to finish.
+
 To trigger Target Mode manually: **Actions tab → Target Mode → Run workflow**
 
 ---
@@ -192,6 +221,9 @@ All settings live in `.env` (local) or GitHub Secrets (cloud).
 | `run.lock` stuck | Previous run crashed without cleanup | Delete `run.lock` from project root |
 | 429 errors in logs | Google Sheets rate limit | Increase `SHEET_WRITE_DELAY` to `1.0` |
 | 0 profiles found | DamaDam HTML structure changed | Check `config/selectors.py` |
+| Both modes ran at same time | Old workflow files (fixed v3.0.2) | Replace both `.github/workflows/` files |
+| Post count blank (Col K) | Scraper missed `<b>` tag (fixed v3.0.2) | Update `target_mode.py` and `sheets_manager.py` |
+| Duplicates after every run | Cache sync bug (fixed v3.0.2) | Update `sheets_manager.py` |
 
 → Full guide: [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md)
 

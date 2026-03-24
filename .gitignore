@@ -1,15 +1,32 @@
-.env
+# Logs
+logs/
+
+# Credentials
 credentials.json
-damadam_cookies.pkl
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-logs/*.log
-logs/*.json
-*.egg-info/
-dist/
-build/
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
-run.lock
+Thumbs.db
