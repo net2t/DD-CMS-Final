@@ -161,6 +161,21 @@ class Config:
         has_file  = cred_path and Path(cred_path).exists()
         if not has_json and not has_file:
             errors.append("Google credentials required (JSON env var or credentials.json file)")
+        
+        # ── Invariant checks ──────────────────────────────────────────────────
+        if cls.MIN_DELAY < 0:
+            errors.append(f"MIN_DELAY must be >= 0 (got {cls.MIN_DELAY})")
+        if cls.MAX_DELAY < 0:
+            errors.append(f"MAX_DELAY must be >= 0 (got {cls.MAX_DELAY})")
+        if cls.MIN_DELAY > cls.MAX_DELAY:
+            errors.append(f"MIN_DELAY ({cls.MIN_DELAY}) must be <= MAX_DELAY ({cls.MAX_DELAY})")
+        if cls.BATCH_SIZE < 1:
+            errors.append(f"BATCH_SIZE must be >= 1 (got {cls.BATCH_SIZE})")
+        if cls.PAGE_LOAD_TIMEOUT < 1:
+            errors.append(f"PAGE_LOAD_TIMEOUT must be >= 1 (got {cls.PAGE_LOAD_TIMEOUT})")
+        if cls.SHEET_WRITE_DELAY < 0:
+            errors.append(f"SHEET_WRITE_DELAY must be >= 0 (got {cls.SHEET_WRITE_DELAY})")
+        
         if errors:
             print("=" * 60)
             for e in errors:

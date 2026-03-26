@@ -10,7 +10,6 @@ Provides:
 import os
 import sys
 import time
-import random
 from datetime import datetime, timedelta, timezone
 
 from rich.console import Console

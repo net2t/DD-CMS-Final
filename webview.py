@@ -31,7 +31,7 @@ from config.config_common import Config
 from utils.sheets_manager import create_gsheets_client, SheetsManager
 
 app = Flask(__name__)
-app.secret_key = "ddcms-webview-secret"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-in-production")
 
 # ── Sheets client (lazy init) ─────────────────────────────────────────────────
 _sheets = None

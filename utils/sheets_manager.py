@@ -595,11 +595,8 @@ class SheetsManager:
             if not self._write(self.profiles_ws.insert_row, row_data, index=2):
                 return {"status": "error", "error": "insert failed"}
             self._cache_insert_at_top(nickname, row_data)
-            # Queue a data write to make sure the row is correct
-            # (insert_row already wrote it, but we want it in the batch log)
-            # Actually for new rows we DON'T queue — insert_row already wrote it.
-            # Just increment batch count so flush_batch() knows work was done.
-            self._batch_count += 1
+            # Note: No batch queue for new rows — insert_row already wrote the data.
+            # _batch_count is NOT incremented because there's nothing to flush.
             log_msg(f"New profile {nickname} → Row 2 (inserted immediately)", "OK")
             return {"status": "new"}
 

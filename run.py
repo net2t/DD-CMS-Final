@@ -196,8 +196,8 @@ def do_run(mode: str, max_profiles: int = 0) -> dict:
                     "Updated Profiles":    stats.get("updated", 0),
                     "Unchanged Profiles":  stats.get("unchanged", 0),
                     "Trigger":             "manual" if _run_count == 1 and mode == "target" else "auto",
-                    "Start":               start_time.strftime("%d-%b-%y %I:%M %p"),
-                    "End":                 end_time.strftime("%d-%b-%y %I:%M %p"),
+                    "Start":               start_time.strftime("%Y-%m-%d %H:%M"),
+                    "End":                 end_time.strftime("%Y-%m-%d %H:%M"),
                 })
             except Exception as e:
                 log_msg(f"Dashboard update failed: {e}", "WARNING")

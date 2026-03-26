@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+# Auto-push after every commit.
+# Non-blocking: failures do NOT fail the commit.
+
+set +e
+
+# Skip in detached HEAD
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
+  exit 0
+fi
+
+# Skip if no origin remote
+git remote get-url origin >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  exit 0
+fi
+
+# If upstream not set, set it to origin/<branch>
+git rev-parse --abbrev-ref --symbolic-full-name "@{u}" >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  git push -u origin "$branch" >/dev/null 2>&1
+  exit 0
+fi
+
+# Normal push
+git push >/dev/null 2>&1
+exit 0

@@ -34,7 +34,9 @@ Sorts sheet so newest scrapes always appear at the top
 | **Online Mode** | Scrapes whoever is currently online at damadam.pk/online_kon/ | Automatically every 15 min via GitHub Actions |
 | **Target Mode** | Scrapes a list of nicknames you put in the RunList sheet | Manually — you trigger it |
 
-> **Both modes cannot run at the same time.** If Online Mode is running when you trigger Target Mode (or vice versa), the second one waits in queue and starts automatically after the first finishes. No data is lost, no conflicts.
+> **Both modes cannot run at the same time.**
+> - **GitHub Actions:** The second mode waits in queue and starts automatically after the first finishes (via `concurrency.group`).
+> - **Local runs:** If a run is already active, the second attempt exits immediately with a warning (no queue).
 
 ---
 
@@ -268,8 +270,28 @@ DD-CMS-Final/
 ├── fix_datetime_format.py    ← One-time migration script (run once after v3.0.1 upgrade)
 ├── requirements.txt          ← Python package list
 ├── .env.sample               ← Template — copy to .env and fill in
-└── README.md                 ← This file
+├── .githooks/                ← Git hooks (auto-push on commit)
+│   └── post-commit           ← Automatically pushes to GitHub after each commit
+├── README.md                 ← This file
 ```
+
+---
+
+## Git Hook Setup (Auto-Push)
+
+This project includes a `post-commit` hook that automatically pushes to GitHub after each commit.
+
+**To enable it (run once after cloning):**
+
+```bash
+# Windows (PowerShell)
+git config core.hooksPath .githooks
+
+# macOS / Linux
+git config core.hooksPath .githooks && chmod +x .githooks/post-commit
+```
+
+Once enabled, every `git commit` will automatically trigger `git push`.
 
 ---
 

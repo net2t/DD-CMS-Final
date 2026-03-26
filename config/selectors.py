@@ -3,6 +3,11 @@
 
 class ProfileSelectors:
     NICKNAME_HEADER    = "//h1"
+    PROFILE_LOADED     = [
+        "//h1",
+        "//a[contains(@href, '/followers/')]/b",
+        "//a[contains(@href, '/posts/')]/b",
+    ]
     UNVERIFIED_BADGE   = ".//span[contains(text(), 'Unverified User')]"
     INTRO_TEXT_B       = "//b[contains(normalize-space(.), 'Intro')]/following-sibling::span[1]"
     INTRO_TEXT_SPAN    = "//span[contains(@class,'nos')]"

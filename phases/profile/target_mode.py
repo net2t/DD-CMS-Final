@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 from config.config_common import Config
 from config.selectors import ProfileSelectors
@@ -82,7 +82,10 @@ def normalize_post_datetime(raw_date):
     ]:
         try:
             dt = datetime.strptime(text, fmt)
-            if '%d' not in fmt or '%m' not in fmt:
+            # Check if date components are missing (time-only formats)
+            has_day = '%d' in fmt
+            has_month = '%m' in fmt or '%b' in fmt or '%B' in fmt
+            if not has_day or not has_month:
                 dt = dt.replace(year=now.year, month=now.month, day=now.day)
             if ':' not in fmt:
                 dt = dt.replace(hour=now.hour, minute=now.minute, second=0, microsecond=0)
@@ -160,6 +163,24 @@ class ProfileScraper:
 
     def __init__(self, driver):
         self.driver = driver
+
+    def _wait_for_profile_page(self, timeout=5):
+        """Wait for profile page to load by checking multiple elements.
+        Returns True if any profile element found, raises TimeoutException otherwise."""
+        end_time = time.time() + timeout
+        last_error = None
+        
+        while time.time() < end_time:
+            for selector in ProfileSelectors.PROFILE_LOADED:
+                try:
+                    elem = self.driver.find_element(By.XPATH, selector)
+                    if elem.is_displayed():
+                        return True
+                except NoSuchElementException:
+                    continue
+            time.sleep(0.2)
+        
+        raise TimeoutException(f"Profile page did not load within {timeout}s")
 
     def _extract_mehfil_details(self, page_source):
         result = {'MEH NAME': [], 'MEH LINK': [], 'MEH DATE': []}
@@ -319,9 +340,11 @@ class ProfileScraper:
             finally:
                 try:
                     self.driver.get(private_url)
-                    WebDriverWait(self.driver, Config.LAST_POST_PUBLIC_PAGE_TIMEOUT).until(
-                        EC.presence_of_element_located((By.XPATH, ProfileSelectors.NICKNAME_HEADER))
-                    )
+                    self._wait_for_profile_page(timeout=Config.LAST_POST_PUBLIC_PAGE_TIMEOUT)
+                    # Validate we're back on the correct profile page
+                    current_url = self.driver.current_url.rstrip('/')
+                    if current_url != private_url.rstrip('/'):
+                        log_msg(f"Navigation mismatch: expected {private_url}, got {current_url}", "WARNING")
                 except Exception:
                     pass
         return result
@@ -360,9 +383,7 @@ class ProfileScraper:
         try:
             log_msg(f"Scraping: {nickname}", "SCRAPING")
             self.driver.get(url)
-            WebDriverWait(self.driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, ProfileSelectors.NICKNAME_HEADER))
-            )
+            self._wait_for_profile_page(timeout=5)
             page_source = self.driver.page_source
             now         = get_pkt_time()
 
