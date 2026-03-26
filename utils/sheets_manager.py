@@ -495,7 +495,7 @@ class SheetsManager:
         """
         all_requests = self._batch_data_requests + self._batch_note_requests
         if not all_requests:
-            return
+            return True
 
         count = self._batch_count
         log_msg(f"Flushing batch ({count} profiles, {len(all_requests)} requests)...")

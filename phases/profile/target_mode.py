@@ -584,13 +584,20 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
         # ── 4. Flush batch every BATCH_SIZE profiles ───────────────────────────
         if sheets.should_flush_batch():
-            sheets.flush_batch()
+            if not sheets.flush_batch():
+                log_msg("Batch flush failed — stopping run to avoid missing data", "ERROR")
+                if target.get('row'):
+                    sheets.update_target_status(target['row'], 'error', 'Batch flush failed')
+                stats["failed"] += 1
+                break
 
         if i < len(targets):
             time.sleep(random.uniform(Config.MIN_DELAY, Config.MAX_DELAY))
 
     # ── 5. Final flush for any remaining queued writes ─────────────────────────
-    sheets.flush_batch()
+    if not sheets.flush_batch():
+        log_msg("Final batch flush failed — run may be missing writes", "ERROR")
+        stats["failed"] += 1
 
     log_msg(f"=== {label} MODE COMPLETED — "
             f"success={stats['success']} failed={stats['failed']} skipped={stats['skipped']} ===")
