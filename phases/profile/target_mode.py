@@ -288,6 +288,18 @@ class ProfileScraper:
                 r'/posts/[^>]*>\s*<b>([\d,\.]+)',
                 r'<b>([\d,\.]+)</b>\s*posts?',
                 r'posts?[^<]*<b>([\d,\.]+)',
+                # New patterns based on common DamaDam structures
+                r'href="/posts/[^"]*"[^>]*>([\d,\.]+)',
+                r'posts[^>]*>([\d,\.]+)',
+                r'(\d+)\s*posts?',
+                r'Posts:\s*(\d+)',
+                r'post[^>]*>(\d+)',
+                r'/posts/.*?(\d+)',
+                # NEW: Pattern for the current HTML structure
+                r'<div>POSTS</div>\s*</div>\s*</button>\s*</a>',  # This won't work, need different approach
+                r'href="/profile/public/[^"]*"[^>]*>.*?<div>(\d+)</div>.*?POSTS',
+                r'<div>(\d+)</div>\s*<div[^>]*>POSTS</div>',
+                r'POSTS.*?<div>(\d+)</div>',
             ], 1):
                 m = re.search(pat, page_source, re.IGNORECASE)
                 if m:
@@ -308,6 +320,14 @@ class ProfileScraper:
             # Look for any numbers that might be post counts
             all_numbers = re.findall(r'\b[\d,\.]+\b', page_source)
             log_msg(f"[DEBUG] All numbers found in page: {all_numbers[:20]}", "DEBUG")
+            
+            # Try to find posts-related links and extract numbers
+            posts_links = re.findall(r'href="[^"]*posts[^"]*"[^>]*>([^<]*)', page_source, re.IGNORECASE)
+            log_msg(f"[DEBUG] Posts links found: {posts_links}", "DEBUG")
+            
+            # Look for any text containing "posts" with numbers nearby
+            posts_context = re.findall(r'[^<>]{0,30}posts[^<>]{0,30}', page_source, re.IGNORECASE)
+            log_msg(f"[DEBUG] Posts context found: {posts_context[:10]}", "DEBUG")
         else:
             log_msg(f"[DEBUG] Final posts count for {nickname}: '{stats['POSTS']}'", "DEBUG")
 
