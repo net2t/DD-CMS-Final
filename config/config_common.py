@@ -35,6 +35,7 @@ class Config:
     MAX_DELAY             = float(os.getenv('MAX_DELAY', '0.5'))
     PAGE_LOAD_TIMEOUT     = int(os.getenv('PAGE_LOAD_TIMEOUT', '10'))
     SHEET_WRITE_DELAY     = float(os.getenv('SHEET_WRITE_DELAY', '0.5'))
+    DEBUG_MODE            = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
 
     # Last Post: fetch public profile page 1 to get most recent post.
     # false = fast mode (skip public page), true = full data but uses more API quota.

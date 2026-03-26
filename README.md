@@ -208,6 +208,7 @@ All settings live in `.env` (local) or GitHub Secrets (cloud).
 | `MAX_DELAY` | `0.5` | Maximum seconds between profile requests |
 | `PAGE_LOAD_TIMEOUT` | `10` | Seconds to wait for a page to load |
 | `SHEET_WRITE_DELAY` | `0.5` | Seconds between Google Sheets API calls |
+| `DEBUG_MODE` | `false` | Set `true` to enable detailed debug logging for post count extraction |
 | `LAST_POST_FETCH_PUBLIC_PAGE` | `false` | Set `true` for richer last-post data (slower) |
 | `SORT_PROFILES_BY_DATE` | `true` | Sort Profiles sheet newest-first after each run |
 
@@ -225,6 +226,7 @@ All settings live in `.env` (local) or GitHub Secrets (cloud).
 | 0 profiles found | DamaDam HTML structure changed | Check `config/selectors.py` |
 | Both modes ran at same time | Old workflow files (fixed v3.0.2) | Replace both `.github/workflows/` files |
 | Post count blank (Col K) | Scraper missed `<b>` tag (fixed v3.0.2) | Update `target_mode.py` and `sheets_manager.py` |
+| Post count still blank | New HTML structure or pattern mismatch | Set `DEBUG_MODE=true` and run to see extraction details |
 | Duplicates after every run | Cache sync bug (fixed v3.0.2) | Update `sheets_manager.py` |
 
 → Full guide: [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md)

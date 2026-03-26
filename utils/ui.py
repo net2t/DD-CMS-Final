@@ -18,6 +18,8 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 
+from config.config_common import Config
+
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -110,6 +112,10 @@ def log_progress(processed, total, nickname="", status=""):
 
 def log_msg(msg, level="INFO", progress=None, total=None):
     """Main logger — writes to terminal + optional log file."""
+    # Skip debug messages unless DEBUG_MODE is enabled
+    if level == "DEBUG" and not Config.DEBUG_MODE:
+        return
+        
     ts    = get_pkt_time().strftime('%H:%M:%S')
     is_ci = os.getenv('GITHUB_ACTIONS') == 'true'
 
@@ -123,11 +129,12 @@ def log_msg(msg, level="INFO", progress=None, total=None):
         "LOGIN":    "bold blue",
         "TIMEOUT":  "dim yellow",
         "SKIP":     "dim",
+        "DEBUG":    "dim white",
     }
     icon_map = {
         "INFO": "💠", "OK": "✅", "SUCCESS": "🎉", "WARNING": "⚠️",
         "ERROR": "❌", "SCRAPING": "🔍", "LOGIN": "🔐", "TIMEOUT": "⏳",
-        "SKIP": "⏭️",
+        "SKIP": "⏭️", "DEBUG": "🐛",
     }
 
     style = style_map.get(level, "white")

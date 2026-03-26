@@ -229,7 +229,7 @@ class ProfileScraper:
             pass
         return ""
 
-    def _extract_stats(self, page_source):
+    def _extract_stats(self, page_source, nickname):
         """
         Extract follower count and post count.
 
@@ -244,45 +244,72 @@ class ProfileScraper:
         stats = {'FOLLOWERS': '', 'POSTS': ''}
 
         # ── Followers ──────────────────────────────────────────────────────────
+        log_msg(f"[DEBUG] Starting follower extraction for {nickname}", "DEBUG")
         try:
-            stats['FOLLOWERS'] = clean_text(
-                self.driver.find_element(By.XPATH, ProfileSelectors.FOLLOWERS_COUNT).text)
-        except Exception:
+            followers_element = self.driver.find_element(By.XPATH, ProfileSelectors.FOLLOWERS_COUNT)
+            stats['FOLLOWERS'] = clean_text(followers_element.text)
+            log_msg(f"[DEBUG] Followers found via XPath: '{stats['FOLLOWERS']}'", "DEBUG")
+        except Exception as e:
+            log_msg(f"[DEBUG] Followers XPath failed: {e}", "DEBUG")
             pass
 
         if not stats['FOLLOWERS']:
-            for pat in [
+            log_msg(f"[DEBUG] Followers count empty, trying regex patterns", "DEBUG")
+            for i, pat in enumerate([
                 r'([\d,\.]+)\s+verified\s+followers',
                 r'([\d,\.]+)\s+followers',
                 r'/followers/[^>]*>\s*<b>([\d,\.]+)',
-            ]:
+            ], 1):
                 m = re.search(pat, page_source, re.IGNORECASE)
                 if m:
                     stats['FOLLOWERS'] = clean_text(m.group(1))
+                    log_msg(f"[DEBUG] Followers found via pattern {i}: '{stats['FOLLOWERS']}' (pattern: {pat})", "DEBUG")
                     break
+                else:
+                    log_msg(f"[DEBUG] Followers pattern {i} no match (pattern: {pat})", "DEBUG")
+        else:
+            log_msg(f"[DEBUG] Final followers count for {nickname}: '{stats['FOLLOWERS']}'", "DEBUG")
 
         # ── Posts ──────────────────────────────────────────────────────────────
+        log_msg(f"[DEBUG] Starting post count extraction for {nickname}", "DEBUG")
         try:
-            stats['POSTS'] = clean_text(
-                self.driver.find_element(By.XPATH, ProfileSelectors.POSTS_COUNT).text)
-        except Exception:
+            posts_element = self.driver.find_element(By.XPATH, ProfileSelectors.POSTS_COUNT)
+            stats['POSTS'] = clean_text(posts_element.text)
+            log_msg(f"[DEBUG] Posts found via XPath: '{stats['POSTS']}'", "DEBUG")
+        except Exception as e:
+            log_msg(f"[DEBUG] Posts XPath failed: {e}", "DEBUG")
             pass
 
         if not stats['POSTS']:
+            log_msg(f"[DEBUG] Posts count empty, trying regex patterns. Page source length: {len(page_source)}", "DEBUG")
             # Try multiple patterns — DamaDam sometimes wraps count differently
-            for pat in [
+            for i, pat in enumerate([
                 r'([\d,\.]+)\s+posts?',
                 r'/posts/[^>]*>\s*<b>([\d,\.]+)',
                 r'<b>([\d,\.]+)</b>\s*posts?',
                 r'posts?[^<]*<b>([\d,\.]+)',
-            ]:
+            ], 1):
                 m = re.search(pat, page_source, re.IGNORECASE)
                 if m:
                     # Use the first capture group that has a digit
                     val = m.group(1) if m.lastindex == 1 else (m.group(2) if m.lastindex >= 2 else "")
                     if val and re.search(r'\d', val):
                         stats['POSTS'] = clean_text(val)
+                        log_msg(f"[DEBUG] Posts found via pattern {i}: '{stats['POSTS']}' (pattern: {pat})", "DEBUG")
                         break
+                    else:
+                        log_msg(f"[DEBUG] Pattern {i} matched but no digits: '{val}' (pattern: {pat})", "DEBUG")
+                else:
+                    log_msg(f"[DEBUG] Pattern {i} no match (pattern: {pat})", "DEBUG")
+        
+        if not stats['POSTS']:
+            log_msg(f"[DEBUG] All post extraction methods failed for {nickname}. Sample page source (first 1000 chars):", "DEBUG")
+            log_msg(f"[DEBUG] {page_source[:1000]}", "DEBUG")
+            # Look for any numbers that might be post counts
+            all_numbers = re.findall(r'\b[\d,\.]+\b', page_source)
+            log_msg(f"[DEBUG] All numbers found in page: {all_numbers[:20]}", "DEBUG")
+        else:
+            log_msg(f"[DEBUG] Final posts count for {nickname}: '{stats['POSTS']}'", "DEBUG")
 
         return stats
 
@@ -406,7 +433,7 @@ class ProfileScraper:
             data['STATUS'] = 'Verified'
 
             mehfil      = self._extract_mehfil_details(page_source)
-            stats       = self._extract_stats(page_source)
+            stats       = self._extract_stats(page_source, nickname)
             _, rank_img = self._extract_rank(page_source)
             user_id     = self._extract_user_id(page_source)
 
