@@ -175,13 +175,6 @@ def do_run(mode: str, max_profiles: int = 0) -> dict:
         # ── Run the phase ──────────────────────────────────────────────────────
         stats, sheets = run_phase(context, mode=mode, max_profiles=max_profiles)
 
-        # ── Sort profiles by date (once at end) ────────────────────────────────
-        if sheets:
-            try:
-                sheets.sort_profiles_by_date()
-            except Exception as e:
-                log_msg(f"Sort failed: {e}", "WARNING")
-
         # ── Update dashboard ───────────────────────────────────────────────────
         if sheets:
             end_time = get_pkt_time()

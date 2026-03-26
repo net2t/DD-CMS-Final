@@ -374,6 +374,16 @@ class SheetsManager:
                     "LAST POST", "LAST POST TIME", "PROFILE LINK",
                     "POST URL", "PHASE 2", "RUN MODE", "LIST"}
 
+    # Only include these columns in the mini note (Insert > Note) change log.
+    # Requested columns: C, D, E, G, H, I, J, K, N, O, P
+    # Mapping (Profiles sheet):
+    #   C=TAGS, D=CITY, E=GENDER, G=AGE, H=JOINED, I=FOLLOWERS, J=LIST,
+    #   K=POSTS, N=LAST POST, O=LAST POST TIME, P=IMAGE
+    _NOTE_LOG_COLS = {
+        "TAGS", "CITY", "GENDER", "AGE", "JOINED", "FOLLOWERS", "LIST",
+        "POSTS", "LAST POST", "LAST POST TIME", "IMAGE",
+    }
+
     def _build_row(self, profile_data):
         row = []
         for col in Config.COLUMN_ORDER:
@@ -426,6 +436,9 @@ class SheetsManager:
               CITY: KARACHI
               FOLLOWERS: 145
         """
+        if not changed_fields:
+            return ""
+        changed_fields = [c for c in changed_fields if c in self._NOTE_LOG_COLS]
         if not changed_fields:
             return ""
         lines = ["BEFORE:"]

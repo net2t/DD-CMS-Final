@@ -19,4 +19,4 @@ def get_public_profile_url(nickname):
     """
     if not nickname or not isinstance(nickname, str):
         return None
-    return f"{Config.BASE_URL}/profile/public/{nickname.strip()}?page=1"
+    return f"{Config.BASE_URL}/profile/public/{nickname.strip()}?page=2"

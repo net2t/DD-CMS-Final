@@ -124,7 +124,7 @@ PAGE_LOAD_TIMEOUT=10
 
 LAST_POST_FETCH_PUBLIC_PAGE=false    # true = fetch page 1 for last post (slower)
 LAST_POST_PUBLIC_PAGE_TIMEOUT=8
-SORT_PROFILES_BY_DATE=true           # sort after each run
+SORT_PROFILES_BY_DATE=true           # (deprecated) end-of-run sort removed
 ```
 
 ---

@@ -210,7 +210,7 @@ All settings live in `.env` (local) or GitHub Secrets (cloud).
 | `SHEET_WRITE_DELAY` | `0.5` | Seconds between Google Sheets API calls |
 | `DEBUG_MODE` | `false` | Set `true` to enable detailed debug logging for post count extraction |
 | `LAST_POST_FETCH_PUBLIC_PAGE` | `false` | Set `true` for richer last-post data (slower) |
-| `SORT_PROFILES_BY_DATE` | `true` | Sort Profiles sheet newest-first after each run |
+| `SORT_PROFILES_BY_DATE` | `true` | (Deprecated) No longer used; end-of-run sort has been removed |
 
 ---
 

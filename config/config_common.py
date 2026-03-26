@@ -59,7 +59,7 @@ class Config:
     # ── Environment ───────────────────────────────────────────────────────────
     IS_CI             = bool(os.getenv('GITHUB_ACTIONS'))
     IS_GITHUB_ACTIONS = IS_CI
-    SCRIPT_VERSION    = "v3.0.0"
+    SCRIPT_VERSION    = "v3.0.3"
 
     # ── Sheet Names ───────────────────────────────────────────────────────────
     SHEET_PROFILES  = "Profiles"

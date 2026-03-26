@@ -273,6 +273,12 @@ class ProfileScraper:
         # ── Posts ──────────────────────────────────────────────────────────────
         log_msg(f"[DEBUG] Starting post count extraction for {nickname}", "DEBUG")
         try:
+            try:
+                WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located((By.XPATH, ProfileSelectors.POSTS_COUNT))
+                )
+            except Exception:
+                pass
             posts_element = self.driver.find_element(By.XPATH, ProfileSelectors.POSTS_COUNT)
             stats['POSTS'] = clean_text(posts_element.text)
             log_msg(f"[DEBUG] Posts found via XPath: '{stats['POSTS']}'", "DEBUG")
@@ -281,6 +287,10 @@ class ProfileScraper:
             pass
 
         if not stats['POSTS']:
+            try:
+                page_source = self.driver.page_source
+            except Exception:
+                pass
             log_msg(f"[DEBUG] Posts count empty, trying regex patterns. Page source length: {len(page_source)}", "DEBUG")
             # Try multiple patterns — DamaDam sometimes wraps count differently
             for i, pat in enumerate([
@@ -432,7 +442,7 @@ class ProfileScraper:
         try:
             log_msg(f"Scraping: {nickname}", "SCRAPING")
             self.driver.get(url)
-            self._wait_for_profile_page(timeout=5)
+            self._wait_for_profile_page(timeout=Config.PAGE_LOAD_TIMEOUT)
             page_source = self.driver.page_source
             now         = get_pkt_time()
 

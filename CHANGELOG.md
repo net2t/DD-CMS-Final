@@ -4,6 +4,48 @@ All notable changes are listed here. Newest version at the top.
 
 ---
 
+## [v3.0.3] — 2026-03-26
+
+### Bug Fixes & Improvements
+
+---
+
+#### Fix 1 — Intermittent Missing POSTS (Col K)
+
+Improved reliability of post count extraction by waiting briefly for the posts element and re-reading page HTML before applying regex fallbacks. Also increased profile page load wait to use `PAGE_LOAD_TIMEOUT`.
+
+**Files changed:**
+- `phases/profile/target_mode.py`
+
+---
+
+#### Fix 2 — Last Post Time/Date Pagination
+
+Public posts page pagination updated from `page=1` to `page=2` to scan at least 2 pages as requested.
+
+**Files changed:**
+- `utils/url_builder.py`
+
+---
+
+#### Fix 3 — Mini Note (Cell Note) Column Restriction
+
+Cell note change logging is now restricted to only these columns: C,D,E,G,H,I,J,K,N,O,P.
+
+**Files changed:**
+- `utils/sheets_manager.py`
+
+---
+
+#### Fix 4 — Remove End-of-Run Sorting
+
+Removed the end-of-run call that sorted the Profiles sheet.
+
+**Files changed:**
+- `run.py`
+
+---
+
 ## [v3.0.2] — 2026-03-24
 
 ### Bug Fixes & Improvements
