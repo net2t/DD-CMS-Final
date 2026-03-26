@@ -87,6 +87,8 @@ def normalize_post_datetime(raw_date):
             has_month = '%m' in fmt or '%b' in fmt or '%B' in fmt
             if not has_day or not has_month:
                 dt = dt.replace(year=now.year, month=now.month, day=now.day)
+                if dt > (now + timedelta(hours=1)):
+                    dt = dt - timedelta(days=1)
             if ':' not in fmt:
                 dt = dt.replace(hour=now.hour, minute=now.minute, second=0, microsecond=0)
             if dt.year > now.year + 1:
@@ -392,12 +394,15 @@ class ProfileScraper:
             data["DATETIME SCRAP"] = now.strftime("%Y-%m-%d %H:%M")
 
             if detect_suspension(page_source) or detect_banned(page_source):
+                data['_STATUS'] = 'Banned'
                 data['STATUS'] = 'Banned'
                 return data
             if detect_unverified(self.driver, page_source):
+                data['_STATUS'] = 'Unverified'
                 data['STATUS'] = 'Unverified'
                 return data
 
+            data['_STATUS'] = 'Verified'
             data['STATUS'] = 'Verified'
 
             mehfil      = self._extract_mehfil_details(page_source)

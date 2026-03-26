@@ -123,10 +123,12 @@ class SheetsManager:
         self._batch_data_requests  = []   # updateCells requests (data only)
         self._batch_note_requests  = []   # updateCells requests (notes only)
         self._batch_count          = 0
+        self._profiles_since_flush = 0
 
         self._ensure_min_cols(self.dashboard_ws, 12)
         self._ensure_min_cols(self.target_ws, 6)
         self._init_headers()
+        self._validate_profiles_headers()
         self._load_tags()
         self._load_existing_profile_rows()
 
@@ -185,6 +187,18 @@ class SheetsManager:
                     self._apply_header_format(ws)
             except Exception as e:
                 log_msg(f"Header init failed for {ws.title}: {e}", "WARNING")
+
+    def _validate_profiles_headers(self):
+        try:
+            expected = [self._format_header_cell(h) for h in Config.COLUMN_ORDER]
+            current = self.profiles_ws.row_values(1)
+            if current and current != expected:
+                raise ValueError(
+                    "Profiles sheet headers do not match Config.COLUMN_ORDER; refusing to write to avoid corrupting columns"
+                )
+        except Exception as e:
+            log_msg(str(e), "ERROR")
+            raise
 
     def _apply_header_format(self, ws):
         try:
@@ -485,10 +499,12 @@ class SheetsManager:
 
         count = self._batch_count
         log_msg(f"Flushing batch ({count} profiles, {len(all_requests)} requests)...")
+        flushed_ok = False
         try:
             self.spreadsheet.batch_update({'requests': all_requests})
             time.sleep(Config.SHEET_WRITE_DELAY)
             log_msg(f"Batch flushed OK ({count} profiles)", "OK")
+            flushed_ok = True
         except APIError as e:
             if '429' in str(e):
                 log_msg("Rate limit on batch flush — waiting 60s...", "WARNING")
@@ -497,22 +513,25 @@ class SheetsManager:
                     self.spreadsheet.batch_update({'requests': all_requests})
                     time.sleep(Config.SHEET_WRITE_DELAY)
                     log_msg(f"Batch flushed OK after retry ({count} profiles)", "OK")
+                    flushed_ok = True
                 except Exception as e2:
                     log_msg(f"Batch flush failed after retry: {e2}", "ERROR")
             else:
                 log_msg(f"Batch flush API error: {e}", "ERROR")
         except Exception as e:
             log_msg(f"Batch flush failed: {e}", "ERROR")
-        finally:
-            self._batch_data_requests = []
-            self._batch_note_requests = []
-            self._batch_count         = 0
-            # CRITICAL: reload cache after flush because batch inserts/moves
-            # can shift row numbers that the in-memory cache no longer reflects.
-            self._load_existing_profile_rows()
+        if not flushed_ok:
+            return False
+
+        self._batch_data_requests  = []
+        self._batch_note_requests  = []
+        self._batch_count          = 0
+        self._profiles_since_flush = 0
+        self._load_existing_profile_rows()
+        return True
 
     def should_flush_batch(self):
-        return self._batch_count > 0 and self._batch_count % Config.BATCH_SIZE == 0
+        return self._profiles_since_flush > 0 and self._profiles_since_flush % Config.BATCH_SIZE == 0
 
     # ── Public write API ───────────────────────────────────────────────────────
 
@@ -535,7 +554,7 @@ class SheetsManager:
         if not nickname:
             return {"status": "error", "error": "missing nickname"}
 
-        status_raw = clean_data(profile_data.get("STATUS", ""))
+        status_raw = clean_data(profile_data.get("_STATUS", profile_data.get("STATUS", "")))
         if status_raw.upper() != "VERIFIED":
             return {"status": "skipped", "reason": "non_verified"}
 
@@ -586,6 +605,7 @@ class SheetsManager:
 
             status = "updated" if changed else "unchanged"
             log_msg(f"{'Updated' if changed else 'Refreshed'} {nickname} → queued for Row 2", "OK")
+            self._profiles_since_flush += 1
             return {"status": status, "changed_fields": changed}
 
         else:
@@ -598,6 +618,7 @@ class SheetsManager:
             # Note: No batch queue for new rows — insert_row already wrote the data.
             # _batch_count is NOT incremented because there's nothing to flush.
             log_msg(f"New profile {nickname} → Row 2 (inserted immediately)", "OK")
+            self._profiles_since_flush += 1
             return {"status": "new"}
 
     # ── Target / RunList helpers ───────────────────────────────────────────────
