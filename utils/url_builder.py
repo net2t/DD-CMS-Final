@@ -1,6 +1,8 @@
 """
 Centralized URL construction for the DamaDam scraper.
 """
+from urllib.parse import quote
+
 from config.config_common import Config
 
 
@@ -8,7 +10,8 @@ def get_profile_url(nickname):
     """Returns the private profile URL for a given nickname."""
     if not nickname or not isinstance(nickname, str):
         return None
-    return f"{Config.BASE_URL}/users/{nickname.strip()}/"
+    nick = quote(nickname.strip(), safe="")
+    return f"{Config.BASE_URL}/users/{nick}/"
 
 
 def get_public_profile_url(nickname):
@@ -19,4 +22,5 @@ def get_public_profile_url(nickname):
     """
     if not nickname or not isinstance(nickname, str):
         return None
-    return f"{Config.BASE_URL}/profile/public/{nickname.strip()}?page=2"
+    nick = quote(nickname.strip(), safe="")
+    return f"{Config.BASE_URL}/profile/public/{nick}?page=1"

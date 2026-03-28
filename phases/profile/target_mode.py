@@ -166,6 +166,32 @@ class ProfileScraper:
     def __init__(self, driver):
         self.driver = driver
 
+    def _extract_digits(self, text):
+        if not text:
+            return ""
+        m = re.search(r"(\d[\d,\.]*)", str(text))
+        return m.group(1) if m else ""
+
+    def _parse_count_from_anchor(self, anchor_elem):
+        """Try to extract a numeric count from an <a> element that may or may not contain a <b>."""
+        if not anchor_elem:
+            return ""
+        try:
+            raw = anchor_elem.text or ""
+        except Exception:
+            raw = ""
+        digits = self._extract_digits(raw)
+        if digits:
+            return clean_text(digits)
+
+        # Fallback: some layouts put the number inside child nodes
+        try:
+            child_text = " ".join([c.text for c in anchor_elem.find_elements(By.XPATH, ".//*") if c.text])
+        except Exception:
+            child_text = ""
+        digits = self._extract_digits(child_text)
+        return clean_text(digits)
+
     def _wait_for_profile_page(self, timeout=5):
         """Wait for profile page to load by checking multiple elements.
         Returns True if any profile element found, raises TimeoutException otherwise."""
@@ -247,7 +273,7 @@ class ProfileScraper:
         log_msg(f"[DEBUG] Starting follower extraction for {nickname}", "DEBUG")
         try:
             followers_element = self.driver.find_element(By.XPATH, ProfileSelectors.FOLLOWERS_COUNT)
-            stats['FOLLOWERS'] = clean_text(followers_element.text)
+            stats['FOLLOWERS'] = self._parse_count_from_anchor(followers_element)
             log_msg(f"[DEBUG] Followers found via XPath: '{stats['FOLLOWERS']}'", "DEBUG")
         except Exception as e:
             log_msg(f"[DEBUG] Followers XPath failed: {e}", "DEBUG")
@@ -258,7 +284,7 @@ class ProfileScraper:
             for i, pat in enumerate([
                 r'([\d,\.]+)\s+verified\s+followers',
                 r'([\d,\.]+)\s+followers',
-                r'/followers/[^>]*>\s*<b>([\d,\.]+)',
+                r'/followers/[^>]*>\s*(?:<[^>]+>\s*)*([\d,\.]+)',
             ], 1):
                 m = re.search(pat, page_source, re.IGNORECASE)
                 if m:
@@ -280,7 +306,7 @@ class ProfileScraper:
             except Exception:
                 pass
             posts_element = self.driver.find_element(By.XPATH, ProfileSelectors.POSTS_COUNT)
-            stats['POSTS'] = clean_text(posts_element.text)
+            stats['POSTS'] = self._parse_count_from_anchor(posts_element)
             log_msg(f"[DEBUG] Posts found via XPath: '{stats['POSTS']}'", "DEBUG")
         except Exception as e:
             log_msg(f"[DEBUG] Posts XPath failed: {e}", "DEBUG")
@@ -292,24 +318,12 @@ class ProfileScraper:
             except Exception:
                 pass
             log_msg(f"[DEBUG] Posts count empty, trying regex patterns. Page source length: {len(page_source)}", "DEBUG")
-            # Try multiple patterns — DamaDam sometimes wraps count differently
+            # Safer patterns — keep number close to "posts" label or posts link
             for i, pat in enumerate([
-                r'([\d,\.]+)\s+posts?',
-                r'/posts/[^>]*>\s*<b>([\d,\.]+)',
-                r'<b>([\d,\.]+)</b>\s*posts?',
-                r'posts?[^<]*<b>([\d,\.]+)',
-                # New patterns based on common DamaDam structures
-                r'href="/posts/[^"]*"[^>]*>([\d,\.]+)',
-                r'posts[^>]*>([\d,\.]+)',
-                r'(\d+)\s*posts?',
-                r'Posts:\s*(\d+)',
-                r'post[^>]*>(\d+)',
-                r'/posts/.*?(\d+)',
-                # NEW: Pattern for the current HTML structure
-                r'<div>POSTS</div>\s*</div>\s*</button>\s*</a>',  # This won't work, need different approach
-                r'href="/profile/public/[^"]*"[^>]*>.*?<div>(\d+)</div>.*?POSTS',
-                r'<div>(\d+)</div>\s*<div[^>]*>POSTS</div>',
-                r'POSTS.*?<div>(\d+)</div>',
+                r'/posts/[^>]*>\s*(?:<[^>]+>\s*)*([\d,\.]+)',
+                r'\b([\d,\.]+)\b\s*posts?\b',
+                r'<div>\s*([\d,\.]+)\s*</div>\s*<div[^>]*>\s*POSTS\s*</div>',
+                r'POSTS\s*</div>\s*</div>\s*<div>\s*([\d,\.]+)\s*</div>',
             ], 1):
                 m = re.search(pat, page_source, re.IGNORECASE)
                 if m:
@@ -521,7 +535,26 @@ class ProfileScraper:
             return data
 
         except TimeoutException:
+            try:
+                cur_url = self.driver.current_url
+            except Exception:
+                cur_url = ""
+            try:
+                title = self.driver.title
+            except Exception:
+                title = ""
+            snippet = ""
+            try:
+                ps = self.driver.page_source or ""
+                snippet = clean_text(ps[:500])
+            except Exception:
+                pass
+
             log_msg(f"Timeout loading profile: {nickname}", "TIMEOUT")
+            if cur_url or title:
+                log_msg(f"[TIMEOUT DEBUG] url={cur_url} | title={title}", "DEBUG")
+            if snippet:
+                log_msg(f"[TIMEOUT DEBUG] snippet={snippet}", "DEBUG")
             return None
         except Exception as e:
             log_msg(f"Error scraping {nickname}: {e}", "ERROR")

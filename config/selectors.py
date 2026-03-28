@@ -5,8 +5,8 @@ class ProfileSelectors:
     NICKNAME_HEADER    = "//h1"
     PROFILE_LOADED     = [
         "//h1",
-        "//a[contains(@href, '/followers/')]/b",
-        "//a[contains(@href, '/posts/')]/b",
+        "//*[@href and contains(@href,'/followers/')]",
+        "//*[@href and contains(@href,'/posts/')]",
     ]
     UNVERIFIED_BADGE   = ".//span[contains(text(), 'Unverified User')]"
     INTRO_TEXT_B       = "//b[contains(normalize-space(.), 'Intro')]/following-sibling::span[1]"
@@ -15,8 +15,8 @@ class ProfileSelectors:
     DETAIL_PATTERN_2   = "//div[contains(., '{}:') and not(contains(., '<img'))]"
     DETAIL_PATTERN_3   = "//span[contains(@class, 'label') and contains(., '{}:')]/following-sibling::span[1]"
     FRIEND_STATUS_BUTTON      = "//form[contains(@action, '/follow/')]/button"
-    FOLLOWERS_COUNT           = "//a[contains(@href, '/followers/')]/b"
-    POSTS_COUNT               = "//a[contains(@href, '/posts/')]/b"
+    FOLLOWERS_COUNT           = "//*[@href and contains(@href,'/followers/')]"
+    POSTS_COUNT               = "//*[@href and contains(@href,'/posts/')]"
     LAST_POST_TEXT            = "//div[contains(@class, 'pst')]/a"
     LAST_POST_TIME            = "//div[contains(@class, 'pst')]/following-sibling::div/span[contains(@class, 'gry') and contains(@class, 'sp') and not(contains(@class, 'lk'))]"
     PROFILE_IMAGE             = "//img[contains(@class, 'dp') and contains(@class, 's') and contains(@class, 'cov')]"
