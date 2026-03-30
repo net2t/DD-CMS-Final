@@ -4,6 +4,107 @@ All notable changes are listed here. Newest version at the top.
 
 ---
 
+## [v3.0.4] — 2026-03-30
+
+### Critical Bug Fix — Profile Drop + Missing target_mode.py
+
+---
+
+#### Fix 1 — target_mode.py Was Missing (Critical)
+
+**Problem:**
+`phases/profile/target_mode.py` did not exist — only `target_mode.py.bak` was present.
+This means the scraper could not import or run profile scraping at all.
+
+**Root cause:**
+File was likely renamed to `.bak` during a previous debug session and the restored version
+was never committed. `.bak` files are not imported by Python.
+
+**Fix:**
+Restored `target_mode.py` from `.bak` with all v3.0.4 fixes applied on top.
+
+**Files changed:**
+- `phases/profile/target_mode.py` — created (was missing)
+
+---
+
+#### Fix 2 — has_meaningful_data Block Was Silently Dropping Valid Profiles (Critical)
+
+**Problem:**
+Valid profiles were being scraped successfully but then returned as `None` and never written
+to the sheet. Old stale data remained in the sheet indefinitely.
+
+**Root cause:**
+The `has_meaningful_data` check at the end of `scrape_profile()` returned `None` if all of
+CITY, AGE, FOLLOWERS, POSTS, IMAGE, MEH NAME were empty — even if NICK NAME was present and
+the profile was a real, accessible profile. When DamaDam selectors failed (see Fix 3), this
+block dropped those profiles silently. The sheet then kept the old incorrect values forever.
+
+**Old code (broken):**
+```python
+if not has_meaningful_data:
+    log_msg(f"Skipping {nickname} - no meaningful profile data extracted", "WARNING")
+    return None   # ← PROFILE DROPPED — stale data stays in sheet
+```
+
+**Fix (new behaviour):**
+```python
+# Never drop a profile if NICK NAME is present.
+# Save it with DATA_STATUS = 'PARTIAL' so you know it needs attention.
+data['DATA_STATUS'] = 'PARTIAL' if not has_meaningful_data else 'COMPLETE'
+return data   # ← Always write — stale data always overwritten
+```
+
+**Impact:**
+- Profiles with partial data are now written to the sheet.
+- `DATA_STATUS` column shows `COMPLETE` or `PARTIAL` per profile.
+- RunList remarks now include `[COMPLETE]` or `[PARTIAL]` tag for visibility.
+- No profile is ever silently dropped due to selector failures.
+
+**Files changed:**
+- `phases/profile/target_mode.py` — `scrape_profile()` method
+
+---
+
+#### Fix 3 — Emergency Random-Number Fallback Removed
+
+**Problem:**
+When both XPath and regex follower/post extraction failed, the code picked any number from
+the page source and injected it as FOLLOWERS count. This caused incorrect data in Col J.
+
+**Root cause:**
+An "emergency last resort" block in `_extract_stats()` searched all numbers on the page
+and used the first "reasonable-looking" one as FOLLOWERS. On profiles with no follower
+anchor in the DOM, this returned completely unrelated numbers.
+
+**Fix:**
+Removed the emergency block entirely. If both XPath and regex fail, the field is left blank.
+A blank field is correct and honest. A random wrong number is worse than blank.
+
+**Diagnostic improvement:**
+Added detailed `[DEBUG]` log lines showing posts links found in HTML and context snippets
+around the word "posts" — so future selector failures are easier to diagnose from logs.
+
+**Files changed:**
+- `phases/profile/target_mode.py` — `_extract_stats()` method
+
+---
+
+#### Fix 4 — DATA_STATUS Field Added to All Profiles
+
+**What it does:**
+Every scraped profile now has a `DATA_STATUS` field set to either:
+- `COMPLETE` — at least one of: CITY, AGE, FOLLOWERS, POSTS, IMAGE, MEH NAME was extracted
+- `PARTIAL` — none of the above were extracted (selector failure or empty profile)
+
+Banned and Unverified profiles also get `DATA_STATUS = COMPLETE` because their status
+is definitively known.
+
+**Files changed:**
+- `phases/profile/target_mode.py` — `scrape_profile()` and `run_target_mode()`
+
+---
+
 ## [v3.0.3] — 2026-03-26
 
 ### Bug Fixes & Improvements

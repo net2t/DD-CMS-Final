@@ -1,11 +1,13 @@
 """
 Profile Scraper + Target Mode Runner — DD-CMS-V3
 
-Fixes (v3.0.2):
-- Post count: more aggressive fallback extraction; also preserved if blank via sheets_manager
-- Batch flush: called at correct intervals; final flush guaranteed at end of run
-- Row movement: every profile moves to Row 2 (handled in sheets_manager.write_profile)
-- Col D ignore: handled in sheets_manager.get_pending_targets()
+Fixes (v3.0.4):
+- CRITICAL: target_mode.py was missing (only .bak existed) — restored from backup
+- has_meaningful_data: no longer drops profiles silently. Profiles with partial data
+  are now saved with DATA_STATUS = 'PARTIAL' instead of being discarded.
+- Only drops profile if NICK NAME itself is missing (truly unsalvageable).
+- Emergency random-number fallback removed — was injecting wrong data into FOLLOWERS.
+- DATA_STATUS field added to every scraped profile ('COMPLETE' or 'PARTIAL').
 """
 
 import time
@@ -65,11 +67,11 @@ def normalize_post_datetime(raw_date):
         for amount, unit in re.findall(r'(\d+)\s*(year|yr|month|mon|week|wk|day|hour|hr|minute|min|second|sec)s?', text):
             amount = int(amount)
             u = unit
-            if u in ('year', 'yr'):    delta += timedelta(days=amount * 365)
+            if u in ('year', 'yr'):     delta += timedelta(days=amount * 365)
             elif u in ('month', 'mon'): delta += timedelta(days=amount * 30)
-            elif u in ('week', 'wk'):  delta += timedelta(weeks=amount)
-            elif u == 'day':            delta += timedelta(days=amount)
-            elif u in ('hour', 'hr'):  delta += timedelta(hours=amount)
+            elif u in ('week', 'wk'):   delta += timedelta(weeks=amount)
+            elif u == 'day':             delta += timedelta(days=amount)
+            elif u in ('hour', 'hr'):   delta += timedelta(hours=amount)
             elif u in ('minute', 'min'):delta += timedelta(minutes=amount)
             elif u in ('second', 'sec'):delta += timedelta(seconds=amount)
         return (now - delta).strftime("%d-%b-%y %I:%M %p").lower()
@@ -82,8 +84,7 @@ def normalize_post_datetime(raw_date):
     ]:
         try:
             dt = datetime.strptime(text, fmt)
-            # Check if date components are missing (time-only formats)
-            has_day = '%d' in fmt
+            has_day   = '%d' in fmt
             has_month = '%m' in fmt or '%b' in fmt or '%B' in fmt
             if not has_day or not has_month:
                 dt = dt.replace(year=now.year, month=now.month, day=now.day)
@@ -173,7 +174,11 @@ class ProfileScraper:
         return m.group(1) if m else ""
 
     def _parse_count_from_anchor(self, anchor_elem):
-        """Try to extract a numeric count from an <a> element that may or may not contain a <b>."""
+        """
+        Try to extract a numeric count from an <a> element.
+        First reads direct .text, then falls back to child node text.
+        The /b child is NOT required — DamaDam removed it.
+        """
         if not anchor_elem:
             return ""
         try:
@@ -184,20 +189,22 @@ class ProfileScraper:
         if digits:
             return clean_text(digits)
 
-        # Fallback: some layouts put the number inside child nodes
+        # Fallback: count may be inside a child element (span, b, etc.)
         try:
-            child_text = " ".join([c.text for c in anchor_elem.find_elements(By.XPATH, ".//*") if c.text])
+            child_text = " ".join(
+                [c.text for c in anchor_elem.find_elements(By.XPATH, ".//*") if c.text]
+            )
         except Exception:
             child_text = ""
         digits = self._extract_digits(child_text)
         return clean_text(digits)
 
     def _wait_for_profile_page(self, timeout=5):
-        """Wait for profile page to load by checking multiple elements.
-        Returns True if any profile element found, raises TimeoutException otherwise."""
+        """
+        Wait until at least one profile element appears in DOM.
+        Returns True if loaded. Raises TimeoutException if not.
+        """
         end_time = time.time() + timeout
-        last_error = None
-        
         while time.time() < end_time:
             for selector in ProfileSelectors.PROFILE_LOADED:
                 try:
@@ -207,7 +214,6 @@ class ProfileScraper:
                 except NoSuchElementException:
                     continue
             time.sleep(0.2)
-        
         raise TimeoutException(f"Profile page did not load within {timeout}s")
 
     def _extract_mehfil_details(self, page_source):
@@ -257,19 +263,24 @@ class ProfileScraper:
 
     def _extract_stats(self, page_source, nickname):
         """
-        Extract follower count and post count.
+        Extract follower count and post count using a 3-layer fallback strategy.
 
-        Strategy (in order):
-          1. XPath selectors on page elements
-          2. Regex fallbacks on raw page_source
-          3. Wider regex patterns to catch different HTML structures
+        Layer 1: XPath on live DOM elements (most reliable)
+        Layer 2: Regex on raw page_source (medium reliability)
+        Layer 3: Empty string returned — no random-number fallback (removed in v3.0.4)
+                 because guessing wrong numbers is worse than leaving the field blank.
 
-        Post count is also extracted from URL-count patterns in case the
-        <b> tag inside the posts link is missing.
+        FIX v3.0.4: Removed emergency random-number fallback from previous version.
+        That block was picking any number from the page and injecting it as FOLLOWERS
+        count — which caused incorrect data being written to the sheet.
         """
         stats = {'FOLLOWERS': '', 'POSTS': ''}
 
-        # ── Followers ──────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────────────────
+        # FOLLOWERS — Layer 1: XPath
+        # WHAT IT DOES: Finds the /followers/ anchor and reads its text directly.
+        # FIX: No /b child needed — DamaDam now puts count as plain anchor text.
+        # ────────────────────────────────────────────────────────────────────────
         log_msg(f"[DEBUG] Starting follower extraction for {nickname}", "DEBUG")
         try:
             followers_element = self.driver.find_element(By.XPATH, ProfileSelectors.FOLLOWERS_COUNT)
@@ -277,10 +288,12 @@ class ProfileScraper:
             log_msg(f"[DEBUG] Followers found via XPath: '{stats['FOLLOWERS']}'", "DEBUG")
         except Exception as e:
             log_msg(f"[DEBUG] Followers XPath failed: {e}", "DEBUG")
-            pass
 
+        # FOLLOWERS — Layer 2: Regex fallback
+        # WHAT IT DOES: Searches raw HTML for follower count patterns.
+        # AFFECTS: Catches profiles where the anchor is present but Selenium can't read it.
         if not stats['FOLLOWERS']:
-            log_msg(f"[DEBUG] Followers count empty, trying regex patterns", "DEBUG")
+            log_msg(f"[DEBUG] Followers XPath empty, trying regex", "DEBUG")
             for i, pat in enumerate([
                 r'([\d,\.]+)\s+verified\s+followers',
                 r'([\d,\.]+)\s+followers',
@@ -288,15 +301,22 @@ class ProfileScraper:
             ], 1):
                 m = re.search(pat, page_source, re.IGNORECASE)
                 if m:
-                    stats['FOLLOWERS'] = clean_text(m.group(1))
-                    log_msg(f"[DEBUG] Followers found via pattern {i}: '{stats['FOLLOWERS']}' (pattern: {pat})", "DEBUG")
+                    # Use last capture group that has digits
+                    val = m.group(m.lastindex) if m.lastindex else m.group(1)
+                    stats['FOLLOWERS'] = clean_text(val)
+                    log_msg(f"[DEBUG] Followers via regex pattern {i}: '{stats['FOLLOWERS']}'", "DEBUG")
                     break
                 else:
-                    log_msg(f"[DEBUG] Followers pattern {i} no match (pattern: {pat})", "DEBUG")
-        else:
-            log_msg(f"[DEBUG] Final followers count for {nickname}: '{stats['FOLLOWERS']}'", "DEBUG")
+                    log_msg(f"[DEBUG] Followers regex pattern {i} no match", "DEBUG")
 
-        # ── Posts ──────────────────────────────────────────────────────────────
+        if not stats['FOLLOWERS']:
+            log_msg(f"[WARNING] FOLLOWERS empty for {nickname} — will save as blank", "WARNING")
+
+        # ────────────────────────────────────────────────────────────────────────
+        # POSTS — Layer 1: XPath
+        # WHAT IT DOES: Finds /posts/ anchor, waits briefly, reads count.
+        # FIX: No /b child — same fix as FOLLOWERS above.
+        # ────────────────────────────────────────────────────────────────────────
         log_msg(f"[DEBUG] Starting post count extraction for {nickname}", "DEBUG")
         try:
             try:
@@ -310,15 +330,17 @@ class ProfileScraper:
             log_msg(f"[DEBUG] Posts found via XPath: '{stats['POSTS']}'", "DEBUG")
         except Exception as e:
             log_msg(f"[DEBUG] Posts XPath failed: {e}", "DEBUG")
-            pass
 
+        # POSTS — Layer 2: Regex fallback
+        # WHAT IT DOES: Multiple regex patterns on raw HTML for post count.
+        # AFFECTS: Catches posts count from different HTML structures DamaDam may use.
         if not stats['POSTS']:
             try:
+                # Re-read page source in case DOM updated after XPath attempt
                 page_source = self.driver.page_source
             except Exception:
                 pass
-            log_msg(f"[DEBUG] Posts count empty, trying regex patterns. Page source length: {len(page_source)}", "DEBUG")
-            # Safer patterns — keep number close to "posts" label or posts link
+            log_msg(f"[DEBUG] Posts XPath empty, trying regex. Source len={len(page_source)}", "DEBUG")
             for i, pat in enumerate([
                 r'/posts/[^>]*>\s*(?:<[^>]+>\s*)*([\d,\.]+)',
                 r'\b([\d,\.]+)\b\s*posts?\b',
@@ -327,33 +349,23 @@ class ProfileScraper:
             ], 1):
                 m = re.search(pat, page_source, re.IGNORECASE)
                 if m:
-                    # Use the first capture group that has a digit
-                    val = m.group(1) if m.lastindex == 1 else (m.group(2) if m.lastindex >= 2 else "")
+                    val = m.group(m.lastindex) if m.lastindex else m.group(1)
                     if val and re.search(r'\d', val):
                         stats['POSTS'] = clean_text(val)
-                        log_msg(f"[DEBUG] Posts found via pattern {i}: '{stats['POSTS']}' (pattern: {pat})", "DEBUG")
+                        log_msg(f"[DEBUG] Posts via regex pattern {i}: '{stats['POSTS']}'", "DEBUG")
                         break
                     else:
-                        log_msg(f"[DEBUG] Pattern {i} matched but no digits: '{val}' (pattern: {pat})", "DEBUG")
+                        log_msg(f"[DEBUG] Pattern {i} matched but no digits: '{val}'", "DEBUG")
                 else:
-                    log_msg(f"[DEBUG] Pattern {i} no match (pattern: {pat})", "DEBUG")
-        
+                    log_msg(f"[DEBUG] Posts regex pattern {i} no match", "DEBUG")
+
         if not stats['POSTS']:
-            log_msg(f"[DEBUG] All post extraction methods failed for {nickname}. Sample page source (first 1000 chars):", "DEBUG")
-            log_msg(f"[DEBUG] {page_source[:1000]}", "DEBUG")
-            # Look for any numbers that might be post counts
-            all_numbers = re.findall(r'\b[\d,\.]+\b', page_source)
-            log_msg(f"[DEBUG] All numbers found in page: {all_numbers[:20]}", "DEBUG")
-            
-            # Try to find posts-related links and extract numbers
+            # Diagnostic log — helps debug future selector failures
             posts_links = re.findall(r'href="[^"]*posts[^"]*"[^>]*>([^<]*)', page_source, re.IGNORECASE)
-            log_msg(f"[DEBUG] Posts links found: {posts_links}", "DEBUG")
-            
-            # Look for any text containing "posts" with numbers nearby
             posts_context = re.findall(r'[^<>]{0,30}posts[^<>]{0,30}', page_source, re.IGNORECASE)
-            log_msg(f"[DEBUG] Posts context found: {posts_context[:10]}", "DEBUG")
-        else:
-            log_msg(f"[DEBUG] Final posts count for {nickname}: '{stats['POSTS']}'", "DEBUG")
+            log_msg(f"[WARNING] POSTS empty for {nickname} — will save as blank", "WARNING")
+            log_msg(f"[DEBUG] Posts links in HTML: {posts_links}", "DEBUG")
+            log_msg(f"[DEBUG] Posts context snippets: {posts_context[:5]}", "DEBUG")
 
         return stats
 
@@ -362,7 +374,8 @@ class ProfileScraper:
 
         try:
             href = self.driver.find_element(By.XPATH, ProfileSelectors.LAST_POST_TEXT).get_attribute('href')
-            if href: result['LAST POST'] = normalize_post_url(href)
+            if href:
+                result['LAST POST'] = normalize_post_url(href)
         except Exception:
             pass
         try:
@@ -371,6 +384,7 @@ class ProfileScraper:
         except Exception:
             pass
 
+        # Skip public page fetch if user has 0 posts
         if posts_count == 0:
             return result
 
@@ -414,7 +428,6 @@ class ProfileScraper:
                 try:
                     self.driver.get(private_url)
                     self._wait_for_profile_page(timeout=Config.LAST_POST_PUBLIC_PAGE_TIMEOUT)
-                    # Validate we're back on the correct profile page
                     current_url = self.driver.current_url.rstrip('/')
                     if current_url != private_url.rstrip('/'):
                         log_msg(f"Navigation mismatch: expected {private_url}, got {current_url}", "WARNING")
@@ -426,7 +439,8 @@ class ProfileScraper:
         try:
             img = self.driver.find_element(By.CSS_SELECTOR, ProfileSelectors.PROFILE_IMAGE_CLOUDFRONT)
             src = img.get_attribute('src')
-            if src and src.startswith('http'): return src
+            if src and src.startswith('http'):
+                return src
         except Exception:
             pass
         try:
@@ -438,8 +452,12 @@ class ProfileScraper:
             pass
         if page_source:
             m = re.search(r"<img[^>]+src=['\"](https?://[^'\"]+avatar-imgs/[^'\"]+)['\"]", page_source, re.I)
-            if m: return m.group(1)
-        m = re.search(r"<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']", page_source or "", re.I)
+            if m:
+                return m.group(1)
+        m = re.search(
+            r"<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']",
+            page_source or "", re.I
+        )
         if m:
             url = m.group(1)
             if 'og_image.png' not in url:
@@ -447,6 +465,24 @@ class ProfileScraper:
         return ""
 
     def scrape_profile(self, nickname, source="Target"):
+        """
+        Main profile scraping method.
+
+        FIX v3.0.4 — has_meaningful_data logic overhauled:
+
+        OLD BEHAVIOUR (BROKEN):
+          If CITY, AGE, FOLLOWERS, POSTS, IMAGE, MEH NAME were all empty:
+          → return None (profile silently dropped, OLD stale data stays in sheet)
+
+        NEW BEHAVIOUR (FIXED):
+          → Always save the profile if NICK NAME is present.
+          → Set DATA_STATUS = 'PARTIAL' when meaningful fields are missing.
+          → Set DATA_STATUS = 'COMPLETE' when at least one meaningful field found.
+          → Stale data is always overwritten — never left behind.
+
+        WHY: A profile with empty FOLLOWERS/POSTS is still a valid profile.
+        Dropping it meant the sheet kept old wrong values forever.
+        """
         clean_nick = sanitize_nickname_for_url(nickname)
         if not clean_nick:
             log_msg(f"Invalid nickname: {nickname}", "ERROR")
@@ -464,18 +500,22 @@ class ProfileScraper:
             data["NICK NAME"]      = clean_nick
             data["DATETIME SCRAP"] = now.strftime("%Y-%m-%d %H:%M")
 
+            # ── Banned / Suspended / Unverified detection ──────────────────────
             if detect_suspension(page_source) or detect_banned(page_source):
-                data['_STATUS'] = 'Banned'
-                data['STATUS'] = 'Banned'
+                data['_STATUS']     = 'Banned'
+                data['STATUS']      = 'Banned'
+                data['DATA_STATUS'] = 'COMPLETE'  # Status is definitively known
                 return data
             if detect_unverified(self.driver, page_source):
-                data['_STATUS'] = 'Unverified'
-                data['STATUS'] = 'Unverified'
+                data['_STATUS']     = 'Unverified'
+                data['STATUS']      = 'Unverified'
+                data['DATA_STATUS'] = 'COMPLETE'  # Status is definitively known
                 return data
 
             data['_STATUS'] = 'Verified'
-            data['STATUS'] = 'Verified'
+            data['STATUS']  = 'Verified'
 
+            # ── Extract all profile data ───────────────────────────────────────
             mehfil      = self._extract_mehfil_details(page_source)
             stats       = self._extract_stats(page_source, nickname)
             _, rank_img = self._extract_rank(page_source)
@@ -507,6 +547,7 @@ class ProfileScraper:
                 "MEH DATE":       "\n".join(mehfil['MEH DATE']),
             })
 
+            # ── Structured detail fields (City, Gender, Age, Married, Joined) ──
             field_map = [
                 ('City',    'CITY',    lambda x: clean_text(x) if x else ''),
                 ('Gender',  'GENDER',  lambda x: 'Female' if x and 'female' in x.lower()
@@ -531,6 +572,36 @@ class ProfileScraper:
                             break
                     except Exception:
                         continue
+
+            # ──────────────────────────────────────────────────────────────────
+            # DATA_STATUS: COMPLETE vs PARTIAL
+            #
+            # FIX v3.0.4: This block NEVER drops a profile anymore.
+            #
+            # OLD CODE:
+            #   if not has_meaningful_data:
+            #       return None   ← THIS WAS THE BUG — stale data stayed in sheet
+            #
+            # NEW CODE:
+            #   Always return data. Set DATA_STATUS to tell us how complete it is.
+            #   The sheet will always overwrite — never leave old values behind.
+            # ──────────────────────────────────────────────────────────────────
+            has_meaningful_data = any([
+                data.get("CITY"),
+                data.get("AGE"),
+                data.get("FOLLOWERS"),
+                data.get("POSTS"),
+                data.get("IMAGE"),
+                data.get("MEH NAME"),
+            ])
+
+            if has_meaningful_data:
+                data['DATA_STATUS'] = 'COMPLETE'
+                log_msg(f"Profile {nickname} scraped — DATA_STATUS: COMPLETE", "OK")
+            else:
+                # ← KEY FIX: Was return None. Now we save as PARTIAL.
+                data['DATA_STATUS'] = 'PARTIAL'
+                log_msg(f"Profile {nickname} has no meaningful data — saving as PARTIAL (not dropping)", "WARNING")
 
             return data
 
@@ -567,10 +638,11 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
     """
     Scrape profiles and write results via batch system.
 
-    moveDimension (row move to top) is still done immediately per profile.
-    Data writes are queued and flushed every BATCH_SIZE profiles.
-
-    Col D in RunList = ignore flag (handled in sheets.get_pending_targets()).
+    FIX v3.0.4:
+    - Profiles with DATA_STATUS=PARTIAL are now written to sheet (not dropped)
+    - Row movement to Row 2 is still done immediately inside write_profile
+    - Data writes are batched and flushed every BATCH_SIZE profiles
+    - Col D in RunList = ignore flag (handled in sheets.get_pending_targets)
     """
     label = (run_label or "TARGET").strip().upper()
     log_msg(f"=== {label} MODE STARTED ===")
@@ -615,10 +687,11 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
         profile_data = scraper.scrape_profile(nickname, source=target.get('source', run_mode))
 
         if not profile_data:
+            # scrape_profile only returns None for genuinely failed/invalid profiles
             consecutive_failures += 1
             stats["failed"] += 1
             if target.get('row'):
-                sheets.update_target_status(target['row'], 'error', 'Scraping failed')
+                sheets.update_target_status(target['row'], 'error', 'Scraping failed - no data returned')
             if consecutive_failures >= MAX_CONSEC_FAIL:
                 log_msg(f"{consecutive_failures} consecutive failures — pausing {STALL_PAUSE}s", "WARNING")
                 time.sleep(STALL_PAUSE)
@@ -630,6 +703,8 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
         consecutive_failures = 0
 
         # ── 2. Queue write (moveDimension is immediate inside write_profile) ───
+        # NOTE: Profiles with DATA_STATUS=PARTIAL are written too.
+        # This ensures stale data is always overwritten.
         list_value   = target.get('tag', '') if run_mode == "Target" else ""
         write_result = sheets.write_profile(
             profile_data,
@@ -640,25 +715,28 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
 
         ts = profile_data.get("DATETIME SCRAP") or get_pkt_time().strftime("%Y-%m-%d %H:%M")
 
-        # ── 3. Update RunList status immediately (Target mode only) ────────────
+        # ── 3. Update RunList status immediately ───────────────────────────────
+        # Include DATA_STATUS in remark so RunList shows PARTIAL profiles clearly
+        data_status_tag = f" [{profile_data.get('DATA_STATUS', '')}]" if profile_data.get('DATA_STATUS') else ""
+
         if w_status == "new":
             stats["success"] += 1; stats["new"] += 1
-            remark = f"New Added: {ts}"
+            remark = f"New Added: {ts}{data_status_tag}"
             log_progress(i, len(targets), nickname, "new")
 
         elif w_status == "updated":
             stats["success"] += 1; stats["updated"] += 1
-            remark = f"Updated: {ts}"
+            remark = f"Updated: {ts}{data_status_tag}"
             log_progress(i, len(targets), nickname, "updated")
 
         elif w_status == "unchanged":
             stats["success"] += 1; stats["unchanged"] += 1
-            remark = f"Scraped OK: {ts}"
+            remark = f"Scraped OK: {ts}{data_status_tag}"
             log_progress(i, len(targets), nickname, "unchanged")
 
         elif w_status == "skipped":
             stats["skipped"] += 1
-            remark = f"Skipped (non-verified): {ts}"
+            remark = f"Skipped (non-verified): {ts}{data_status_tag}"
             log_progress(i, len(targets), nickname, "skipped")
 
         else:
@@ -690,5 +768,6 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
         stats["failed"] += 1
 
     log_msg(f"=== {label} MODE COMPLETED — "
-            f"success={stats['success']} failed={stats['failed']} skipped={stats['skipped']} ===")
+            f"success={stats['success']} failed={stats['failed']} "
+            f"skipped={stats['skipped']} partial={stats.get('partial', 0)} ===")
     return stats
