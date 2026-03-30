@@ -366,8 +366,8 @@ class SheetsManager:
     _MEHFIL_MULTILINE = {"MEH NAME", "MEH LINK", "MEH DATE"}
 
     # These columns are preserved from the old row if the new scrape returns blank.
-    # POSTS added here — if scraper misses the count, keep the last known value.
-    _PRESERVE_IF_BLANK = {"POSTS", "LAST POST", "LAST POST TIME"}
+    # POSTS and FOLLOWERS added here — if scraper misses the count, keep the last known value.
+    _PRESERVE_IF_BLANK = {"POSTS", "FOLLOWERS", "LAST POST", "LAST POST TIME"}
 
     # These columns are excluded from change detection (always changing or irrelevant).
     _IGNORE_DIFF = {"ID", "NICK NAME", "JOINED", "DATETIME SCRAP",
