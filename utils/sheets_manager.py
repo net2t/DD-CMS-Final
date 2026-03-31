@@ -372,7 +372,7 @@ class SheetsManager:
     # These columns are excluded from change detection (always changing or irrelevant).
     _IGNORE_DIFF = {"ID", "NICK NAME", "JOINED", "DATETIME SCRAP",
                     "LAST POST", "LAST POST TIME", "PROFILE LINK",
-                    "POST URL", "PHASE 2", "LIST"}
+                    "POST URL", "PHASE 2"}
 
     # Only include these columns in the mini note (Insert > Note) change log.
     # Requested columns: C, D, E, G, H, I, J, K, N, O, P
