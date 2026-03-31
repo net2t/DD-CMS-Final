@@ -49,8 +49,6 @@ jobs:
           DAMADAM_PASSWORD_2: ${{ secrets.DAMADAM_PASSWORD_2 }}
           GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-          ONLINE_GOOGLE_SHEET_URL: ${{ secrets.ONLINE_GOOGLE_SHEET_URL }}
-          ONLINE_GOOGLE_CREDENTIALS_JSON: ${{ secrets.ONLINE_GOOGLE_CREDENTIALS_JSON }}
           PAGE_LOAD_TIMEOUT: '60'
           MIN_DELAY: '1.0'
           MAX_DELAY: '2.0'
