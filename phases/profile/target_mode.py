@@ -595,6 +595,11 @@ class ProfileScraper:
                 data.get("MEH NAME"),
             ])
 
+            gender_val = data.get("GENDER")
+            if gender_val not in ["Male", "Female"]:
+                log_msg(f"Profile {nickname} missing valid Gender ('{gender_val}') — treating as failed page load", "ERROR")
+                return None
+
             if has_meaningful_data:
                 data['DATA_STATUS'] = 'COMPLETE'
                 log_msg(f"Profile {nickname} scraped — DATA_STATUS: COMPLETE", "OK")
@@ -766,6 +771,10 @@ def run_target_mode(driver, sheets, max_profiles=0, targets=None, run_label="TAR
     if not sheets.flush_batch():
         log_msg("Final batch flush failed — run may be missing writes", "ERROR")
         stats["failed"] += 1
+
+    # ── 6. Sort profiles by date ───────────────────────────────────────────────
+    # Now that all profiles are updated/appended and flushed, sort the sheet
+    sheets.sort_profiles_by_date()
 
     log_msg(f"=== {label} MODE COMPLETED — "
             f"success={stats['success']} failed={stats['failed']} "

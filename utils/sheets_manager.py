@@ -303,60 +303,15 @@ class SheetsManager:
         except Exception:
             return None
 
-    def _cache_update_after_move(self, moved_nick, old_row, to_row=2):
+    def _cache_append_at_bottom(self, nickname, row_data):
         """
-        After moving `moved_nick` from old_row → to_row=2,
-        shift all rows that were between to_row and old_row upward by 1.
-        """
-        key = (moved_nick or "").strip().lower()
-        if old_row <= to_row:
-            return
-        # Rows 2..(old_row-1) all move down by 1 because the moved row
-        # was extracted from below them and inserted above them.
-        for k in list(self._existing_profile_rows):
-            r = self._existing_profile_rows[k]
-            if to_row <= r < old_row:
-                self._existing_profile_rows[k] = r + 1
-        # The moved row is now at to_row
-        self._existing_profile_rows[key] = to_row
-        # Invalidate cached detail for any affected rows
-        self.existing_profiles.pop(key, None)
-
-    def _cache_insert_at_top(self, nickname, row_data):
-        """
-        After inserting a new row at row 2, shift all existing rows down by 1.
+        After appending a new row at the bottom, just add it to the cache.
+        Existing rows do NOT shift.
         """
         key = (nickname or "").strip().lower()
-        for k in list(self._existing_profile_rows):
-            self._existing_profile_rows[k] += 1
-        self._existing_profile_rows[key] = 2
-        self.existing_profiles[key] = {'row': 2, 'data': row_data}
-
-    # ── Row movement ───────────────────────────────────────────────────────────
-
-    def _move_row_to_top(self, from_row, to_row=2):
-        """Move a Profiles row to row 2 using Sheets API moveDimension."""
-        if not from_row or from_row <= 1 or from_row == to_row:
-            return True
-        try:
-            sheet_id = self.profiles_ws._properties.get('sheetId')
-            if sheet_id is None:
-                return False
-            body = {"requests": [{"moveDimension": {
-                "source": {
-                    "sheetId":    sheet_id,
-                    "dimension":  "ROWS",
-                    "startIndex": from_row - 1,
-                    "endIndex":   from_row,
-                },
-                "destinationIndex": to_row - 1,
-            }}]}
-            self.spreadsheet.batch_update(body)
-            time.sleep(Config.SHEET_WRITE_DELAY)
-            return True
-        except Exception as e:
-            log_msg(f"Failed to move row {from_row}→{to_row}: {e}", "WARNING")
-            return False
+        new_row = len(self._existing_profile_rows) + 2
+        self._existing_profile_rows[key] = new_row
+        self.existing_profiles[key] = {'row': new_row, 'data': row_data}
 
     # ── Row data builder ───────────────────────────────────────────────────────
 
@@ -597,40 +552,32 @@ class SheetsManager:
                     changed.append(col)
                 final_row.append(new_val)
 
-            # ── Move row to top IMMEDIATELY (must be real-time) ────────────────
-            # Every scraped profile moves to Row 2 regardless of data change.
-            if old_row != 2:
-                if not self._move_row_to_top(old_row, to_row=2):
-                    log_msg(f"Move failed for {nickname} — skipping write", "WARNING")
-                    return {"status": "error", "error": "move failed"}
-                self._cache_update_after_move(key, old_row, to_row=2)
-
-            # ── Queue data write (Row 2 after move) ────────────────────────────
-            self._queue_row_data(2, final_row)
+            # ── Queue data write (at old_row, no moving) ───────────────────────
+            self._queue_row_data(old_row, final_row)
 
             # ── Queue cell note if fields changed ──────────────────────────────
             if changed:
                 note_text = self._build_change_note(changed, old_data, final_row)
-                self._queue_cell_note(2, nick_col_idx, note_text)
+                self._queue_cell_note(old_row, nick_col_idx, note_text)
 
             # Update detail cache
-            self.existing_profiles[key] = {'row': 2, 'data': final_row}
+            self.existing_profiles[key] = {'row': old_row, 'data': final_row}
 
             status = "updated" if changed else "unchanged"
-            log_msg(f"{'Updated' if changed else 'Refreshed'} {nickname} → queued for Row 2", "OK")
+            log_msg(f"{'Updated' if changed else 'Refreshed'} {nickname} → queued for Row {old_row}", "OK")
             self._profiles_since_flush += 1
             return {"status": status, "changed_fields": changed}
 
         else:
-            # ── New profile: INSERT immediately at Row 2 ───────────────────────
-            # Insert must be immediate so row numbering stays correct for
-            # subsequent moveDimension calls in this same run.
-            if not self._write(self.profiles_ws.insert_row, row_data, index=2):
-                return {"status": "error", "error": "insert failed"}
-            self._cache_insert_at_top(nickname, row_data)
-            # Note: No batch queue for new rows — insert_row already wrote the data.
-            # _batch_count is NOT incremented because there's nothing to flush.
-            log_msg(f"New profile {nickname} → Row 2 (inserted immediately)", "OK")
+            # ── New profile: APPEND at the end of the sheet ────────────────────
+            # Using append_row means existing rows do not shift, so our queued
+            # batch writes to absolute row indices stay valid.
+            if not self._write(self.profiles_ws.append_row, row_data):
+                return {"status": "error", "error": "append failed"}
+            self._cache_append_at_bottom(nickname, row_data)
+            
+            # Note: No batch queue for new rows — append_row already wrote the data.
+            log_msg(f"New profile {nickname} → Appended to end of sheet", "OK")
             self._profiles_since_flush += 1
             return {"status": "new"}
 
