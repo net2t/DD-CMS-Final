@@ -8,11 +8,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Space+Mono:wght@400;700&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#07090f;--bg2:#0b0e19;--bg3:#111626;--surf:#151c2e;
-  --bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.14);
-  --txt:#dde1ef;--txt2:#8891aa;--txt3:#485068;
-  --acc:#00d4ff;--pur:#7c5cfc;--pink:#ff4f7b;--blue:#3d9eff;
-  --gold:#ffd166;--green:#06d6a0;
+  --bg:#04060b;--bg2:#0a0d16;--bg3:#131826;--surf:#101420;
+  --bd:rgba(255,255,255,0.09);--bd2:rgba(255,255,255,0.18);
+  --txt:#e9ebf0;--txt2:#9eacc4;--txt3:#67728f;
+  --acc:#4285f4;--pur:#a142f4;--pink:#f4427b;--blue:#42a5f4;
+  --gold:#f4b400;--green:#0f9d58;
+  --bg-fade:rgba(10,13,22,1);
   --r:10px;--r2:16px;
   --ff-h:'Rajdhani','Exo 2',sans-serif;
   --ff-b:'Exo 2',sans-serif;
@@ -34,9 +35,20 @@ body::after{
   pointer-events:none;z-index:0;
 }
 
-/* TOPBAR */
+/* TOPBAR & SIDEBAR */
+.sb-ov{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:800;display:none;backdrop-filter:blur(3px)}
+.sb-ov.open{display:block}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:260px;background:var(--bg2);z-index:801;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.2,1,0.2,1);border-right:1px solid var(--bd);padding:24px 20px}
+.sidebar.open{transform:translateX(0)}
+.sb-head{font-family:var(--ff-h);font-size:24px;font-weight:700;color:var(--txt);margin-bottom:30px;letter-spacing:1px;display:flex;align-items:center;gap:10px}
+.sb-btn{padding:12px 16px;border-radius:10px;font-family:var(--ff-b);font-size:14px;font-weight:600;color:var(--txt2);cursor:pointer;margin-bottom:8px;transition:all 0.2s;display:flex;align-items:center;gap:12px}
+.sb-btn:hover{background:var(--surf);color:var(--txt)}
+.sb-btn.act{background:linear-gradient(135deg,rgba(66,133,244,0.15),rgba(161,66,244,0.15));color:var(--acc);border:1px solid rgba(66,133,244,0.2)}
+.menu-btn{background:transparent;border:none;color:var(--txt);cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background 0.2s}
+.menu-btn:hover{background:var(--surf)}
+
 .topbar{
-  position:sticky;top:0;z-index:300;background:rgba(7,9,15,.92);
+  position:sticky;top:0;z-index:300;background:rgba(4,6,11,.92);
   backdrop-filter:blur(24px) saturate(160%);border-bottom:1px solid var(--bd);
   display:flex;align-items:center;padding:0 22px;height:58px;gap:14px;
 }
@@ -157,10 +169,11 @@ body::after{
   box-shadow:0 20px 52px rgba(0,0,0,.8),0 0 35px rgba(0,212,255,.1);
 }
 
-/* blurred photo bg */
-.cbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center top;filter:blur(16px) saturate(1.5);opacity:.2;transform:scale(1.08)}
-.cov{position:absolute;inset:0;z-index:1;background:linear-gradient(175deg,rgba(11,14,25,.5) 0%,rgba(11,14,25,.82) 50%,rgba(11,14,25,.97) 100%)}
-.cc{position:relative;z-index:2;padding:16px 15px 13px}
+/* blurred/faded photo bg */
+.cbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center top;opacity:0.35;mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);-webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);transition:opacity 0.3s, transform 0.3s;transform:scale(1.05)}
+.card-wrap:hover .cbg{opacity:0.6;transform:scale(1.1)}
+.cov{position:absolute;inset:0;z-index:1;background:linear-gradient(175deg,rgba(10,13,22,.1) 0%,rgba(10,13,22,.8) 40%,rgba(10,13,22,1) 100%)}
+.cc{position:relative;z-index:2;padding:60px 15px 13px;display:flex;flex-direction:column;justify-content:flex-end;min-height:160px}
 
 /* Avatar row */
 .av-row{display:flex;align-items:flex-start;gap:13px;margin-bottom:13px}
@@ -214,12 +227,13 @@ body::after{
 .d-nick{font-family:var(--ff-h);font-size:27px;font-weight:700;color:var(--txt);letter-spacing:.5px}
 .d-x{width:33px;height:33px;border-radius:7px;background:var(--surf);border:1px solid var(--bd);color:var(--txt2);cursor:pointer;display:grid;place-items:center;font-size:13px;transition:all .14s}
 .d-x:hover{background:var(--pink);border-color:var(--pink);color:#fff}
-.d-hero{position:relative;padding:22px 20px;border-bottom:1px solid var(--bd);display:flex;gap:16px;align-items:center;overflow:hidden}
-.d-hbg{position:absolute;inset:0;background-size:cover;background-position:center top;filter:blur(22px) saturate(1.5);opacity:.18;transform:scale(1.1);z-index:0}
-.d-hov{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(11,14,25,.65),rgba(11,14,25,.92))}
-.d-hc{position:relative;z-index:2;display:flex;gap:16px;align-items:center;width:100%}
-.d-av{width:86px;height:86px;border-radius:13px;object-fit:cover;border:2px solid rgba(255,255,255,.14);box-shadow:0 8px 30px rgba(0,0,0,.5);flex-shrink:0}
-.d-avph{width:86px;height:86px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;font-family:var(--ff-h);font-size:36px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.1)}
+.d-hero{position:relative;padding:35px 20px 20px;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;justify-content:flex-end;min-height:240px;overflow:hidden}
+.d-hbg{position:absolute;inset:0;background-size:cover;background-position:center top;z-index:0;opacity:0.4;transition:transform 0.5s ease-out;transform:scale(1.02)}
+.ov.open .d-hbg{transform:scale(1)}
+.d-hov{position:absolute;inset:0;z-index:1;background:linear-gradient(to bottom,transparent 0%,var(--bg-fade) 75%,var(--bg-fade) 100%)}
+.d-hc{position:relative;z-index:2;display:flex;gap:16px;align-items:flex-end;width:100%}
+.d-av{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--bg2);box-shadow:0 8px 30px rgba(0,0,0,.6);flex-shrink:0;background:var(--bg2)}
+.d-avph{width:96px;height:96px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-family:var(--ff-h);font-size:40px;font-weight:700;color:#fff;border:3px solid var(--bg2);box-shadow:0 8px 30px rgba(0,0,0,.6)}
 .d-hbody{flex:1}
 .d-mlbl{font-family:var(--ff-m);font-size:7.5px;letter-spacing:2px;color:var(--txt3);text-transform:uppercase;margin-bottom:5px}
 .d-name{font-family:var(--ff-h);font-size:20px;font-weight:700;color:var(--txt);margin-bottom:4px}
@@ -288,8 +302,19 @@ body::after{
 </head>
 <body>
 
+<!-- SIDEBAR -->
+<div class="sb-ov" id="sbov" onclick="toggleSb()"></div>
+<div class="sidebar" id="sb">
+  <div class="sb-head">DD·CMS Menu</div>
+  <div class="sb-btn act"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Profiles</div>
+  <div class="sb-btn" style="opacity:0.4;cursor:not-allowed"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> Posts (Soon)</div>
+</div>
+
 <!-- TOPBAR -->
 <nav class="topbar">
+  <button class="menu-btn" onclick="toggleSb()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+  </button>
   <a class="logo" href="#">
     <div class="logo-icon">DD</div>
     <span class="logo-txt">DD<span>·</span>CMS</span>
@@ -318,6 +343,7 @@ body::after{
   <div class="st" style="--sc:var(--blue)"><div class="st-lbl">Male</div><div class="st-val" id="s-m">—</div><div class="st-sub" id="s-mp"></div></div>
   <div class="st" style="--sc:var(--green)"><div class="st-lbl">Online Mode</div><div class="st-val" id="s-on">—</div><div class="st-sub">scraped online</div></div>
   <div class="st" style="--sc:var(--gold)"><div class="st-lbl">Last Scraped</div><div class="st-val" id="s-ld" style="font-size:15px;padding-top:7px">—</div><div class="st-sub" id="s-ln"></div></div>
+  <div class="st" style="flex:2;min-width:160px;padding-right:22px"><div class="st-lbl">Age Matrix</div><div id="mc-age" style="display:flex;height:34px;align-items:flex-end;gap:3px;margin-top:1px"></div></div>
 </div>
 
 <!-- FILTERS -->
@@ -352,6 +378,7 @@ body::after{
     <button class="btn btn-pri" onclick="load()">Try Again</button>
   </div>
   <div id="empty-state"><div class="em-t">NO PROFILES MATCH — —</div></div>
+  <div class="pager" id="pager-top" style="display:none;padding:0 0 20px"></div>
   <div id="grid"></div>
   <div class="pager" id="pager" style="display:none"></div>
   <div class="foot-info" id="fi" style="display:none"></div>
@@ -435,6 +462,15 @@ function buildStats(){
   st('s-m',m.toLocaleString());st('s-mp',n?Math.round(m/n*100)+'% of total':'');
   st('s-on',o.toLocaleString());
   if(last){st('s-ld',s(last[C.DATETIME]).split(' ').slice(0,2).join(' '));st('s-ln',s(last[C.NICK]));}
+
+  const ages={};
+  all.forEach(r=>{ let a=parseInt(s(r[C.AGE])); if(a>=15 && a<=60) ages[a]=(ages[a]||0)+1; });
+  let hp=''; let maxA=Math.max(...Object.values(ages),1);
+  Object.entries(ages).sort((a,b)=>a[0]-b[0]).forEach(([k,v])=>{ 
+    let h=Math.min(100, Math.max(10, v/maxA*100))+'%';
+    hp+=`<div style="flex:1;background:linear-gradient(to top,var(--acc),var(--pur));height:${h};border-radius:2px 2px 0 0;opacity:0.85;min-width:2px" title="${k}y: ${v} profiles"></div>`;
+  });
+  if(id('mc-age')) id('mc-age').innerHTML=hp;
 }
 
 function applyFil(){
@@ -530,16 +566,16 @@ function mkCard(r){
         </filter>
         <style>
           @keyframes spark1_${uid}{to{stroke-dashoffset:-940}}
-          @keyframes spark2_${uid}{to{stroke-dashoffset:-940}}
+          @keyframes spark2_${uid}{to{stroke-dashoffset:940}}
           .s1_${uid}{
             stroke-dasharray:28,912;
             stroke-dashoffset:0;
-            animation:spark1_${uid} 2.8s linear infinite;
+            animation:spark1_${uid} 15s linear infinite;
           }
           .s2_${uid}{
             stroke-dasharray:18,922;
-            stroke-dashoffset:-470;
-            animation:spark2_${uid} 4.2s linear infinite;
+            stroke-dashoffset:0;
+            animation:spark2_${uid} 15s linear infinite;
           }
         </style>
       </defs>
@@ -564,7 +600,7 @@ function mkCard(r){
       ${img?`<div class="cbg" style="background-image:url('${e(img)}')"></div>`:''}
       <div class="cov"></div>
       <div class="cc">
-        <div class="av-row">
+        <div class="av-row" style="margin-bottom:0">
           <div class="av-wrap">
             ${avHtml}
             <span class="gbadge ${badgeCls}">${badgeTxt}</span>
@@ -578,18 +614,6 @@ function mkCard(r){
             <span class="modechip ${modeCls}">${mode||'—'}</span>
             ${mar==='Yes'?`<span class="modechip m-mar">MARRIED</span>`:''}
           </div>
-        </div>
-        <div class="cstats">
-          <div class="cs"><div class="cs-v">${fol}</div><div class="cs-k">Followers</div></div>
-          <div class="cs"><div class="cs-v">${pst}</div><div class="cs-k">Posts</div></div>
-          <div class="cs"><div class="cs-v">${age||'—'}</div><div class="cs-k">Age</div></div>
-        </div>
-        <div class="cfoot">
-          <div class="c-ts">
-            <svg style="vertical-align:middle;margin-right:4px;margin-top:-2px" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            ${dtShort}
-          </div>
-          ${tagChip}
         </div>
       </div>
     </div>`;
@@ -618,9 +642,9 @@ function mkCard(r){
     if(styleEl){
       styleEl.textContent=`
         @keyframes spark1_${uid}{to{stroke-dashoffset:${-perim}}}
-        @keyframes spark2_${uid}{to{stroke-dashoffset:${-perim}}}
-        .s1_${uid}{stroke-dasharray:${sparkLen1},${gap1};stroke-dashoffset:0;animation:spark1_${uid} 2.8s linear infinite;}
-        .s2_${uid}{stroke-dasharray:${sparkLen2},${gap2};stroke-dashoffset:${-halfPerim};animation:spark2_${uid} 4.2s linear infinite;}
+        @keyframes spark2_${uid}{to{stroke-dashoffset:${perim}}}
+        .s1_${uid}{stroke-dasharray:${sparkLen1},${gap1};stroke-dashoffset:0;animation:spark1_${uid} 15s linear infinite;}
+        .s2_${uid}{stroke-dasharray:${sparkLen2},${gap2};stroke-dashoffset:0;animation:spark2_${uid} 15s linear infinite;}
       `;
     }
   });
@@ -681,9 +705,9 @@ function openDrw(r){
 }
 
 function renderPager(tot){
-  const pg=id('pager');
-  if(tot<=1){pg.style.display='none';return}
-  pg.style.display='flex';
+  const pg=id('pager'), pgt=id('pager-top');
+  if(tot<=1){pg.style.display='none';pgt.style.display='none';return}
+  pg.style.display='flex'; pgt.style.display='flex';
   let h=`<span class="pg-info">Page ${page} of ${tot} &nbsp;·&nbsp; ${filt.length.toLocaleString()} profiles</span>`;
   h+=`<button class="pb" onclick="goP(${page-1})" ${page===1?'disabled':''}>← Prev</button>`;
   const s0=Math.max(1,page-2),s1=Math.min(tot,page+2);
@@ -691,10 +715,11 @@ function renderPager(tot){
   for(let i=s0;i<=s1;i++) h+=`<button class="pb${i===page?' cur':''}" onclick="goP(${i})">${i}</button>`;
   if(s1<tot){if(s1<tot-1)h+=`<span class="pg-dot">…</span>`;h+=`<button class="pb" onclick="goP(${tot})">${tot}</button>`;}
   h+=`<button class="pb" onclick="goP(${page+1})" ${page===tot?'disabled':''}>Next →</button>`;
-  pg.innerHTML=h;
+  pg.innerHTML=h; pgt.innerHTML=h;
 }
 function goP(n){const t=Math.ceil(filt.length/PER_PAGE);if(n<1||n>t)return;page=n;render();}
 
+function toggleSb(){ const s=id('sb'), o=id('sbov'); s.classList.toggle('open'); o.classList.toggle('open'); }
 function closeDrw(ev){if(ev.target===id('ov'))closeDrwD();}
 function closeDrwD(){id('ov').classList.remove('open');}
 function df(k,v,full){
