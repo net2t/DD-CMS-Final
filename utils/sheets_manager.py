@@ -113,6 +113,7 @@ class SheetsManager:
         self.target_ws    = self._get_or_create(Config.SHEET_TARGET,     cols=6)
         self.dashboard_ws = self._get_or_create(Config.SHEET_DASHBOARD,  cols=12)
         self.tags_ws      = self._get_sheet_if_exists(Config.SHEET_TAGS)
+        self.posts_ws     = self._get_or_create(Config.SHEET_POSTS, cols=len(Config.POSTS_COLUMN_ORDER))
 
         self.tags_mapping                = {}
         self.existing_profiles           = {}
@@ -172,6 +173,7 @@ class SheetsManager:
                 "RUN#", "TIMESTAMP", "PROFILES", "SUCCESS", "FAILED",
                 "NEW", "UPDATED", "DIFF", "UNCHANGED", "TRIGGER", "START", "END",
             ],
+            self.posts_ws:     [self._format_header_cell(h) for h in Config.POSTS_COLUMN_ORDER],
         }
         for ws, headers in sheet_headers.items():
             if not ws:
@@ -283,7 +285,79 @@ class SheetsManager:
             self.existing_profiles = {}
             log_msg(f"Loaded {len(mapping)} existing profile rows")
         except Exception as e:
-            log_msg(f"Failed to load profile rows: {e}", "WARNING")
+            log_msg(f"Failed to sort profiles: {e}", "ERROR")
+
+    # ── Phase 2 Methods ────────────────────────────────────────────────────────
+
+    def get_eligible_profiles_for_phase2(self, limit=None):
+        """
+        Fetch profiles where 'PHASE 2' column is exactly 'Ready'.
+        Returns list of dicts with full row data.
+        """
+        try:
+            rows = self.profiles_ws.get_all_values()
+            if not rows or len(rows) < 2:
+                return []
+            
+            headers = rows[0]
+            try:
+                p2_idx = Config.COLUMN_ORDER.index("PHASE 2")
+                nick_idx = Config.COLUMN_ORDER.index("NICK NAME")
+                id_idx = Config.COLUMN_ORDER.index("ID")
+            except ValueError:
+                log_msg("Config.COLUMN_ORDER is missing essential Phase 2 columns.", "ERROR")
+                return []
+            
+            eligible = []
+            for r_num, row in enumerate(rows[1:], start=2):
+                if len(row) > p2_idx and row[p2_idx].strip() == Config.PHASE2_READY:
+                    profile_id  = row[id_idx] if len(row) > id_idx else ""
+                    nick        = row[nick_idx] if len(row) > nick_idx else ""
+                    eligible.append({
+                        "row": r_num,
+                        "PROFILE ID": profile_id,
+                        "NICK NAME": nick,
+                        "row_data": row
+                    })
+                if limit and len(eligible) >= limit:
+                    break
+            
+            return eligible
+        except Exception as e:
+            log_msg(f"Failed to get eligible profiles for Phase 2: {e}", "ERROR")
+            return []
+
+    def mark_phase2_done(self, row_num, status="Done"):
+        """Update the Phase 2 column to Done for a specific profile row."""
+        try:
+            col_idx = Config.COLUMN_ORDER.index("PHASE 2") + 1
+            self._write(self.profiles_ws.update_cell, row_num, col_idx, status)
+            log_msg(f"Marked Phase 2 {status} for row {row_num}", "INFO")
+        except Exception as e:
+            log_msg(f"Failed to mark phase 2 status: {e}", "ERROR")
+
+    def write_posts_batch(self, posts_data_list):
+        """
+        Append a batch of parsed posts to the Posts sheet.
+        `posts_data_list` should be a list of dictionaries mapping exactly 
+        to Config.POSTS_COLUMN_ORDER.
+        """
+        if not posts_data_list:
+            return
+        
+        rows_to_append = []
+        for pdata in posts_data_list:
+            row = []
+            for col in Config.POSTS_COLUMN_ORDER:
+                val = clean_data(pdata.get(col, ""))
+                row.append(val)
+            rows_to_append.append(row)
+            
+        try:
+            self._write(self.posts_ws.append_rows, rows_to_append)
+            log_msg(f"Appended {len(rows_to_append)} posts to Posts sheet.", "OK")
+        except Exception as e:
+            log_msg(f"Failed to append posts: {e}", "ERROR")
 
     def _get_existing_record(self, nickname):
         """Fetch a single profile record on-demand (cached per run)."""

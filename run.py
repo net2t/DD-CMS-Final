@@ -40,6 +40,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from config.config_common import Config
 from core.run_context import RunContext
 from phases.phase_profile import run as run_phase
+import phases.phase_posts as phase_posts
 from utils.ui import (
     log_msg, print_header, print_summary, print_important_events,
     init_run_logger, close_run_logger, get_pkt_time,
@@ -147,7 +148,7 @@ def do_run(mode: str, max_profiles: int = 0) -> dict:
     _run_count += 1
 
     mode = mode.lower().strip()
-    assert mode in ("online", "target"), f"Unknown mode: {mode}"
+    assert mode in ("online", "target", "posts"), f"Unknown mode: {mode}"
 
     init_run_logger(mode)
     print_header("DD-CMS-V3", Config.SCRIPT_VERSION)
@@ -173,7 +174,12 @@ def do_run(mode: str, max_profiles: int = 0) -> dict:
             return {}
 
         # ── Run the phase ──────────────────────────────────────────────────────
-        stats, sheets = run_phase(context, mode=mode, max_profiles=max_profiles)
+        if mode == "posts":
+            stats = {}
+            sheets = context.get_sheets_manager()
+            phase_posts.run(context, limit=max_profiles)
+        else:
+            stats, sheets = run_phase(context, mode=mode, max_profiles=max_profiles)
 
         # ── Update dashboard ───────────────────────────────────────────────────
         if sheets:
@@ -278,6 +284,46 @@ def run_scheduler(max_profiles: int = 0):
             time.sleep(1)
 
     log_msg("Scheduler stopped.")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Posts mode scheduler (auto — every 30 minutes, no-overlap)
+# ══════════════════════════════════════════════════════════════════════════════
+
+POSTS_INTERVAL_SECONDS = 30 * 60   # 30 minutes
+
+def run_scheduler_posts(max_profiles: int = 10):
+    """
+    Continuously run Posts Mode every 30 minutes.
+    """
+    signal.signal(signal.SIGINT,  _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+
+    log_msg("=== SCHEDULER STARTED — Posts mode every 30 minutes ===")
+    log_msg("Press Ctrl+C to stop.")
+
+    while not _scheduler_stop.is_set():
+        now  = get_pkt_time()
+        tick = now.strftime("%d-%b-%y %H:%M:%S")
+
+        if _is_locked():
+            log_msg(f"[{tick}] Run already active — skipping this tick", "WARNING")
+        else:
+            log_msg(f"[{tick}] Starting scheduled Posts run...")
+            if _acquire_lock("posts"):
+                try:
+                    do_run("posts", max_profiles)
+                except Exception as e:
+                    log_msg(f"Scheduled posts run error: {e}", "ERROR")
+                finally:
+                    _release_lock()
+
+        for _ in range(POSTS_INTERVAL_SECONDS):
+            if _scheduler_stop.is_set():
+                break
+            time.sleep(1)
+
+    log_msg("Posts Scheduler stopped.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -397,8 +443,8 @@ Examples:
     )
     p.add_argument(
         "mode",
-        choices=["online", "target", "scheduler"],
-        help="online = online mode once | target = target mode once | scheduler = auto every 15 min",
+        choices=["online", "target", "scheduler", "posts", "scheduler_posts"],
+        help="online = online mode once | target = target mode once | scheduler = auto online every 15 min | posts = Phase 2 extraction | scheduler_posts = auto posts every 30 min",
     )
     p.add_argument(
         "--limit", "-l",
@@ -423,5 +469,8 @@ if __name__ == "__main__":
 
         if args.mode == "scheduler":
             run_scheduler(max_profiles=args.limit)
+        elif args.mode == "scheduler_posts":
+            limit = args.limit if args.limit > 0 else 10 # Default to 10
+            run_scheduler_posts(max_profiles=limit)
         else:
             run_once(mode=args.mode, max_profiles=args.limit)

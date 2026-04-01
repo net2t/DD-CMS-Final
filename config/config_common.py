@@ -66,6 +66,21 @@ class Config:
     SHEET_TARGET    = "RunList"
     SHEET_DASHBOARD = "Dashboard"
     SHEET_TAGS      = "Tags"
+    SHEET_POSTS     = "Posts"   # Phase 2
+
+    # ── Column Order (Posts Sheet - Phase 2) ──────────────────────────────────
+    POSTS_COLUMN_ORDER = [
+        "PROFILE ID",       # 0  - Relationship to Profiles sheet
+        "NICK NAME",        # 1  - With Hyperlink
+        "POST URL",         # 2
+        "POST TYPE",        # 3  - Image / Text
+        "POST TIME",        # 4  - E.g. "5 days ago"
+        "CONTENT",          # 5  - Text or Caption
+        "IMAGE URL",        # 6  - If image post
+        "REPLIES",          # 7  - Count
+        "IS TEMPORARY",     # 8  - Yes/No (clock icon / no replies)
+        "DATETIME SCRAP",   # 9
+    ]
 
     # ── Column Order (Profiles Sheet) ─────────────────────────────────────────
     #
@@ -130,6 +145,10 @@ class Config:
     TARGET_STATUS_DONE     = "Done 💀"
     TARGET_STATUS_ERROR    = "Error 💥"
     TARGET_STATUS_SKIP_DEL = "Skip/Del 🚫"
+
+    # ── Phase 2 Status Values ─────────────────────────────────────────────────
+    PHASE2_READY = "Ready"
+    PHASE2_NOT_ELIGIBLE = "Not Eligible"
 
     # ── Suspension Detection ──────────────────────────────────────────────────
     SUSPENSION_INDICATORS = [
