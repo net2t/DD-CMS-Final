@@ -1,6 +1,6 @@
 # DD-CMS-Final — DamaDam Profile Scraper
 
-A Python scraper that automatically collects user profile data from [damadam.pk](https://damadam.pk) and writes it to a Google Sheet. Runs automatically every 15 minutes via GitHub Actions — no PC needs to be on.
+A Python scraper that automatically collects user profile data from [damadam.pk](https://damadam.pk) and writes it to a Google Sheet. Runs automatically every 15 minutes via GitHub Actions no PC needs to be on.
 
 [![Online Mode (15 min)](https://github.com/net2t/DD-CMS-Final/actions/workflows/online-schedule.yml/badge.svg)](https://github.com/net2t/DD-CMS-Final/actions/workflows/online-schedule.yml)
 [![Target Mode (Manual)](https://github.com/net2t/DD-CMS-Final/actions/workflows/target-manual.yml/badge.svg)](https://github.com/net2t/DD-CMS-Final/actions/workflows/target-manual.yml)
