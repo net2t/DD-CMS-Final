@@ -1,8 +1,8 @@
 name: Online Mode ⏰
 
 on:
-  # schedule:
-  #   - cron: '*/15 * * * *'  # DISABLED - Temporarily stopped
+  schedule:
+    - cron: '*/15 * * * *'  # Run every 15 minutes
   workflow_dispatch:
     inputs:
       limit:
