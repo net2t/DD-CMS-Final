@@ -37,23 +37,32 @@ def run(context, limit=None):
         row_num = item["row"]
         nick = item["NICK NAME"]
         profile_id = item["PROFILE ID"]
+        total_posts = item.get("total_posts", 0)
+        previous_scraped = item.get("previous_scraped", 0)
         
         if not nick:
             sheets.mark_phase2_done(row_num, "Error: No Nickname")
             continue
 
+        needed_posts = total_posts - previous_scraped
+        if needed_posts < 0:
+            needed_posts = 10 # fallback if posts were deleted
+
         log_msg(f"Processing posts for @{nick} (Row {row_num})...")
+        if previous_scraped > 0 and needed_posts > 0:
+            log_msg(f"Delta Mode: Fetching {needed_posts} new posts (Total: {total_posts}, Prev: {previous_scraped})", "INFO")
 
         try:
-            posts_data = scrape_posts_for_profile(browser, nick, profile_id)
+            posts_data = scrape_posts_for_profile(browser, nick, profile_id, needed_posts=needed_posts)
             if posts_data is not None:
                 # Write to Posts sheet
                 if len(posts_data) > 0:
                     sheets.write_posts_batch(posts_data)
                     total_new_posts += len(posts_data)
                 
-                # Mark as Done
-                sheets.mark_phase2_done(row_num, "Scraped")
+                # Mark as Done (Count)
+                new_status = f"Done ({total_posts})" if total_posts > 0 else "Done"
+                sheets.mark_phase2_done(row_num, new_status)
                 processed += 1
             else:
                 # Failed/Errors

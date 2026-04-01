@@ -78,8 +78,9 @@ class Config:
         "CONTENT",          # 5  - Text or Caption
         "IMAGE URL",        # 6  - If image post
         "REPLIES",          # 7  - Count
-        "IS TEMPORARY",     # 8  - Yes/No (clock icon / no replies)
-        "DATETIME SCRAP",   # 9
+        "COMMENT STATUS",   # 8  - Open / Off / Follow to Reply
+        "IS TEMPORARY",     # 9  - Yes/No (clock icon / no replies)
+        "DATETIME SCRAP",   # 10
     ]
 
     # ── Column Order (Profiles Sheet) ─────────────────────────────────────────

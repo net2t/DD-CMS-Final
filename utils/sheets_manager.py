@@ -310,17 +310,38 @@ class SheetsManager:
             
             eligible = []
             for r_num, row in enumerate(rows[1:], start=2):
-                if len(row) > p2_idx and row[p2_idx].strip() == Config.PHASE2_READY:
-                    profile_id  = row[id_idx] if len(row) > id_idx else ""
-                    nick        = row[nick_idx] if len(row) > nick_idx else ""
-                    eligible.append({
-                        "row": r_num,
-                        "PROFILE ID": profile_id,
-                        "NICK NAME": nick,
-                        "row_data": row
-                    })
-                if limit and len(eligible) >= limit:
-                    break
+                if len(row) > p2_idx:
+                    p2_val = row[p2_idx].strip()
+                    if p2_val == Config.PHASE2_READY or p2_val.startswith("Done ("):
+                        profile_id  = row[id_idx] if len(row) > id_idx else ""
+                        nick        = row[nick_idx] if len(row) > nick_idx else ""
+                        
+                        posts_idx = Config.COLUMN_ORDER.index("POSTS")
+                        posts_val = row[posts_idx] if len(row) > posts_idx else "0"
+                        import re
+                        posts_digits = re.sub(r"\D+", "", str(posts_val))
+                        current_total_posts = int(posts_digits) if posts_digits else 0
+                        
+                        previous_scraped = 0
+                        if p2_val.startswith("Done ("):
+                            m = re.search(r"Done \((\d+)\)", p2_val)
+                            if m:
+                                previous_scraped = int(m.group(1))
+                                
+                        # Skip if we already scraped all posts
+                        if p2_val != Config.PHASE2_READY and current_total_posts <= previous_scraped:
+                            continue
+                            
+                        eligible.append({
+                            "row": r_num,
+                            "PROFILE ID": profile_id,
+                            "NICK NAME": nick,
+                            "total_posts": current_total_posts,
+                            "previous_scraped": previous_scraped,
+                            "row_data": row
+                        })
+                    if limit and len(eligible) >= limit:
+                        break
             
             return eligible
         except Exception as e:
