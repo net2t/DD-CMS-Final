@@ -8,12 +8,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Space+Mono:wght@400;700&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#04060b;--bg2:#0a0d16;--bg3:#131826;--surf:#101420;
-  --bd:rgba(255,255,255,0.09);--bd2:rgba(255,255,255,0.18);
-  --txt:#e9ebf0;--txt2:#9eacc4;--txt3:#67728f;
-  --acc:#4285f4;--pur:#a142f4;--pink:#f4427b;--blue:#42a5f4;
-  --gold:#f4b400;--green:#0f9d58;
-  --bg-fade:rgba(10,13,22,1);
+  --bg:#030d12;--bg2:#07161e;--bg3:#0c222d;--surf:#0f2733;
+  --bd:rgba(255,255,255,0.08);--bd2:rgba(255,255,255,0.15);
+  --txt:#e2e8f0;--txt2:#94a3b8;--txt3:#64748b;
+  --acc:#00e5ff;--pur:#1de9b6;--pink:#ff4081;--blue:#00b0ff;
+  --gold:#ffea00;--green:#00e676;
+  --bg-fade:rgba(7,22,30,1);
   --r:10px;--r2:16px;
   --ff-h:'Rajdhani','Exo 2',sans-serif;
   --ff-b:'Exo 2',sans-serif;
@@ -122,7 +122,7 @@ body::after{
 .em-t{font-family:var(--ff-m);font-size:9px;letter-spacing:3px;color:var(--txt3)}
 
 /* GRID */
-#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}
 
 /* ═══════════════════════════════════════════════════════════
    CARD — Electric Current Spark Line Animation
@@ -215,15 +215,15 @@ body::after{
 .pg-dot{color:var(--txt3);font-family:var(--ff-m);padding:0 3px}
 .foot-info{text-align:center;padding:6px 0 2px;font-family:var(--ff-m);font-size:8px;color:var(--txt3);letter-spacing:.5px}
 
-/* DRAWER */
-.ov{position:fixed;inset:0;z-index:900;background:rgba(3,5,10,.75);backdrop-filter:blur(14px);display:none;align-items:flex-start;justify-content:flex-end}
+/* DRAWER / POPUP */
+.ov{position:fixed;inset:0;z-index:900;background:rgba(2,8,12,.8);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px}
 .ov.open{display:flex}
-.drw{width:475px;max-width:100vw;height:100vh;background:var(--bg2);border-left:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column;animation:slIn .24s cubic-bezier(.16,1,.3,1);box-shadow:-24px 0 80px rgba(0,0,0,.55)}
-@keyframes slIn{from{transform:translateX(100%)}}
+.drw{width:540px;max-width:100%;max-height:90vh;background:var(--bg2);border:1px solid var(--bd);border-radius:18px;overflow-y:auto;display:flex;flex-direction:column;animation:popIn .3s cubic-bezier(.175,.885,.32,1.27);box-shadow:0 30px 90px rgba(0,0,0,.8)}
+@keyframes popIn{from{transform:scale(0.9);opacity:0}}
 .drw::-webkit-scrollbar{width:4px}
 .drw::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
 .d-accent{height:3px;flex-shrink:0}
-.d-head{padding:15px 20px 13px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:2}
+.d-head{padding:15px 20px 13px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:10;border-radius:18px 18px 0 0}
 .d-nick{font-family:var(--ff-h);font-size:27px;font-weight:700;color:var(--txt);letter-spacing:.5px}
 .d-x{width:33px;height:33px;border-radius:7px;background:var(--surf);border:1px solid var(--bd);color:var(--txt2);cursor:pointer;display:grid;place-items:center;font-size:13px;transition:all .14s}
 .d-x:hover{background:var(--pink);border-color:var(--pink);color:#fff}
@@ -290,8 +290,9 @@ body::after{
   .c-nick{font-size:15px}
   .cs-v{font-size:16px}
   /* Drawer from bottom on mobile */
-  .ov{align-items:flex-end;justify-content:center}
-  .drw{width:100vw;max-height:92vh;height:auto;border-left:none;border-top:1px solid var(--bd);border-radius:20px 20px 0 0}
+  .ov{align-items:flex-end;justify-content:center;padding:0}
+  .drw{width:100vw;max-height:92vh;height:auto;border:1px solid var(--bd);border-bottom:none;border-radius:20px 20px 0 0;animation:slIn .25s cubic-bezier(0.2,1,0.2,1)}
+  .d-head{border-radius:20px 20px 0 0}
   @keyframes slIn{from{transform:translateY(100%)}}
 }
 @media(max-width:400px){
@@ -398,12 +399,16 @@ body::after{
       <div class="d-hc">
         <div id="dav"></div>
         <div class="d-hbody">
-          <div class="d-mlbl" id="dml"></div>
           <div class="d-name" id="dnm"></div>
           <div class="d-ca"   id="dca"></div>
           <div class="d-tags" id="dtg"></div>
         </div>
       </div>
+    </div>
+    <div class="d-sec" style="background:var(--surf);display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;padding:0;border-bottom:1px solid var(--bd)">
+      <div style="padding:15px 10px;text-align:center;background:var(--bg2)"><div style="font-family:var(--ff-h);font-size:21px;font-weight:700;color:var(--acc)" id="d-fol">—</div><div style="font-family:var(--ff-m);font-size:8px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;margin-top:3px">Followers</div></div>
+      <div style="padding:15px 10px;text-align:center;background:var(--bg2)"><div style="font-family:var(--ff-h);font-size:21px;font-weight:700;color:var(--blue)" id="d-pst">—</div><div style="font-family:var(--ff-m);font-size:8px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;margin-top:3px">Posts</div></div>
+      <div style="padding:15px 10px;text-align:center;background:var(--bg2)"><div style="font-family:var(--ff-h);font-size:21px;font-weight:700;color:var(--pink)" id="d-mar">—</div><div style="font-family:var(--ff-m);font-size:8px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;margin-top:3px">Married</div></div>
     </div>
     <div class="d-sec"><div class="d-sh">Profile Info</div><div class="d-grid" id="di"></div></div>
     <div class="d-sec"><div class="d-sh">Stats</div><div class="d-grid" id="ds"></div></div>
@@ -560,22 +565,12 @@ function mkCard(r){
           <feGaussianBlur stdDeviation="2.5" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
-        <filter id="fg2${uid}" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
         <style>
           @keyframes spark1_${uid}{to{stroke-dashoffset:-940}}
-          @keyframes spark2_${uid}{to{stroke-dashoffset:940}}
           .s1_${uid}{
             stroke-dasharray:28,912;
             stroke-dashoffset:0;
             animation:spark1_${uid} 15s linear infinite;
-          }
-          .s2_${uid}{
-            stroke-dasharray:18,922;
-            stroke-dashoffset:0;
-            animation:spark2_${uid} 15s linear infinite;
           }
         </style>
       </defs>
@@ -589,12 +584,6 @@ function mkCard(r){
         stroke="${sparkCol1}" stroke-width="1.5" stroke-linecap="round"
         filter="url(#fg${uid})"
         class="s1_${uid}"/>
-      <!-- spark line 2 — purple, opposite phase -->
-      <rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)"
-        rx="15" ry="15" fill="none"
-        stroke="${sparkCol2}" stroke-width="1.5" stroke-linecap="round"
-        filter="url(#fg2${uid})"
-        class="s2_${uid}"/>
     </svg>
     <div class="card">
       ${img?`<div class="cbg" style="background-image:url('${e(img)}')"></div>`:''}
@@ -642,9 +631,7 @@ function mkCard(r){
     if(styleEl){
       styleEl.textContent=`
         @keyframes spark1_${uid}{to{stroke-dashoffset:${-perim}}}
-        @keyframes spark2_${uid}{to{stroke-dashoffset:${perim}}}
         .s1_${uid}{stroke-dasharray:${sparkLen1},${gap1};stroke-dashoffset:0;animation:spark1_${uid} 15s linear infinite;}
-        .s2_${uid}{stroke-dasharray:${sparkLen2},${gap2};stroke-dashoffset:0;animation:spark2_${uid} 15s linear infinite;}
       `;
     }
   });
@@ -666,7 +653,6 @@ function openDrw(r){
   id('da').style.background=accentCol;
   id('dhb').style.backgroundImage=img?`url('${e(img)}')`:'';
   st('dn',nick);st('dnm',nick);
-  st('dml',mode?'● '+mode.toUpperCase()+' MODE':'');
   st('dca',[city,age?age+'y':''].filter(Boolean).join(' · ')||'');
   st('dtg',tags?'# '+tags.replace(/,\s*/g,'  #'):'');
 
@@ -675,17 +661,19 @@ function openDrw(r){
     ?`<img class="d-av" src="${e(img)}" alt="${e(nick)}" onerror="this.outerHTML='<div class=d-avph style=background:${ac}>${nick[0]?.toUpperCase()||'?'}</div>'">`
     :`<div class="d-avph" style="background:${ac}">${nick[0]?.toUpperCase()||'?'}</div>`;
 
+  st('d-fol',fmt(r[C.FOLLOWERS]));
+  st('d-pst',fmt(r[C.POSTS]));
+  st('d-mar',r[C.MARRIED]||'—');
+
   id('di').innerHTML=
     df('City',r[C.CITY])+df('Gender',r[C.GENDER])+
-    df('Age',r[C.AGE])+df('Married',r[C.MARRIED])+
     df('Joined',r[C.JOINED])+df('List',r[C.LIST])+
     df('Run Mode',r[C.RUN_MODE])+df('Scraped',r[C.DATETIME],true)+
     (rurl?`<div class="df"><div class="dk">Rank</div><div class="dv"><img src="${e(rurl)}" style="height:14px" alt="rank"></div></div>`:'');
 
   id('ds').innerHTML=
-    df('Followers',r[C.FOLLOWERS])+df('Posts',r[C.POSTS])+
     df('Phase 2',r[C.PHASE2])+df('Last Post Time',r[C.LASTTIME])+
-    (r[C.LASTPOST]?`<div class="df"><div class="dk">Last Post</div><div class="dv sp"><a href="${e(s(r[C.LASTPOST]))}" target="_blank">View Post ↗</a></div></div>`:'');
+    (r[C.LASTPOST]?`<div class="df sp"><div class="dk">Last Post</div><div class="dv"><a href="${e(s(r[C.LASTPOST]))}" target="_blank">View Post ↗</a></div></div>`:'');
 
   const msec=id('dmhs'),mdiv=id('dmh');
   if(mehName){
