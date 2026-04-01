@@ -47,6 +47,11 @@ def extract_comment_info(container, browser_driver=None):
         btn_parent_a = container.find_element(By.CSS_SELECTOR, "a[href*='/comments/']")
         post_url = btn_parent_a.get_attribute('href')
         
+        # Clean URL: 'https://damadam.pk/comments/text/35736825/29/#reply' -> 'https://damadam.pk/comments/text/35736825'
+        if post_url:
+            post_url = re.sub(r'/\d+/#reply$', '', post_url)
+            post_url = re.sub(r'/#reply$', '', post_url)
+        
         try:
             btn_text = btn_parent_a.text.strip()
             match = re.search(r'(\d+)', btn_text)
