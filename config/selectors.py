@@ -71,7 +71,7 @@ class ProfileSelectors:
 
 
 class OnlineUserSelectors:
-    PAGE_HEADER              = "h1.clb.cxl.lsp"
+    PAGE_HEADER              = "h1"
     NICKNAME_STRATEGY_1      = "b.clb bdi"
     NICKNAME_STRATEGY_2      = "form[action*='/search/nickname/redirect/']"
     NICKNAME_STRATEGY_3      = "li.mbl.cl.sp"

@@ -206,9 +206,15 @@ class SheetsManager:
         try:
             header_range = f"A1:{gspread.utils.rowcol_to_a1(1, ws.col_count)}"
             self._write(ws.format, header_range, {
+                "backgroundColor": {
+                    "red": 0.01,
+                    "green": 0.05,
+                    "blue": 0.07,
+                },
                 "textFormat": {
                     "fontFamily": "Quantico",
-                    "foregroundColor": {"red": 1, "green": 1, "blue": 1},
+                    "bold": True,
+                    "foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
                 }
             })
         except Exception:
