@@ -194,7 +194,7 @@ def do_run(mode: str, max_profiles: int = 0) -> dict:
                     "New Profiles":        stats.get("new", 0),
                     "Updated Profiles":    stats.get("updated", 0),
                     "Unchanged Profiles":  stats.get("unchanged", 0),
-                    "Trigger":             "manual" if _run_count == 1 and mode == "target" else "auto",
+                    "Trigger":             f"{mode.upper()} (Manual)" if _run_count == 1 and len(sys.argv) <= 2 else f"{mode.upper()} (Auto)",
                     "Start":               start_time.strftime("%Y-%m-%d %H:%M"),
                     "End":                 end_time.strftime("%Y-%m-%d %H:%M"),
                 })
@@ -287,19 +287,18 @@ def run_scheduler(max_profiles: int = 0):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  Posts mode scheduler (auto — every 30 minutes, no-overlap)
+#  Posts mode scheduler
 # ══════════════════════════════════════════════════════════════════════════════
 
-POSTS_INTERVAL_SECONDS = 30 * 60   # 30 minutes
-
-def run_scheduler_posts(max_profiles: int = 10):
+def run_scheduler_posts(max_profiles: int = 10, interval_seconds: int = 1800):
     """
-    Continuously run Posts Mode every 30 minutes.
+    Continuously run Posts Mode every `interval_seconds` (default 30 min).
     """
     signal.signal(signal.SIGINT,  _signal_handler)
     signal.signal(signal.SIGTERM, _signal_handler)
 
-    log_msg("=== SCHEDULER STARTED — Posts mode every 30 minutes ===")
+    mins = interval_seconds // 60
+    log_msg(f"=== SCHEDULER STARTED — Posts mode every {mins} minutes ===")
     log_msg("Press Ctrl+C to stop.")
 
     while not _scheduler_stop.is_set():
@@ -318,7 +317,7 @@ def run_scheduler_posts(max_profiles: int = 10):
                 finally:
                     _release_lock()
 
-        for _ in range(POSTS_INTERVAL_SECONDS):
+        for _ in range(interval_seconds):
             if _scheduler_stop.is_set():
                 break
             time.sleep(1)
@@ -378,7 +377,7 @@ def interactive_menu():
     print("\nSelect Mode:")
     print("  1) Online")
     print("  2) Target")
-    print("  3) Scheduler (Online every 15 min)")
+    print("  3) Get Posts (Phase 2)")
     print("  0) Exit")
 
     choice = input("Enter choice [1]: ").strip() or "1"
@@ -389,7 +388,7 @@ def interactive_menu():
     elif choice == "2":
         mode = "target"
     elif choice == "3":
-        mode = "scheduler"
+        mode = "posts"
     else:
         print("Invalid choice")
         return
@@ -453,6 +452,13 @@ Examples:
         metavar="N",
         help="Max profiles per run (0 = unlimited, default: 0)",
     )
+    p.add_argument(
+        "--interval", "-i",
+        type=int,
+        default=30,
+        metavar="M",
+        help="Interval in minutes for scheduler_posts (default: 30)",
+    )
     return p
 
 
@@ -471,6 +477,7 @@ if __name__ == "__main__":
             run_scheduler(max_profiles=args.limit)
         elif args.mode == "scheduler_posts":
             limit = args.limit if args.limit > 0 else 10 # Default to 10
-            run_scheduler_posts(max_profiles=limit)
+            interval_sec = args.interval * 60
+            run_scheduler_posts(max_profiles=limit, interval_seconds=interval_sec)
         else:
             run_once(mode=args.mode, max_profiles=args.limit)
